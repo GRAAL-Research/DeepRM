@@ -48,8 +48,6 @@ def data_gen(n, m, d, dif, shuffle=True):
         Tuple of tuples (X 1-dim np.array of length 2m
                          y np.array of dims 2m x d)
     """
-    if shuffle:
-        np.random.seed(20230816)
     gen = gen_d
     X, y = gen(m, d, dif, False, shuffle)
     data = [[X, y]]

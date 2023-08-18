@@ -1,4 +1,5 @@
 # Copyright 2023 Benjamin Leblanc, Mathieu Bazinet, Alexandre Drouin, Pascal Germain, Valentina Zantedeschi
+import matplotlib.pyplot as plt
 
 # This file is part of the work Deep Reconstruction Machine (DeepRM).
 
@@ -11,14 +12,16 @@ from train import *
 from datasets import *
 import torch
 
-def deeprm(n = 1000,
+def deeprm(dataset = 'easy_gauss_lin',
+           seed = 0,
+           n = 1000,
            m = 20,
            d = 10,
-           dataset = 'easy_gauss_lin',
-           train_valid = 0.8,
-           net = 'simplenet',
-           kernel_dim = [200, 200],
-           hidden_dim = [10, 200, 200],
+           train_valid = [0.8, 0.65, 0.5, 0.35, 0.2, 0.1, 0.05],
+           meta_predictor = 'simplenet',
+           predictor = 'linear_classif',
+           kernel_dim = [200, 200, 10],
+           hidden_dim = [200, 200],
            criterion = 'bce_loss',
            start_lr=1e-4,
            patience = 5,
@@ -29,32 +32,37 @@ def deeprm(n = 1000,
            scheduler = 'plateau',
            n_epoch = 200,
            batch_size = 50,
-           plot = True,
-           DEVICE = "cpu"
+           DEVICE = "cpu",
+           plot = 'loss'
     ):
-    if dataset == 'easy_gauss_lin':
-        data = data_gen(n, m, d, 'easy')
-    elif dataset == 'hard_gauss_lin':
-        data = data_gen(n, m, d, 'hard')
-    if net == 'simplenet':
-        network = SimpleNet(d, kernel_dim, hidden_dim, d+1, m, d, batch_size)
-    if criterion == 'bce_loss':
-        crit = BCELoss_mod
-    if optimizer == 'adam':
-        opti = torch.optim.Adam(network.parameters(), lr=copy.copy(start_lr))
-    if scheduler == 'plateau':
-        sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti,
+    np.random.seed(seed)
+    for train_split in train_valid:
+        if dataset == 'easy_gauss_lin':
+            data = data_gen(n, m, d, 'easy')
+        elif dataset == 'hard_gauss_lin':
+            data = data_gen(n, m, d, 'hard')
+        if meta_predictor == 'simplenet':
+            meta_pred = SimpleNet(d, kernel_dim, hidden_dim, d+1, m, d, batch_size)
+        if predictor == 'linear_classif':
+            pred = lin_clas
+        if criterion == 'bce_loss':
+            crit = nn.BCELoss(reduction='sum')
+        if optimizer == 'adam':
+            opti = torch.optim.Adam(meta_pred.parameters(), lr=copy.copy(start_lr))
+        if scheduler == 'plateau':
+            sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti,
                                                                mode='max',
                                                                factor=factor,
                                                                patience=patience,
                                                                threshold=tol,
                                                                verbose=False)
-    hist = train(network, data, train_valid, opti, sched, early_stop, n_epoch, batch_size, crit, DEVICE)
+        hist = train(meta_pred, pred, data, train_split, opti, sched, tol, early_stop, n_epoch, batch_size, crit, DEVICE)
+        if plot in ['loss', 'acc']:
+            plt.plot(hist['epoch'], hist[f'train_{plot}'], c='b', lw=2, alpha=train_split)
+            plt.plot(hist['epoch'], hist[f'valid_{plot}'], c='b', lw=2, alpha=train_split, ls='--')
     if plot:
-        plt.plot(hist['epoch'], hist['train'], c='b', lw=2, alpha=train_valid)
-        plt.plot(hist['epoch'], hist['valid'], c='b', lw=2, alpha=train_valid, ls='--')
-        plt.legend(['Train', 'Valid'])
         plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
+        plt.ylabel(f'{plot}')
+        plt.legend(['Train', 'Valid'])
         plt.show()
 deeprm()
