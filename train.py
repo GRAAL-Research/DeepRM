@@ -1,44 +1,49 @@
 import math
-import numpy as np
-
+from utils import *
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Subset, DataLoader
-import copy
+from copy import copy
+from bound import compute_bound
 
-class SimpleNet(nn.Module):
-    def __init__(self, input_dim, kernel_dim, hidden_dim, output_dim, m, d, batch_size):
+class SimpleMetaNet(nn.Module):
+    def __init__(self, input_dim, dims, output_dim, m, d, k, tau, batch_size, init):
         """
         Generates a simple feed-forward neural network with ReLU activations and kernel mean embedding (MLP).
             The kernel has |kernel_dim| layer; the element outputted by the Kernel are multiplied by the label values
             before applying the mean function. Then, there are |hidden_dim| hidden layers, and an output layer.
         Args:
             intput_dim (int): Input dimension of the network.
-            kernel_dim (list of int): Dimensions of the kernel mean embedding - composed of |kernel_dim| hidden layers.
-            hidden_dim (list of int): Dimensions of the hidden layers. There are |hidden_dim| hidden layers.
+            dims (tuple of list of int):
             output_dim (int): Outputput dimension of the network
-            m (int): Number of examples in each class, per dataset
+            m (int): Number of examples per dataset
             d (int): Input dimension of each dataset
+            k (int): Sample compression size
+            tau (float): Temperature parameter for the Gumbel-Softmax component
             batch_size (int): Batch size.
+            init (string): Layer initialization scheme (choices: 'kaiming_unif', '.._norm', 'xavier_unif', '.._norm')
         Output:
             nn.Module A feedforward neural network.
         """
-        super(SimpleNet, self).__init__()
-        self.m, self.d, self.k, self.batch_size = m, d, kernel_dim[-1], batch_size
-        self.kernel = torch.nn.ModuleList()
+        super(SimpleMetaNet, self).__init__()
+        self.msg, self.msk = None, None  # Message and mask (for compression selection)
+        self.kern_1_dim, self.kern_2_dim, self.modl_1_dim, self.modl_2_dim = dims  # Dims of all 4 components
+        self.m, self.d, self.k, self.tau, self.batch_size = m, d, k, tau, batch_size  # Parameters
+        assert 1 <= k <= m   # Sample compression size is bounded
+        assert self.kern_2_dim[-1] == self.modl_2_dim[-1]  # Since there is a skip connection, must be of same size
+        self.modl_1_dim[-1] += self.m  # So that input size is (message size + mask size)
 
-        ker_dims = [input_dim] + kernel_dim
-        for i in range(len(ker_dims)-1):
-            self.kernel.append(nn.Linear(ker_dims[i], ker_dims[i+1]))
-            if i < len(ker_dims) - 2:
-                self.kernel.append(nn.ReLU())
+        self.kern_1 = relu_fc_layer([input_dim] + self.kern_1_dim)  # The different layers are instanciated
+        self.kern_2 = relu_fc_layer([input_dim] + self.kern_2_dim)
+        self.modl_1 = relu_fc_layer([self.kern_1_dim[-1]] + self.modl_1_dim)
+        self.modl_2 = relu_fc_layer([self.modl_1_dim[-1] - self.m + self.kern_2_dim[-1]] + self.modl_2_dim, last=True)
+        self.last_l = relu_fc_layer([self.modl_2_dim[-1]] + [output_dim])
+        init_weights(init, [self.kern_1, self.kern_2, self.modl_1, self.modl_2])
 
-        self.hidden = torch.nn.ModuleList()
-        hid_dims = [kernel_dim[-1]] + hidden_dim + [output_dim]
-        for i in range(len(hid_dims)-1):
-            self.hidden.append(nn.Linear(hid_dims[i], hid_dims[i+1]))
-            if i < len(hid_dims) - 2:
-                self.hidden.append(nn.ReLU())
+        #dist = torch.distributions.laplace.Laplace(torch.tensor([0.0]), torch.tensor([1.0]))
+        #self.msg_reg = torch.squeeze(dist.sample(torch.Size([self.modl_1_dim[-1]])))
+        #self.msg_reg.requires_grad = True
 
     def forward(self, x):
         """
@@ -48,15 +53,82 @@ class SimpleNet(nn.Module):
         return:
             torch.tensor Output of the network
         """
-        x_t = torch.zeros((self.batch_size, self.k))
-        for i in range(len(x)):
+        ## First KME ##
+        x_t = torch.zeros((self.batch_size, self.kern_1_dim[-1]))  # Size of the KME output
+        for i in range(len(x)):  # For each dataset ...
             x_i = x[i][:,:-1]
-            for layer in self.kernel:
+            for layer in self.kern_1:
                 x_i = layer(x_i)
-            x_t[i] = torch.mean(x_i * torch.reshape(x[i][:,-1], (-1,1)), dim=0)
-        for layer in self.hidden:
+            x_t[i] = torch.mean(x_i * torch.reshape(x[i][:,-1], (-1,1)), dim=0)  # ... A compression is done
+
+        ## First module ##
+        for layer in self.modl_1:
             x_t = layer(x_t)
+
+        ## Compression set computation ##
+        for i in range(len(x_t)):
+            odds = F.gumbel_softmax(x_t[i, :self.m], tau=self.tau, hard=False)
+            inds = torch.topk(odds, self.k).indices  # We retain the top-k examples having the highest odds
+            tens = torch.zeros(len(odds))
+            tens[[inds]] += 1
+            x_t[i, :self.m] = tens - odds.detach() + odds  # Straight-trough estimator
+        self.msk = torch.clone(x_t[:, :self.m])
+        self.msg = x_t[:, self.m:]
+
+        ## Second KME ##
+        x_t_2 = torch.zeros((self.batch_size, self.kern_2_dim[-1]))
+        for i in range(len(x)):  # For each dataset ...
+            x_i = torch.zeros((self.m, self.d))
+            for j in range(self.m):
+                x_i[j] = x[i][j, :-1] * x_t[i,j]
+            for layer in self.kern_2:
+                x_i = layer(x_i)
+            x_t_2[i] = torch.mean(x_i * torch.reshape(x[i][:, -1], (-1, 1)), dim=0)  # ... A compression is done
+        x_t = torch.hstack((x_t_2, x_t[:, self.m:]))  # Both the compression set (after going through the 2nd KME) and
+                                                      #     the message are given to the second module as inputs.
+
+        ## Second module ##
+        skip = x_t[:, :self.kern_2_dim[-1]]  # A skip connection is made
+        for layer in self.modl_2:
+            x_t = layer(x_t)
+        for layer in self.last_l:
+            x_t = layer(x_t + skip)  # The skip connection leads to just before applying the last linear layer
         return x_t
+
+def relu_fc_layer(dims, last=False):
+    """
+    Creates a ReLU linear layer, given dimensions.
+    Args:
+        dims (vector of ints): (respectively) size of the input layer, of the hidden layers, and of the output layer
+        last (bool): Whether (True) or not (False) to put an activation function at the end of the last layer
+    return:
+        torch.nn.Module
+    """
+    lay = torch.nn.ModuleList()
+    for i in range(len(dims) - 1):
+        lay.append(nn.Linear(dims[i], dims[i + 1]))
+        if i < len(dims) - 2 or last:
+            lay.append(nn.ReLU())
+    return lay
+
+def init_weights(init, modules):
+    """
+    Instanciate the weights of the linear layers of one or many torch.nn.Module.
+    Args:
+        init (str): Layer initialization scheme (choices: 'kaiming_unif', '.._norm', 'xavier_unif', '.._norm')
+        modules (list of torch.nn.Module): The module(s) of interest
+    """
+    for module in modules:
+        for layer in module:
+            if isinstance(layer, nn.Linear):
+                if init == 'kaiming_unif':
+                    nn.init.kaiming_uniform_(layer.weight.data, nonlinearity='relu')
+                elif init == 'kaiming_norm':
+                    nn.init.kaiming_normal_(layer.weight.data, nonlinearity='relu')
+                elif init == 'xavier_unif':
+                    nn.init.xavier_uniform_(layer.weight.data)
+                elif init == 'xavier_norm':
+                    nn.init.xavier_normal_(layer.weight.data)
 
 def train_valid_loaders(dataset, batch_size, train_split=0.8, shuffle=True, seed=42):
     """
@@ -88,7 +160,8 @@ def train_valid_loaders(dataset, batch_size, train_split=0.8, shuffle=True, seed
 
     return train_loader, valid_loader
 
-def train(meta_pred, pred, dataset, train_split, optimizer, scheduler, tol, early_stop, n_epoch, batch_size, criterion, DEVICE):
+def train(meta_pred, pred, dataset, train_split, optimizer, scheduler, tol, early_stop,
+          n_epoch, batch_size, criterion, penalty_msg, penalty_msg_coef, vis, bound_type, DEVICE):
     """
     Trains a meta predictor using PyTorch.
 
@@ -104,17 +177,25 @@ def train(meta_pred, pred, dataset, train_split, optimizer, scheduler, tol, earl
         n_epoch (int): The maximum number of epochs.
         batch_size (int): Batch size.
         criterion (torch.nn, function): Loss function
+        penalty_msg (func): A regularization function for the message. (See utils.l1 for an example of such function)
+        penalty_msg_coef (float): Message regularization factor.
+        vis (int): Number of created predictors to visualize (plot) at the end of the training (only works for
+                        linear classifier with 2-d datasets).
+        bound_type (str): The type of PAC bound to compute (choices: "Alex", "Mathieu").
         DEVICE (str): 'cuda', or 'cpu'; whether to use the gpu
 
     Returns:
-        Tuple (nn.Module, float, float): The trained model; the best train (and validation) accuracy
+        Tuple (nn.Module, dict): The trained model; dictionary containing several information about the training
     """
     train_loader, valid_loader = train_valid_loaders(dataset, batch_size, train_split)
     best_val_acc, best_train_acc, j, hist = 0, 0, 0, {'epoch': [],
                                                       'train_loss': [],
                                                       'valid_loss': [],
                                                       'train_acc': [],
-                                                      'valid_acc': []}
+                                                      'valid_acc': [],
+                                                      'bound_value': [],
+                                                      'n_sigma': [],
+                                                      'n_Z': []}
     for i in range(n_epoch):
         meta_pred.train()
         with torch.enable_grad():
@@ -123,68 +204,27 @@ def train(meta_pred, pred, dataset, train_split, optimizer, scheduler, tol, earl
                 optimizer.zero_grad()
                 if str(DEVICE) == 'cuda':
                     inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
-                meta_output = meta_pred(inputs)
-                output = pred(meta_output, inputs)
-                loss = criterion(output, targets)
+                meta_output = meta_pred(inputs)  # We compute the parameters of the predictor.
+                output = pred(meta_output, inputs)  # Given its parameters, the predictor computes predictions.
+                loss = criterion(output, targets) + penalty_msg(meta_pred.msg, penalty_msg_coef)  # Regularized loss
                 loss.backward()
                 optimizer.step()
-        train_acc, train_loss = perf(meta_pred, pred, criterion, train_loader, DEVICE)
-        val_acc, val_loss = perf(meta_pred, pred, criterion, valid_loader, DEVICE)
-        update_hist(hist, (train_acc, train_loss, val_acc, val_loss, i))
-        #history.save(dict(acc=train_acc, val_acc=val_acc, loss=train_loss, val_loss=val_loss, lr=optimizer.state_dict()['param_groups'][0]['lr']))
-        print(f'Epoch {i + 1} - Train acc: {train_acc:.2f} - Val acc: {val_acc:.2f}')
+        n_sigma = round(torch.sum((torch.abs(meta_pred.msg) > 0) * 1).item() / batch_size)  # Mean message size
+        train_acc, train_loss, bound = stats(meta_pred, pred, criterion, train_loader, n_sigma, bound_type, DEVICE)
+        val_acc, val_loss, _ = stats(meta_pred, pred, criterion, valid_loader, n_sigma, bound_type, DEVICE)
+        update_hist(hist, (train_acc, train_loss, val_acc, val_loss, bound, n_sigma, meta_pred.k, i))  # Tracking results
+        print(f'Epoch {i + 1} - Train acc: {train_acc:.2f} - Val acc: {val_acc:.2f} - Bound value: {bound:.2f}')
         scheduler.step(val_acc)
-        if i == 1 or val_acc > best_val_acc + tol:
-            j = copy.copy(i)
-        #    cop = copy.deepcopy(meta_pred)
-        #    best_val_acc = val_acc
-        #    best_train_acc = train_acc
-        if i - j > early_stop:
+        if i == 1 or val_acc > best_val_acc + tol:  # If an improvement has been done in validation...
+            j = copy(i)                             # ...We keep track of it
+            best_val_acc = copy(val_acc)
+        if i - j > early_stop:  # If no improvement for early_stop epoch, stop training.
             break
+    if vis > 0 and pred == lin_clas and len(inputs[0,0,:-1]) == 2:
+        show(meta_pred, train_loader, vis, DEVICE)
     return hist
 
-def lin_clas(weights, inputs, return_sign = False):
-    """
-    Generates the predicton of a (or many) linear classifier, given its (their) weights and inputs.
-    Args:
-        weights (torch.tensor of size batch_size x (d+1)): The d first columns represent the orientation of the linear
-            predictors, the last element is their bias.
-        inputs (torch.tensor of size batch_size x m x d): The features of examples in a batch
-        return_sign (bool): Whether to return only the output with sigmoid function, or also with the sign function applied.
-    Returns:
-        Torch.tensor of size batch_size x m (or tuple of two torch.tens...), the output with sigmoid (and sign) applied.
-    """
-    out = torch.sum(torch.transpose(inputs[:, :, :-1], 0, 1) * weights[:, :-1], dim=-1) + weights[:, -1]
-    out = torch.transpose(out, 0, 1)
-    if not return_sign:
-        return torch.sigmoid(out)
-    return torch.sigmoid(out), torch.sign(out)
-
-def update_hist(hist, values):
-    """
-    Adds values to the hist dictionnary to keep track of the losses and accuracies for each epochs.
-    Args:
-        hist (dic): A dictionnary that keep track of training metrics.
-        values (Tuple): Elements to be added to the dictionnary.
-    """
-    hist['epoch'].append(values[0])
-    hist['train_acc'].append(values[1])
-    hist['train_loss'].append(values[2])
-    hist['valid_acc'].append(values[3])
-    hist['valid_loss'].append(values[4])
-
-def lin_loss(output, targets):
-    """
-    Computes the total linear loss.
-    Args:
-        output (torch.tensor of size batch_size x m): The output (0 or 1) of the predictor
-        targets (torch.tensor of size batch_size x m): The labels (0 or 1)
-    Return:
-        Float, the total linear loss incurred.
-    """
-    return torch.sum(((output * (targets * 2 - 1)) + 1) / 2)
-
-def perf(meta_pred, pred, criterion, data_loader, DEVICE):
+def stats(meta_pred, pred, criterion, data_loader, n_sigma, bound_type, DEVICE):
     """
     Computes the overall accuracy and loss of a predictor on given task and dataset.
     Args:
@@ -192,6 +232,8 @@ def perf(meta_pred, pred, criterion, data_loader, DEVICE):
         pred (function): A predictor whose parameters are computed by the meta predictor.
         criterion (torch.nn, function): Loss function
         data_loader (DataLoader): A DataLoader to test on.
+        n_sigma (int): Size of the message
+        bound_type (str): The type of PAC bound to compute (choices: "Alex", "Mathieu").
         DEVICE (str): 'cuda', or 'cpu'; whether to use the gpu
     Returns:
         Tuple (float, float): the 0-1 accuracy and loss.
@@ -202,12 +244,15 @@ def perf(meta_pred, pred, criterion, data_loader, DEVICE):
         tot_loss = 0
         tot_acc = 0
         for inputs, targets in data_loader:
-            i += len(targets) * len(targets[0])
+            n = copy(len(targets) * len(targets[0]))
+            i += n
             inputs, targets = inputs.float(), targets.float()
             if str(DEVICE) == 'cuda':
                 inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
             meta_output = meta_pred(inputs)
             output = pred(meta_output, inputs, return_sign = True)
-            tot_loss += criterion(output[0], targets)
-            tot_acc += lin_loss(output[1], targets)
-        return tot_acc / i, tot_loss / i
+            tot_loss += criterion(output[0], targets) * n
+            tot_acc += lin_loss(output[1], targets) * n
+        bnd = compute_bound(bound_type=bound_type, n_Z=meta_pred.k, n_sigma=n_sigma,
+                            m=i, r=i-tot_acc, c_2 = 10, d = len(meta_output), delta=0.05)
+        return tot_acc / i, tot_loss / i, bnd
