@@ -1,6 +1,7 @@
 import math
 import numpy as np
 from scipy.stats import norm
+from matplotlib import pyplot as plt
 
 def log_stirlings_approximation(n):
     """
@@ -25,6 +26,12 @@ def zeta(x):
     """
     return (6 / np.pi**2) * (x + 1)**-2
 
+def eta(x,m):
+    """
+    Uniform
+    """
+    return 1 / m
+
 def prior(sigma):
     """
     Prior on the value of messages (this is an arbitrary choice)
@@ -38,7 +45,21 @@ def prior(sigma):
 
     return p_len * p_content
 
-def compute_bound(bound_type, n_Z, n_sigma, m, r, c_2, d, delta):
+def a_star(m,n_Z,r,a):
+    return (1-
+            np.exp(1/(m-n_Z-r) * (r * np.log(r/(m-n_Z)) + (m - n_Z - r) * np.log(1 - r/(m-n_Z)) - r * np.log(r/(m-n_Z) + a))) -
+            r/(m-n_Z))
+def bnd(m,n_Z,r,p_sigma,delta,a):
+    return 1-np.exp(
+        -1 / (m - n_Z - r) *
+        (r * np.log(r/(m-n_Z)+a)+
+         log_binomial_coefficient(m, n_Z) +
+         log_binomial_coefficient(m - n_Z, r) +
+         np.log(1 / p_sigma) +
+         np.log(1 / (zeta(n_Z) * zeta(r) * delta))
+         ))
+
+def compute_bound(bound_type, n_Z, n_sigma, m, r, c_2, d, data, delta):
     """
     Sample compression bound of Marchand and someone else
 
@@ -62,18 +83,54 @@ def compute_bound(bound_type, n_Z, n_sigma, m, r, c_2, d, delta):
 
     """
     # For now, we craft an arbitrary message by sampling n_sigma values from a N01 (matches the prior)
+    sigma = np.random.randn(n_sigma) * 2
+    p_sigma = prior(sigma)
     if bound_type == 'Alex':
-        sigma = np.random.randn(n_sigma) * 2
-        p_sigma = prior(sigma)
         bound = np.exp(
                     -1 / (m - n_Z - r)*
-                     (
-                        log_binomial_coefficient(m, n_Z) +
+                     (  log_binomial_coefficient(m, n_Z) +
                         log_binomial_coefficient(m - n_Z, r) +
                         np.log(1 / p_sigma) +
                         np.log(1 / (zeta(n_Z) * zeta(r) * delta))
                      )
                 )
+    if bound_type == 'Ben':
+        ini_bnd = np.exp(
+                    -1 / (m - n_Z - r)*
+                     (  log_binomial_coefficient(m, n_Z) +
+                        log_binomial_coefficient(m - n_Z, r) +
+                        np.log(1 / p_sigma) +
+                        np.log(1 / (zeta(n_Z) * zeta(r) * delta))
+                     )
+                )
+        maxx, best_c = 0, 0
+        bnd = []
+        for c in range(1,len(data)-n_Z):
+            wp = sum(data[:c])
+            ep = c - sum(data[:c])
+            wm = sum(data[c:-n_Z])
+            em = (m - n_Z - c) - sum(data[c:-n_Z])
+            if wp * ep * wm * em > 0:
+                bound = np.exp(
+                    -1 / (wp) *
+                    (log_binomial_coefficient(m, n_Z) +
+                     log_binomial_coefficient(m - c, em) +
+                     log_binomial_coefficient(c, ep) +
+                     (wm) * np.log(wm) +
+                     (em) * np.log(em) -
+                     (wm + em) * np.log(wm + em) +
+                     np.log(1 / p_sigma) +
+                     np.log(1 / (zeta(n_Z) * zeta(ep) * zeta(em) * delta))
+                     )
+                )
+                bnd.append(np.copy(bound))
+                if bound > maxx:
+                    maxx, best_c = np.copy(bound), c
+        print()
+        print(f"Alex's bound: {ini_bnd:.4f}")
+        print(f"Ben's bound: {maxx:.4f}")
+        print(f"Gain: {maxx-np.array(ini_bnd):.4f}")
+        print()
     elif bound_type == 'Mathieu':
         bound = 1 - (r / m + math.sqrt(c_2 * (d + log_binomial_coefficient(m, n_Z) - math.log(zeta(n_Z) * delta)) / m))
     return bound

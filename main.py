@@ -13,63 +13,119 @@ from datasets import *
 from utils import plot_hist
 from copy import copy
 import torch
+from sklearn.model_selection import ParameterGrid
 
-def deeprm(dataset = 'easy_gauss_lin',
-           seed = 0,
-           n = 1000,
-           m = 10,
-           d = 2,
-           train_split = 0.8,
-           meta_predictor = 'simplenet',
-           predictor = 'linear_classif',
-           kern_1_dim = [1000, 500, 10],
-           kern_2_dim = [1000, 500, 10],
-           modl_1_dim = [1000, 1000, 500, 2], # Last value: message size
-           modl_2_dim = [1000, 1000, 500, 10],
-           k = 2,
-           tau = 10,
-           init = 'kaiming_unif',
-           criterion = 'bce_loss',
-           start_lr = 1e-4,
-           pen_msg = 'l1',
-           pen_msg_coef = 0,#1e2,
-           patience = 5,
-           factor = 0.5,
-           tol = 1e-2,
-           early_stop = 20,
-           optimizer = 'adam',
-           scheduler = 'plateau',
-           n_epoch = 200,
-           batch_size = 50,
-           DEVICE = 'cpu',
-           bound_type = 'Mathieu',
-           vis = 5,
-           plot = 'acc'
+def deeprm(experiment_name = 'Test_5',
+           dataset = ['easy'], # easy, hard, moons
+           seed = [5,6,7,8,9],
+           n = [1000],
+           m = [10],
+           d = [2],
+           test_split = [0.25],
+           valid_split = [0.2],
+           meta_predictr = ['simplenet'],
+           #predictr = [['small_nn', [1]]],
+           predictr = [['linear_classif', []]],
+           kern_1_dim = [[1000, 10]],
+           kern_2_dim = [[1000, 10]],
+           modl_1_dim = [[1000, 1000, 4]], # Last value: message size
+           modl_2_dim = [[1000, 1000, 10]],
+           k = [4], # 0.01 # Either an integer (exact number of compression set), or float (threshold in Gumbel)
+           tau = [10],
+           init = ['kaiming_unif'],
+           criterion = ['bce_loss'],
+           start_lr = [1e-4, 1e-3, 1e-5],
+           pen_msg = ['l1'],
+           pen_msg_coef = [0],#1e2,
+           batch_size = [50],
+           patience = [5],
+           factor = [0.5],
+           tol = [1e-2],
+           early_stop = [20],
+           optimizer = ['adam'],
+           scheduler = ['plateau'],
+           n_epoch = [200],
+           DEVICE = ['cpu'],
+           bound_type = ['Alex'],
+           independent_food = [False],
+           vis = 0,
+           plot = None#'acc'
     ):
-    set_seed(seed)
-    if dataset == 'easy_gauss_lin':
-        data = data_gen(n, m, d, 'easy', True, False)
-    elif dataset == 'hard_gauss_lin':
-        data = data_gen(n, m, d, 'hard')
-    if meta_predictor == 'simplenet':
-        meta_pred = SimpleMetaNet(d, (kern_1_dim, kern_2_dim, modl_1_dim, modl_2_dim), d+1, m, d, k, tau, batch_size, init)
-    if predictor == 'linear_classif':
-        pred = lin_clas
-    if criterion == 'bce_loss':
-        crit = nn.BCELoss()
-    if pen_msg == 'l1':
-        penalty_msg = l1
-    if optimizer == 'adam':
-        opti = torch.optim.Adam(meta_pred.parameters(), lr=copy(start_lr))
-    if scheduler == 'plateau':
-        sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti,
-                                                           mode='max',
-                                                           factor=factor,
-                                                           patience=patience,
-                                                           threshold=tol,
-                                                           verbose=False)
-    hist = train(meta_pred, pred, data, train_split, opti, sched, tol, early_stop,
-                 n_epoch, batch_size, crit, penalty_msg, pen_msg_coef, vis, bound_type, DEVICE)
-    if plot in ['loss', 'acc']:
-        plot_hist(hist, modl_1_dim[-1]-m, plot)
+    param_grid = ParameterGrid([{'dataset': dataset,
+                                   'seed': seed,
+                                   'n': n,
+                                   'm': m,
+                                   'd': d,
+                                   'test_split': test_split,
+                                   'valid_split': valid_split,
+                                   'meta_predictor': meta_predictr,
+                                   'predictor': predictr,
+                                   'kern_1_dim': kern_1_dim,
+                                   'kern_2_dim': kern_2_dim,
+                                   'modl_1_dim': modl_1_dim,
+                                   'modl_2_dim': modl_2_dim,
+                                   'k': k,
+                                   'tau': tau,
+                                   'init': init,
+                                   'criterion': criterion,
+                                   'start_lr': start_lr,
+                                   'pen_msg': pen_msg,
+                                   'pen_msg_coef': pen_msg_coef,
+                                   'batch_size': batch_size,
+                                    'patience': patience,
+                                    'factor': factor,
+                                    'tol': tol,
+                                    'early_stop': early_stop,
+                                    'optimizer': optimizer,
+                                    'scheduler': scheduler,
+                                    'n_epoch': n_epoch,
+                                    'DEVICE': DEVICE,
+                                    'bound_type': bound_type,
+                                    'independent_food': independent_food}])
+    param_grid = [t for t in param_grid]
+    ordering = {d: i for i, d in enumerate(dataset)}
+    param_grid = sorted(param_grid, key=lambda d: ordering[d['dataset']])
+    n_tasks = len(param_grid)
+    for i, task_dict in enumerate(param_grid):
+        print(f"Launching task {i + 1}/{n_tasks} : {task_dict}\n")
+        if is_job_already_done(experiment_name, task_dict):
+            print("Already done; passing...\n")
+        else:
+            set_seed(task_dict['seed'])
+            data = data_gen(task_dict['n'], task_dict['m'], task_dict['d'], task_dict['dataset'], True, False)
+            pred = Predictor(task_dict['d'], task_dict['predictor'], task_dict['batch_size'])
+            output_dim = pred.num_param
+            set_seed(task_dict['seed'])
+            if task_dict['meta_predictor'] == 'simplenet':
+                meta_pred = SimpleMetaNet(task_dict['d'],
+                                            (task_dict['kern_1_dim'],
+                                                  task_dict['kern_2_dim'],
+                                                  task_dict['modl_1_dim'].copy(),
+                                                  task_dict['modl_2_dim'].copy()),
+                                          output_dim,
+                                          task_dict['m'],
+                                          task_dict['d'],
+                                          task_dict['k'],
+                                          task_dict['tau'],
+                                          task_dict['batch_size'],
+                                          task_dict['init'])
+
+            if task_dict['criterion'] == 'bce_loss':
+                crit = nn.BCELoss()
+            if task_dict['pen_msg'] == 'l1':
+                penalty_msg = l1
+            if task_dict['optimizer'] == 'adam':
+                opti = torch.optim.Adam(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
+            if task_dict['scheduler'] == 'plateau':
+                sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti,
+                                                                   mode='max',
+                                                                   factor=task_dict['factor'],
+                                                                   patience=task_dict['patience'],
+                                                                   threshold=task_dict['tol'],
+                                                                   verbose=False)
+            hist, best_epoch = train(meta_pred, pred, data, task_dict['test_split'], task_dict['valid_split'], opti, sched, task_dict['tol'], task_dict['early_stop'], task_dict['n_epoch'],
+                         task_dict['batch_size'], crit, penalty_msg, task_dict['pen_msg_coef'], vis, task_dict['bound_type'], task_dict['DEVICE'], task_dict['independent_food'])
+            write(experiment_name, task_dict, hist, best_epoch-1)
+            if plot in ['loss', 'acc']:
+                plot_hist(hist, task_dict['modl_1_dim'][-1]-m, plot)
 deeprm()
