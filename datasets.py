@@ -28,6 +28,9 @@ def gen(m, d, dif='easy', vis=False, shuffle=True):
         Tuple (X np.array
                y np.array)
     """
+    if dif == 'both':
+        rand = np.random.randint(2)
+        dif = rand * 'easy' + (1-rand) * 'moons'
     if dif in ['easy', 'hard']:
         mu = np.random.rand(d) * 10 - 5
         X = np.random.multivariate_normal(mean=mu, cov=np.eye(d), size=2 * m)
@@ -44,13 +47,13 @@ def gen(m, d, dif='easy', vis=False, shuffle=True):
         scale = np.random.randint(3,8)
         rotation = np.random.randint(1,360)
         origin = np.random.randint(-10,10, 2)
-        X = make_moons(n_samples=2 * m, shuffle=False, noise=0.05)[0] * scale + origin
+        X = make_moons(n_samples=2 * m, shuffle=False, noise=0.08)[0] * scale + origin
         for i in range(2*m):
             new_coord = rotate((0,0), X[i], math.radians(rotation))
             X[i, 0], X[i, 1] = new_coord[0], new_coord[1]
         y = np.ones(2 * m)
         y[:m] -= 1
-    if vis is True:
+    if vis > 0:
         plt.scatter(X[m:, 0], X[m:, 1], c='r')
         plt.scatter(X[:m, 0], X[:m, 1], c='b')
         plt.xlim(-20, 20)
@@ -80,6 +83,7 @@ def data_gen(n, m, d, dif, shuffle=True, vis=False):
     X, y = gen(m, d, dif, vis, shuffle)
     data = [[X, y]]
     for i in range(n - 1):
-        X, y = gen(m, d, dif, vis and i < 2, shuffle)
+        vis -= 1
+        X, y = gen(m, d, dif, vis, shuffle)
         data.append([X, y])
     return data

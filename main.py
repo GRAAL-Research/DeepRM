@@ -1,6 +1,4 @@
-# Copyright 2023 Benjamin Leblanc, Alexandre Drouin, Mathieu Bazinet, Pascal Germain, Valentina Zantedeschi
-import matplotlib.pyplot as plt
-
+# Copyright 2023 Benjamin Leblanc, Alexandre Drouin, Mathieu Bazinet, Pascal Germain
 # This file is part of the Deep Reconstruction Machine (DeepRM) work.
 
 # DeepRM is free software: you can redistribute it and/or modify
@@ -14,43 +12,49 @@ from utils import plot_hist
 from copy import copy
 import torch
 from sklearn.model_selection import ParameterGrid
+import wandb
 
-def deeprm(experiment_name = 'Test_5',
-           dataset = ['easy'], # easy, hard, moons
-           seed = [5,6,7,8,9],
-           n = [1000],
-           m = [10],
+def deeprm(experiment_name = 'Test_wandb_3',
+           dataset = ['moons'], # easy, hard, moons
+           seed = [7],
+           n = [4000],
+           m = [60],
            d = [2],
            test_split = [0.25],
            valid_split = [0.2],
            meta_predictr = ['simplenet'],
-           #predictr = [['small_nn', [1]]],
-           predictr = [['linear_classif', []]],
-           kern_1_dim = [[1000, 10]],
-           kern_2_dim = [[1000, 10]],
-           modl_1_dim = [[1000, 1000, 4]], # Last value: message size
-           modl_2_dim = [[1000, 1000, 10]],
-           k = [4], # 0.01 # Either an integer (exact number of compression set), or float (threshold in Gumbel)
-           tau = [10],
+           predictr = [['small_nn', [3]],
+                       ['small_nn', [10]],
+                       #['linear_classif', []],
+                       ],
+           kern_1_dim = [[1000, 1000, 50]],
+           kern_2_dim = [[1000, 1000, 80]],
+           modl_1_dim = [[1000, 1000, 1000, 5]], # Last value: message size
+           modl_2_dim = [[1000, 1000, 1000, 80]],
+           k = [10,8,6,5,4,3], # Either an integer (exact number of compression set), or float (threshold in Gumbel)
+           tau = [1], # Gumbel parameter
            init = ['kaiming_unif'],
            criterion = ['bce_loss'],
-           start_lr = [1e-4, 1e-3, 1e-5],
+           start_lr = [1e-4, 1e-5],
            pen_msg = ['l1'],
            pen_msg_coef = [0],#1e2,
-           batch_size = [50],
-           patience = [5],
+           batch_size = [200],
+           patience = [100],
            factor = [0.5],
            tol = [1e-2],
-           early_stop = [20],
+           early_stop = [100],
            optimizer = ['adam'],
            scheduler = ['plateau'],
-           n_epoch = [200],
-           DEVICE = ['cpu'],
+           n_epoch = [1600],
+           DEVICE = ['gpu'], # 'gpu' or 'cpu'
            bound_type = ['Alex'],
            independent_food = [False],
-           vis = 0,
-           plot = None#'acc'
+           vis = 16,
+           vis_loss_acc = True,
+           plot = None,
+           weightsbiases = ['deeprm2024', 'deeprm3']
     ):
+    weightsbiases.append(1)
     param_grid = ParameterGrid([{'dataset': dataset,
                                    'seed': seed,
                                    'n': n,
@@ -92,7 +96,7 @@ def deeprm(experiment_name = 'Test_5',
             print("Already done; passing...\n")
         else:
             set_seed(task_dict['seed'])
-            data = data_gen(task_dict['n'], task_dict['m'], task_dict['d'], task_dict['dataset'], True, False)
+            data = data_gen(task_dict['n'], task_dict['m'], task_dict['d'], task_dict['dataset'], True, min(0,copy(vis)))
             pred = Predictor(task_dict['d'], task_dict['predictor'], task_dict['batch_size'])
             output_dim = pred.num_param
             set_seed(task_dict['seed'])
@@ -108,14 +112,17 @@ def deeprm(experiment_name = 'Test_5',
                                           task_dict['k'],
                                           task_dict['tau'],
                                           task_dict['batch_size'],
-                                          task_dict['init'])
+                                          task_dict['init'],
+                                          task_dict['DEVICE'])
 
             if task_dict['criterion'] == 'bce_loss':
-                crit = nn.BCELoss()
+                crit = nn.BCELoss(reduction='none')
             if task_dict['pen_msg'] == 'l1':
                 penalty_msg = l1
             if task_dict['optimizer'] == 'adam':
                 opti = torch.optim.Adam(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
+            elif task_dict['optimizer'] == 'rmsprop':
+                opti = torch.optim.RMSprop(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
             if task_dict['scheduler'] == 'plateau':
                 sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti,
                                                                    mode='max',
@@ -123,9 +130,43 @@ def deeprm(experiment_name = 'Test_5',
                                                                    patience=task_dict['patience'],
                                                                    threshold=task_dict['tol'],
                                                                    verbose=False)
-            hist, best_epoch = train(meta_pred, pred, data, task_dict['test_split'], task_dict['valid_split'], opti, sched, task_dict['tol'], task_dict['early_stop'], task_dict['n_epoch'],
-                         task_dict['batch_size'], crit, penalty_msg, task_dict['pen_msg_coef'], vis, task_dict['bound_type'], task_dict['DEVICE'], task_dict['independent_food'])
+            wandb_dico = {
+                            'dataset': task_dict['dataset'],
+                            'seed': task_dict['seed'],
+                            'n': task_dict['n'],
+                            'm': task_dict['m'],
+                            'd': task_dict['d'],
+                            'test_split': task_dict['test_split'],
+                            'valid_split': task_dict['valid_split'],
+                            'meta_predictor': task_dict['meta_predictor'],
+                            'predictor': task_dict['predictor'],
+                            'kern_1_dim': task_dict['kern_1_dim'],
+                            'kern_2_dim': task_dict['kern_2_dim'],
+                            'modl_1_dim': task_dict['modl_1_dim'],
+                            'modl_2_dim': task_dict['modl_2_dim'],
+                            'k': task_dict['k'],
+                            'tau': task_dict['tau'],
+                            'init': task_dict['init'],
+                            'criterion': task_dict['criterion'],
+                            'start_lr': task_dict['start_lr'],
+                            'pen_msg': task_dict['pen_msg'],
+                            'pen_msg_coef': task_dict['pen_msg_coef'],
+                            'batch_size': task_dict['batch_size'],
+                            'patience': task_dict['patience'],
+                            'factor': task_dict['factor'],
+                            'tol': task_dict['tol'],
+                            'early_stop': task_dict['early_stop'],
+                            'optimizer': task_dict['optimizer'],
+                            'scheduler': task_dict['scheduler'],
+                            'n_epoch': task_dict['n_epoch'],
+                            'DEVICE': task_dict['DEVICE'],
+                            'bound_type': task_dict['bound_type'],
+                            'independent_food': task_dict['independent_food']
+                        }
+            weightsbiases[-1] = wandb_dico
+            hist, best_epoch = train(meta_pred, pred, data, task_dict['dataset'], task_dict['test_split'], task_dict['valid_split'], opti, sched, task_dict['tol'], task_dict['early_stop'], task_dict['n_epoch'],
+                         task_dict['batch_size'], crit, penalty_msg, task_dict['pen_msg_coef'], vis, vis_loss_acc, task_dict['bound_type'], task_dict['DEVICE'], task_dict['independent_food'], weightsbiases)
             write(experiment_name, task_dict, hist, best_epoch-1)
             if plot in ['loss', 'acc']:
-                plot_hist(hist, task_dict['modl_1_dim'][-1]-m, plot)
+                plot_hist(hist, task_dict['modl_1_dim'][-1]-task_dict['m'], plot)
 deeprm()

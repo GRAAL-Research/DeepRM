@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import ast
 
-with open('Test_4.txt', 'r') as det_:
+with open('Test_10.txt', 'r') as det_:
     det = [line.strip().split('\t') for line in det_]
 det_.close()
 det = np.array(det)
@@ -13,12 +13,15 @@ df = df.astype({'train_acc': float,
                 'valid_acc': float,
                 'test_acc': float})
 
-df_2 = df.groupby(by=['k', 'modl_1_dim', 'start_lr']).mean(numeric_only=True)
-df_2 = df_2.reset_index()
+df_2 = df.groupby(by=['k', 'predictor', 'modl_1_dim', 'start_lr', 'batch_size']).mean(numeric_only=True)
+#df_2 = df_2.reset_index()
+print(df_2)
+1/0
 df_2 = df_2.groupby(by=['k', 'modl_1_dim']).max(numeric_only=True)
 df_2 = df_2.reset_index()
 arr = np.array(df_2[['k', 'modl_1_dim', 'valid_acc']])
 arr = np.array(df_2[['modl_1_dim']])
+
 lis = []
 for i in range(len(arr)):
     lis.append(ast.literal_eval(arr[i,0])[-1])

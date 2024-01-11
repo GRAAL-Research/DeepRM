@@ -59,7 +59,7 @@ def bnd(m,n_Z,r,p_sigma,delta,a):
          np.log(1 / (zeta(n_Z) * zeta(r) * delta))
          ))
 
-def compute_bound(bound_type, n_Z, n_sigma, m, r, c_2, d, data, delta):
+def compute_bound(bound_type, n_Z, n_sigma, m, r, c_2, d, acc, delta):
     """
     Sample compression bound of Marchand and someone else
 
@@ -91,10 +91,12 @@ def compute_bound(bound_type, n_Z, n_sigma, m, r, c_2, d, data, delta):
                      (  log_binomial_coefficient(m, n_Z) +
                         log_binomial_coefficient(m - n_Z, r) +
                         np.log(1 / p_sigma) +
-                        np.log(1 / (zeta(n_Z) * zeta(r) * delta))
+                        np.log(1 / zeta(n_Z)) +
+                        np.log(1 / zeta(r)) +
+                        np.log(1 / delta)
                      )
                 )
-    if bound_type == 'Ben':
+    if bound_type == 'Ben2':
         ini_bnd = np.exp(
                     -1 / (m - n_Z - r)*
                      (  log_binomial_coefficient(m, n_Z) +
@@ -105,32 +107,44 @@ def compute_bound(bound_type, n_Z, n_sigma, m, r, c_2, d, data, delta):
                 )
         maxx, best_c = 0, 0
         bnd = []
-        for c in range(1,len(data)-n_Z):
-            wp = sum(data[:c])
-            ep = c - sum(data[:c])
-            wm = sum(data[c:-n_Z])
-            em = (m - n_Z - c) - sum(data[c:-n_Z])
-            if wp * ep * wm * em > 0:
-                bound = np.exp(
-                    -1 / (wp) *
-                    (log_binomial_coefficient(m, n_Z) +
-                     log_binomial_coefficient(m - c, em) +
-                     log_binomial_coefficient(c, ep) +
-                     (wm) * np.log(wm) +
-                     (em) * np.log(em) -
-                     (wm + em) * np.log(wm + em) +
-                     np.log(1 / p_sigma) +
-                     np.log(1 / (zeta(n_Z) * zeta(ep) * zeta(em) * delta))
-                     )
-                )
-                bnd.append(np.copy(bound))
-                if bound > maxx:
-                    maxx, best_c = np.copy(bound), c
+        for c in range(1,int((m - n_Z - r).item())):
+            bound = np.exp(
+                -1 / (m - n_Z - r - c) *
+                (log_binomial_coefficient(m, n_Z) +
+                 log_binomial_coefficient(m - n_Z, r) +
+                 r * np.log(r / (r + c)) +
+                 c * np.log(c / (r + c)) +
+                 np.log(1 / p_sigma) +
+                 np.log(1 / (zeta(n_Z) * zeta(r) * delta))
+                 )
+            )
+            bnd.append(np.copy(bound))
+            if np.copy(bound) > maxx:
+                maxx, best_c = np.copy(bound), c
         print()
         print(f"Alex's bound: {ini_bnd:.4f}")
         print(f"Ben's bound: {maxx:.4f}")
         print(f"Gain: {maxx-np.array(ini_bnd):.4f}")
         print()
+        bound = ini_bnd #maxx
+        plt.figure().clear()
+        plt.close()
+        plt.cla()
+        plt.clf()
+        plt.plot(bnd)
+        plt.hlines(ini_bnd, 1, int((m - n_Z - r).item()), linestyles='solid', colors='orange')
+        plt.hlines((m - n_Z - r) / (m - n_Z), 1, int((m - n_Z - r).item()), linestyles='solid', colors='green')
+        plt.hlines(acc[0].item(), 1, int((m - n_Z - r).item()), linestyles='dashed', colors='green')
+        plt.hlines(acc[1].item(), 1, int((m - n_Z - r).item()), linestyles='dotted', colors='green')
+        plt.vlines(r/(1-maxx)-r, 0, 0.8, colors='red')
+        plt.legend(['Ben bound', 'Marchand Sokolova bound', 'Training acc', 'Validation acc', 'Test acc', 'Best'])
+        plt.xlabel('c')
+        plt.ylabel('Accuracy / bound value')
+        plt.savefig("figures/bnd_Ben.png")
+        plt.figure().clear()
+        plt.close()
+        plt.cla()
+        plt.clf()
     elif bound_type == 'Mathieu':
         bound = 1 - (r / m + math.sqrt(c_2 * (d + log_binomial_coefficient(m, n_Z) - math.log(zeta(n_Z) * delta)) / m))
     return bound
