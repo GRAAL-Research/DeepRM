@@ -1,6 +1,9 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.datasets import make_moons
+import torch
+import torchvision
+import torchvision.transforms as transforms
 import math
 
 def rotate(origin, point, angle):
@@ -75,8 +78,8 @@ def data_gen(n, m, d, dif, shuffle=True, vis=False):
         m (int): Number of examples per dataset
         d (int): Input dimension of each dataset
     return:
-        Tuple of tuples (X 1-dim np.array of length 2m
-                         y np.array of dims 2m x d)
+        Tuple of tuples (X np.array of dims 2m x d
+                         y 1-dim np.array of length 2m)
     """
     assert d == 2 or vis == False
     m = int(m/2)
@@ -87,3 +90,25 @@ def data_gen(n, m, d, dif, shuffle=True, vis=False):
         X, y = gen(m, d, dif, vis, shuffle)
         data.append([X, y])
     return data
+
+def load_mnist():
+    transform = transforms.Compose(
+        [transforms.ToTensor()])
+    trainset = torchvision.datasets.MNIST(root='./datasets', train=True,
+                                            download=True, transform=transform)
+    testset = torchvision.datasets.MNIST(root='./datasets', train=False,
+                                           download=True, transform=transform)
+    trainset = torch.hstack((trainset.data.reshape((60000, 28 * 28)), trainset.targets.reshape(60000, -1)))
+    testset = torch.hstack((testset.data.reshape((10000, 28 * 28)), testset.targets.reshape(10000, -1)))
+    dataset = torch.vstack((trainset, testset))
+    data = []
+    for i in range(10):
+        for j in range(10):
+            if i != j:
+                X_1 = dataset[dataset[:, -1] == i, :-1]
+                X_2 = dataset[dataset[:, -1] == j, :-1]
+                X = torch.vstack((X_1[:6313], X_2[:6313]))
+                y = torch.zeros((6313*2))
+                y[6313:] += 1
+                data.append([torch.hstack((X, torch.reshape(y, (-1,1)))), y])
+    return data # Tuple de tuple (2m x d, 2m)

@@ -11,18 +11,19 @@ from datasets import *
 from utils import plot_hist
 from copy import copy
 import torch
+import torch.nn as nn
 from sklearn.model_selection import ParameterGrid
 import wandb
 
 def deeprm(experiment_name = 'Test_wandb_3',
-           dataset = ['moons'], # easy, hard, moons
+           dataset = ['mnist'], # easy, hard, moons, mnist
            seed = [7],
-           n = [4000],
-           m = [60],
-           d = [2],
-           test_split = [0.25],
-           valid_split = [0.2],
-           meta_predictr = ['simplenet'],
+           n = [4000],  # Total number of datasets
+           m = [200],   # Number of example per dataset
+           d = [2],     # Dimension of each example
+           splits = [[0.55, 0.20, 0.25]], # Train, valid and test proportion of the data
+           train_splits = [[0.9, 30]], # Proportion of meta_learner food VS predictor food; number of examples chosen
+           meta_predictr = ['simplenet'],                   # per batch for the meta-learner to learn on
            predictr = [['small_nn', [3]],
                        ['small_nn', [10]],
                        #['linear_classif', []],
@@ -38,7 +39,7 @@ def deeprm(experiment_name = 'Test_wandb_3',
            start_lr = [1e-4, 1e-5],
            pen_msg = ['l1'],
            pen_msg_coef = [0],#1e2,
-           batch_size = [200],
+           batch_size = [2],
            patience = [100],
            factor = [0.5],
            tol = [1e-2],
@@ -46,13 +47,13 @@ def deeprm(experiment_name = 'Test_wandb_3',
            optimizer = ['adam'],
            scheduler = ['plateau'],
            n_epoch = [1600],
-           DEVICE = ['gpu'], # 'gpu' or 'cpu'
+           DEVICE = ['cpu'], # 'gpu' or 'cpu'
            bound_type = ['Alex'],
-           independent_food = [False],
+           independent_food = [True],
            vis = 16,
            vis_loss_acc = True,
            plot = None,
-           weightsbiases = ['deeprm2024', 'deeprm3']
+           weightsbiases = [] #['graal_deeprm2024', 'deeprm'] # []
     ):
     weightsbiases.append(1)
     param_grid = ParameterGrid([{'dataset': dataset,
@@ -60,8 +61,8 @@ def deeprm(experiment_name = 'Test_wandb_3',
                                    'n': n,
                                    'm': m,
                                    'd': d,
-                                   'test_split': test_split,
-                                   'valid_split': valid_split,
+                                   'splits': splits,
+                                   'train_splits': train_splits,
                                    'meta_predictor': meta_predictr,
                                    'predictor': predictr,
                                    'kern_1_dim': kern_1_dim,
@@ -91,23 +92,34 @@ def deeprm(experiment_name = 'Test_wandb_3',
     param_grid = sorted(param_grid, key=lambda d: ordering[d['dataset']])
     n_tasks = len(param_grid)
     for i, task_dict in enumerate(param_grid):
+        if task_dict['dataset'] in ['mnist']:
+            task_dict['n'], task_dict['m'], task_dict['d'] = 90, 6313 * 2, 784
+        if not task_dict['independent_food']:
+            task_dict['train_splits'] = []
         print(f"Launching task {i + 1}/{n_tasks} : {task_dict}\n")
         if is_job_already_done(experiment_name, task_dict):
             print("Already done; passing...\n")
         else:
             set_seed(task_dict['seed'])
-            data = data_gen(task_dict['n'], task_dict['m'], task_dict['d'], task_dict['dataset'], True, min(0,copy(vis)))
+            if task_dict['dataset'] in ['moons', 'easy', 'hard']:
+                data = data_gen(task_dict['n'], task_dict['m'], task_dict['d'], task_dict['dataset'], True, min(0,copy(vis)))
+            elif task_dict['dataset'] in ['mnist']:
+                data = load_mnist()
             pred = Predictor(task_dict['d'], task_dict['predictor'], task_dict['batch_size'])
             output_dim = pred.num_param
             set_seed(task_dict['seed'])
             if task_dict['meta_predictor'] == 'simplenet':
+                if task_dict['independent_food']:
+                    di = task_dict['train_splits'][-1]
+                else:
+                    di = task_dict['m']
                 meta_pred = SimpleMetaNet(task_dict['d'],
                                             (task_dict['kern_1_dim'],
                                                   task_dict['kern_2_dim'],
                                                   task_dict['modl_1_dim'].copy(),
                                                   task_dict['modl_2_dim'].copy()),
                                           output_dim,
-                                          task_dict['m'],
+                                          di,
                                           task_dict['d'],
                                           task_dict['k'],
                                           task_dict['tau'],
@@ -136,8 +148,8 @@ def deeprm(experiment_name = 'Test_wandb_3',
                             'n': task_dict['n'],
                             'm': task_dict['m'],
                             'd': task_dict['d'],
-                            'test_split': task_dict['test_split'],
-                            'valid_split': task_dict['valid_split'],
+                            'splits': task_dict['splits'],
+                            'train_splits': task_dict['train_splits'],
                             'meta_predictor': task_dict['meta_predictor'],
                             'predictor': task_dict['predictor'],
                             'kern_1_dim': task_dict['kern_1_dim'],
@@ -164,7 +176,7 @@ def deeprm(experiment_name = 'Test_wandb_3',
                             'independent_food': task_dict['independent_food']
                         }
             weightsbiases[-1] = wandb_dico
-            hist, best_epoch = train(meta_pred, pred, data, task_dict['dataset'], task_dict['test_split'], task_dict['valid_split'], opti, sched, task_dict['tol'], task_dict['early_stop'], task_dict['n_epoch'],
+            hist, best_epoch = train(meta_pred, pred, data, task_dict['dataset'], task_dict['splits'], task_dict['train_splits'], opti, sched, task_dict['tol'], task_dict['early_stop'], task_dict['n_epoch'],
                          task_dict['batch_size'], crit, penalty_msg, task_dict['pen_msg_coef'], vis, vis_loss_acc, task_dict['bound_type'], task_dict['DEVICE'], task_dict['independent_food'], weightsbiases)
             write(experiment_name, task_dict, hist, best_epoch-1)
             if plot in ['loss', 'acc']:
