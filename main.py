@@ -16,8 +16,8 @@ from sklearn.model_selection import ParameterGrid
 import wandb
 
 def deeprm(experiment_name = 'Test_wandb_3',
-           dataset = ['mnist'], # easy, hard, moons, mnist
-           seed = [7],
+           dataset = ['moons'], # easy, hard, moons, mnist
+           seed = [8,9],
            n = [4000],  # Total number of datasets
            m = [200],   # Number of example per dataset
            d = [2],     # Dimension of each example
@@ -30,16 +30,18 @@ def deeprm(experiment_name = 'Test_wandb_3',
                        ],
            kern_1_dim = [[1000, 1000, 50]],
            kern_2_dim = [[1000, 1000, 80]],
-           modl_1_dim = [[1000, 1000, 1000, 5]], # Last value: message size
+           modl_1_dim = [[1000, 1000, 1000, 1],
+                         [1000, 1000, 1000, 1],
+                         [1000, 1000, 1000, 2]], # Last value: message size
            modl_2_dim = [[1000, 1000, 1000, 80]],
-           k = [10,8,6,5,4,3], # Either an integer (exact number of compression set), or float (threshold in Gumbel)
+           k = [6], # Either an integer (exact number of compression set), or float (threshold in Gumbel)
            tau = [1], # Gumbel parameter
            init = ['kaiming_unif'],
            criterion = ['bce_loss'],
-           start_lr = [1e-4, 1e-5],
+           start_lr = [1e-4],
            pen_msg = ['l1'],
            pen_msg_coef = [0],#1e2,
-           batch_size = [2],
+           batch_size = [200],
            patience = [100],
            factor = [0.5],
            tol = [1e-2],
@@ -49,7 +51,7 @@ def deeprm(experiment_name = 'Test_wandb_3',
            n_epoch = [1600],
            DEVICE = ['cpu'], # 'gpu' or 'cpu'
            bound_type = ['Alex'],
-           independent_food = [True],
+           independent_food = [False],
            vis = 16,
            vis_loss_acc = True,
            plot = None,

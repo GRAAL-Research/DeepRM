@@ -41,14 +41,15 @@ class SimpleMetaNet(nn.Module):
         assert self.kern_2_dim[-1] == self.modl_2_dim[-1]  # Since there is a skip connection, must be of same size
         self.output_dim_1 = self.modl_1_dim[-1] + self.m  # So that input size is (message size + mask size)
         self.output_dim_2 = output_dim
-        self.modl_2_dim[-1] = self.kern_2_dim[-1] + self.modl_1_dim.copy()[-1]
+        self.modl_2_dim[-1] = self.output_dim_1 #self.kern_2_dim[-1] + self.modl_1_dim.copy()[-1]
         self.modl_1_dim[-1] = self.kern_1_dim[-1]
         self.attention_dim = self.modl_1_dim
 
         self.kern_1 = relu_fc_layer([input_dim] + self.kern_1_dim, self.device)  # The different layers are instanciated
         self.kern_2 = relu_fc_layer([input_dim] + self.kern_2_dim, self.device)
         self.modl_1 = relu_fc_layer([self.kern_1_dim[-1]] + self.modl_1_dim, self.device)
-        self.modl_2 = relu_fc_layer([self.output_dim_1 - self.m + self.kern_2_dim[-1]] + self.modl_2_dim, self.device, last=True)
+        #self.modl_2 = relu_fc_layer([self.output_dim_1 - self.m + self.kern_2_dim[-1]] + self.modl_2_dim, self.device, last=True)
+        self.modl_2 = relu_fc_layer([self.output_dim_1] + self.modl_2_dim, self.device, last=True)
         #self.attention = attention_layer(self.attention_dim[:-1], self.attention_dim[-1], self.device)
         self.last_l_1 = relu_fc_layer([self.modl_1_dim[-1]] + [self.output_dim_1], self.device)
         self.last_l_2 = relu_fc_layer([self.modl_2_dim[-1]] + [self.output_dim_2], self.device)
@@ -98,15 +99,15 @@ class SimpleMetaNet(nn.Module):
         self.msg = x_t[:, self.m:]
 
         ## Second KME ##
-        x_t_2 = torch.zeros((self.batch_size, self.kern_2_dim[-1])).to(torch.device(self.device))
-        for i in range(len(x)):  # For each dataset ...
-            x_i = torch.zeros((self.m, self.d)).to(torch.device(self.device))
-            for j in range(self.m):
-                x_i[j] = x[i][j, :-1] * x_t[i, j]
-            for layer in self.kern_2:
-                x_i = layer(x_i)
-            x_t_2[i] = torch.mean(x_i * torch.reshape(x[i][:, -1], (-1, 1)), dim=0)  # ... A compression is done
-        x_t = torch.hstack((x_t_2, x_t[:, self.m:]))  # Both the compression set (after going through the 2nd KME) and
+        #x_t_2 = torch.zeros((self.batch_size, self.kern_2_dim[-1])).to(torch.device(self.device))
+        #for i in range(len(x)):  # For each dataset ...
+        #    x_i = torch.zeros((self.m, self.d)).to(torch.device(self.device))
+        #    for j in range(self.m):
+        #        x_i[j] = x[i][j, :-1] * x_t[i, j]
+        #    for layer in self.kern_2:
+        #        x_i = layer(x_i)
+        #    x_t_2[i] = torch.mean(x_i * torch.reshape(x[i][:, -1], (-1, 1)), dim=0)  # ... A compression is done
+        #x_t = torch.hstack((x_t_2, x_t[:, self.m:]))  # Both the compression set (after going through the 2nd KME) and
         #     the message are given to the second module as inputs.
 
         ## Second module ##
