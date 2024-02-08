@@ -17,28 +17,31 @@ import wandb
 
 def deeprm(experiment_name = 'Test_wandb_3',
            dataset = ['moons'], # easy, hard, moons, mnist
-           seed = [8,9],
+           seed = [7,8,9],
            n = [4000],  # Total number of datasets
-           m = [200],   # Number of example per dataset
+           m = [60],   # Number of example per dataset
            d = [2],     # Dimension of each example
            splits = [[0.55, 0.20, 0.25]], # Train, valid and test proportion of the data
-           train_splits = [[0.9, 30]], # Proportion of meta_learner food VS predictor food; number of examples chosen
+           train_splits = [[0.9, 10]], # Proportion of meta_learner food VS predictor food; number of examples chosen
            meta_predictr = ['simplenet'],                   # per batch for the meta-learner to learn on
            predictr = [['small_nn', [3]],
-                       ['small_nn', [10]],
+                       ['small_nn', [7]]
                        #['linear_classif', []],
                        ],
-           kern_1_dim = [[1000, 1000, 50]],
-           kern_2_dim = [[1000, 1000, 80]],
-           modl_1_dim = [[1000, 1000, 1000, 1],
-                         [1000, 1000, 1000, 1],
-                         [1000, 1000, 1000, 2]], # Last value: message size
-           modl_2_dim = [[1000, 1000, 1000, 80]],
-           k = [6], # Either an integer (exact number of compression set), or float (threshold in Gumbel)
-           tau = [1], # Gumbel parameter
+           kme_1_dim = [[200, 20]],
+           kme_2_dim = [[200, 30]],
+           modl_1_dim = [[100, 40]],
+           modl_2_dim = [[100, 40]],
+           modl_3_dim = [[200, 200, 0],
+                         [200, 200, 2],
+                         [200, 200, 5],
+                         [200, 200, 10]], # Last value: message size
+           modl_4_dim = [[200, 200, 30]],
+           k = [0,2,4,6,8], # Either an integer (exact number of compression set), or float (threshold in Gumbel)
+           tau = [1], # Temperature parameter (Gumbel)
            init = ['kaiming_unif'],
            criterion = ['bce_loss'],
-           start_lr = [1e-4],
+           start_lr = [1e-3],
            pen_msg = ['l1'],
            pen_msg_coef = [0],#1e2,
            batch_size = [200],
@@ -55,7 +58,7 @@ def deeprm(experiment_name = 'Test_wandb_3',
            vis = 16,
            vis_loss_acc = True,
            plot = None,
-           weightsbiases = [] #['graal_deeprm2024', 'deeprm'] # []
+           weightsbiases = ['graal_deeprm2024', 'deeprm2'] # []
     ):
     weightsbiases.append(1)
     param_grid = ParameterGrid([{'dataset': dataset,
@@ -67,10 +70,12 @@ def deeprm(experiment_name = 'Test_wandb_3',
                                    'train_splits': train_splits,
                                    'meta_predictor': meta_predictr,
                                    'predictor': predictr,
-                                   'kern_1_dim': kern_1_dim,
-                                   'kern_2_dim': kern_2_dim,
+                                   'kme_1_dim': kme_1_dim,
+                                   'kme_2_dim': kme_2_dim,
                                    'modl_1_dim': modl_1_dim,
                                    'modl_2_dim': modl_2_dim,
+                                   'modl_3_dim': modl_3_dim,
+                                   'modl_4_dim': modl_4_dim,
                                    'k': k,
                                    'tau': tau,
                                    'init': init,
@@ -101,6 +106,8 @@ def deeprm(experiment_name = 'Test_wandb_3',
         print(f"Launching task {i + 1}/{n_tasks} : {task_dict}\n")
         if is_job_already_done(experiment_name, task_dict):
             print("Already done; passing...\n")
+        elif task_dict['k'] == task_dict['modl_3_dim'][-1] == 0:
+            print("DeepRM is opac!...\n")
         else:
             set_seed(task_dict['seed'])
             if task_dict['dataset'] in ['moons', 'easy', 'hard']:
@@ -116,10 +123,12 @@ def deeprm(experiment_name = 'Test_wandb_3',
                 else:
                     di = task_dict['m']
                 meta_pred = SimpleMetaNet(task_dict['d'],
-                                            (task_dict['kern_1_dim'],
-                                                  task_dict['kern_2_dim'],
+                                            (task_dict['kme_1_dim'],
+                                                  task_dict['kme_2_dim'],
                                                   task_dict['modl_1_dim'].copy(),
-                                                  task_dict['modl_2_dim'].copy()),
+                                                  task_dict['modl_2_dim'].copy(),
+                                                  task_dict['modl_3_dim'].copy(),
+                                                  task_dict['modl_4_dim'].copy()),
                                           output_dim,
                                           di,
                                           task_dict['d'],
@@ -154,10 +163,12 @@ def deeprm(experiment_name = 'Test_wandb_3',
                             'train_splits': task_dict['train_splits'],
                             'meta_predictor': task_dict['meta_predictor'],
                             'predictor': task_dict['predictor'],
-                            'kern_1_dim': task_dict['kern_1_dim'],
-                            'kern_2_dim': task_dict['kern_2_dim'],
+                            'kme_1_dim': task_dict['kme_1_dim'],
+                            'kme_2_dim': task_dict['kme_2_dim'],
                             'modl_1_dim': task_dict['modl_1_dim'],
                             'modl_2_dim': task_dict['modl_2_dim'],
+                            'modl_3_dim': task_dict['modl_3_dim'],
+                            'modl_4_dim': task_dict['modl_4_dim'],
                             'k': task_dict['k'],
                             'tau': task_dict['tau'],
                             'init': task_dict['init'],
