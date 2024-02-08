@@ -106,7 +106,7 @@ class SimpleMetaNet(nn.Module):
                 x_2 = layer(x_2)
             x_2 = torch.mean(x_2 * torch.reshape(x[:, :, -1], (self.batch_size, -1, 1)), dim=1)  # ... A compression is done
         else:
-            x_2 = torch.zeros((self.batch_size, self.kern_1_dim[-1]))
+            x_2 = torch.zeros((self.batch_size, self.kern_1_dim[-1])).to(torch.device(self.device))
 
         ## Third module ##
         x_t = x_1 - x_2
@@ -124,7 +124,7 @@ class SimpleMetaNet(nn.Module):
                 x_1 = layer(x_1)
             x_1 = torch.mean(x_1 * torch.reshape(x[:, :, -1], (self.batch_size, -1, 1)), dim=1)  # ... A compression is done
         else:
-            x_1 = torch.zeros((self.batch_size, self.kern_2_dim[-1]))
+            x_1 = torch.zeros((self.batch_size, self.kern_2_dim[-1])).to(torch.device(self.device))
 
         ## Fourth module ##
         x_2 = torch.hstack((x_1, x_t))
@@ -377,7 +377,7 @@ def train(meta_pred, pred, data, dataset, splits, train_splits, optimizer, sched
         wandb.login(key='b7d84000aed68a9db76819fa4935778c47f0b374')
         wandb.init(
             name=str(weightsbiases[-1]['start_lr']) + '_' + str(weightsbiases[-1]['optimizer']) + '_' + \
-                 str(weightsbiases[-1]['predictor'][-1]) + '_' + str(weightsbiases[-1]['modl_1_dim'][-1]) + '_' + \
+                 str(weightsbiases[-1]['predictor'][-1]) + '_' + str(weightsbiases[-1]['modl_3_dim'][-1]) + '_' + \
                  str(weightsbiases[-1]['k']) + '_' + str(weightsbiases[-1]['seed']),
             project=weightsbiases[1],
             config=weightsbiases[2]

@@ -41,7 +41,7 @@ def deeprm(experiment_name = 'Test_wandb_3',
            tau = [1], # Temperature parameter (Gumbel)
            init = ['kaiming_unif'],
            criterion = ['bce_loss'],
-           start_lr = [1e-3],
+           start_lr = [1e-3, 1e-4],
            pen_msg = ['l1'],
            pen_msg_coef = [0],#1e2,
            batch_size = [200],
@@ -107,7 +107,7 @@ def deeprm(experiment_name = 'Test_wandb_3',
         if is_job_already_done(experiment_name, task_dict):
             print("Already done; passing...\n")
         elif task_dict['k'] == task_dict['modl_3_dim'][-1] == 0:
-            print("DeepRM is opac!...\n")
+            print("DeepRM is opaque!...\n")
         else:
             set_seed(task_dict['seed'])
             if task_dict['dataset'] in ['moons', 'easy', 'hard']:
