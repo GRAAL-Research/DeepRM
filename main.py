@@ -17,9 +17,9 @@ import wandb
 
 def deeprm(experiment_name = 'Test_wandb_3',
            dataset = ['moons'], # easy, hard, moons, mnist
-           seed = [7,8,9],
+           seed = [7,8],
            n = [4000],  # Total number of datasets
-           m = [60],   # Number of example per dataset
+           m = [6],   # Number of example per dataset
            d = [2],     # Dimension of each example
            splits = [[0.55, 0.20, 0.25]], # Train, valid and test proportion of the data
            train_splits = [[0.9, 10]], # Proportion of meta_learner food VS predictor food; number of examples chosen
@@ -28,17 +28,14 @@ def deeprm(experiment_name = 'Test_wandb_3',
                        ['small_nn', [7]]
                        #['linear_classif', []],
                        ],
-           kme_1_dim = [[200, 20]],
-           kme_2_dim = [[200, 30]],
+           kme_1_dim = [[100, 20]],
+           kme_2_dim = [[100, 30]],
            modl_1_dim = [[100, 40]],
            modl_2_dim = [[100, 40]],
-           modl_3_dim = [[200, 200, 0],
-                         [200, 200, 2],
-                         [200, 200, 5],
-                         [200, 200, 10]], # Last value: message size
-           modl_4_dim = [[200, 200, 30]],
-           k = [0,2,4,6,8], # Either an integer (exact number of compression set), or float (threshold in Gumbel)
-           tau = [1], # Temperature parameter (Gumbel)
+           modl_3_dim = [[100, 30]], # Last value: message size
+           modl_4_dim = [[100, 30]],
+           k = [0], # Either an integer (exact number of compression set), or float (threshold in Gumbel)
+           tau = [0.1], # Temperature parameter (Gumbel)
            init = ['kaiming_unif'],
            criterion = ['bce_loss'],
            start_lr = [1e-3, 1e-4],
@@ -58,7 +55,7 @@ def deeprm(experiment_name = 'Test_wandb_3',
            vis = 16,
            vis_loss_acc = True,
            plot = None,
-           weightsbiases = ['graal_deeprm2024', 'deeprm2'] # []
+           weightsbiases = ['graal_deeprm2024', 'deeprm_recon'] # []
     ):
     weightsbiases.append(1)
     param_grid = ParameterGrid([{'dataset': dataset,

@@ -46,14 +46,14 @@ class SimpleMetaNet(nn.Module):
         self.modl_3_dim[-1] = self.kern_1_dim[-1]
         self.modl_4_dim[-1] = self.output_dim_3 + self.kern_2_dim[-1]
 
-        self.modl_1 = relu_fc_layer([self.d + 1] + self.modl_1_dim, self.device)
-        self.modl_2 = relu_fc_layer([self.d + 1] + self.modl_2_dim, self.device)
-        self.modl_3 = relu_fc_layer([self.kern_1_dim[-1]] + self.modl_3_dim, self.device, last = True)
-        self.modl_4 = relu_fc_layer([self.output_dim_3 + self.kern_2_dim[-1]] + self.modl_4_dim, self.device, last = True)
-        self.last_l_3 = relu_fc_layer([self.modl_3_dim[-1]] + [self.output_dim_3], self.device)
-        self.last_l_4 = relu_fc_layer([self.modl_4_dim[-1]] + [self.output_dim_4], self.device)
-        self.kern_1 = relu_fc_layer([input_dim] + self.kern_1_dim, self.device)  # The different layers are instanciated
-        self.kern_2 = relu_fc_layer([self.d] + self.kern_2_dim, self.device)
+        self.modl_1 = relu_fc_layer([self.d + 1] + self.modl_1_dim, self.device, bn=60)
+        self.modl_2 = relu_fc_layer([self.d + 1] + self.modl_2_dim, self.device, bn=60)
+        self.modl_3 = relu_fc_layer([self.kern_1_dim[-1]] + self.modl_3_dim, self.device, bn=0, last = True)
+        self.modl_4 = relu_fc_layer([self.output_dim_3 + self.kern_2_dim[-1]] + self.modl_4_dim, self.device, bn=0, last = True)
+        self.last_l_3 = relu_fc_layer([self.modl_3_dim[-1]] + [self.output_dim_3], self.device, bn=0)
+        self.last_l_4 = relu_fc_layer([self.modl_4_dim[-1]] + [self.output_dim_4], self.device, bn=0)
+        self.kern_1 = relu_fc_layer([input_dim] + self.kern_1_dim, self.device, bn=60)  # The different layers are instanciated
+        self.kern_2 = relu_fc_layer([self.d] + self.kern_2_dim, self.device, bn=60)
         init_weights_ff(init, [self.modl_1, self.modl_2, self.modl_3, self.last_l_3, self.modl_4, self.last_l_4, self.kern_1, self.kern_2])
 
     def forward(self, x):
@@ -76,21 +76,22 @@ class SimpleMetaNet(nn.Module):
 
         ## Mask computation ##
         x_t = torch.sum(torch.mul(x_1, x_2), dim=-1) * self.tau
-        x_t = torch.softmax(x_t, dim=1).clone()
-
+        #x_t = torch.softmax(x_t, dim=1).clone()
+        x_t = torch.sigmoid(x_t).clone()
         self.probs = torch.clone(x_t)
-        if int(self.k) == self.k:
-            odds = F.gumbel_softmax(torch.log(x_t+1e-40), hard=False)
-            self.inds = torch.topk(odds, self.k).indices  # We retain the top-k examples having the highest odds
-            tens = torch.zeros(odds.shape).to(torch.device(self.device))
-            tens[torch.arange(tens.size(0)).unsqueeze(1), self.inds] = 1
-            tens += odds - odds.detach()
-        else:
-            odds = F.gumbel_softmax(torch.log(x_t), hard=False)
-            self.inds = (odds > self.k)  # We retain the examples having higher odds than k
-            tens = torch.zeros(odds.shape).to(torch.device(self.device))
-            tens[torch.arange(tens.size(0)).unsqueeze(1), self.inds] = 1
-            tens += odds - odds.detach()
+        #if int(self.k) == self.k:
+        #    odds = F.gumbel_softmax(torch.log(x_t/(1-x_t)+1e-40), hard=False)
+        #    self.inds = torch.topk(odds, self.k).indices  # We retain the top-k examples having the highest odds
+        #    tens = torch.zeros(odds.shape).to(torch.device(self.device))
+        #    tens[torch.arange(tens.size(0)).unsqueeze(1), self.inds] = 1
+        #    tens += odds - odds.detach()
+        #else:
+        #    odds = F.gumbel_softmax(torch.log(x_t/(1-x_t)+1e-40), hard=False)
+        #    self.inds = (odds > self.k)  # We retain the examples having higher odds than k
+        #    tens = torch.zeros(odds.shape).to(torch.device(self.device))
+        #    tens[torch.arange(tens.size(0)).unsqueeze(1), self.inds] = 1
+        #    tens += odds - odds.detach()
+        tens = x_t
         self.msk = torch.clone(tens)
 
         ## First KME, all data ##
@@ -148,7 +149,7 @@ class SimpleMetaNet(nn.Module):
                 break
 
 
-def relu_fc_layer(dims, device, last=False):
+def relu_fc_layer(dims, device, bn, last=False):
     """
     Creates a ReLU linear layer, given dimensions.
     Args:
@@ -160,6 +161,8 @@ def relu_fc_layer(dims, device, last=False):
     lay = torch.nn.ModuleList()
     lay.to(torch.device(device))
     for i in range(len(dims) - 1):
+        #if bn > 0 :
+        #    lay.append(nn.BatchNorm1d(bn))
         lay.append(nn.Linear(dims[i], dims[i + 1]))
         if i < len(dims) - 2 or last:
             lay.append(nn.ReLU())
