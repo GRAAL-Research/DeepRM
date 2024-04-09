@@ -19,7 +19,7 @@ def rotate(origin, point, angle):
     qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
     return qx, qy
 
-def gen(m, d, dif='easy', vis=False, shuffle=True):
+def gen(m, d, dif='easy', vis=False, shuffle=True, i=0):
     """
     Generates a linearly separable 2-classes d-dimensional dataset. Each class
         is normaly distributed around a random mean with identity covariance matrix.
@@ -50,24 +50,39 @@ def gen(m, d, dif='easy', vis=False, shuffle=True):
         scale = np.random.randint(3,8)
         rotation = np.random.randint(1,360)
         origin = np.random.randint(-10,10, 2)
-        X = make_moons(n_samples=2 * m, shuffle=False, noise=0.08)[0] * scale + origin
-        for i in range(2*m):
-            new_coord = rotate((0,0), X[i], math.radians(rotation))
-            X[i, 0], X[i, 1] = new_coord[0], new_coord[1]
-        y = np.ones(2 * m)
-        y[:m] -= 1
+        X_1 = make_moons(n_samples=2 * m, shuffle=False, noise=0.08, random_state=i)[0] * scale + origin
+        X_2 = make_moons(n_samples=2 * 3, shuffle=False, noise=0.08, random_state=i)[0] * scale + origin
+        for i in range(2 * m):
+            new_coord = rotate((0, 0), X_1[i], math.radians(rotation))
+            X_1[i, 0], X_1[i, 1] = new_coord[0], new_coord[1]
+        for i in range(2 * 3):
+            new_coord = rotate((0, 0), X_2[i], math.radians(rotation))
+            X_2[i, 0], X_2[i, 1] = new_coord[0], new_coord[1]
+        y_1 = np.ones(2 * m)
+        y_2 = np.ones(2 * 3)
+        y_1[:m] -= 1
+        y_2[:3] -= 1
     if vis > 0:
-        plt.scatter(X[m:, 0], X[m:, 1], c='r')
-        plt.scatter(X[:m, 0], X[:m, 1], c='b')
+        plt.scatter(X_1[m:, 0], X_1[m:, 1], c='r')
+        plt.scatter(X_1[:m, 0], X_1[:m, 1], c='b')
+        plt.xlim(-20, 20)
+        plt.ylim(-20, 20)
+        plt.show()
+        plt.scatter(X_2[3:, 0], X_2[3:, 1], c='r')
+        plt.scatter(X_2[:3, 0], X_2[:3, 1], c='b')
         plt.xlim(-20, 20)
         plt.ylim(-20, 20)
         plt.show()
     if shuffle:
         indx = np.arange(2 * m)
         np.random.shuffle(indx)
-        X = X[indx]
-        y = y[indx]
-    return np.hstack((X,np.reshape(y*2-1, (2*m, 1)))), y
+        X_1 = X_1[indx]
+        y_1 = y_1[indx]
+        indx = np.arange(2 * 3)
+        np.random.shuffle(indx)
+        X_2 = X_2[indx]
+        y_2 = y_2[indx]
+    return np.hstack((X_1,np.reshape(y_1*2-1, (2*m, 1)))), y_1, np.hstack((X_2,np.reshape(y_2*2-1, (2*3, 1)))), y_2
 
 
 def data_gen(n, m, d, dif, shuffle=True, vis=False):
@@ -83,13 +98,15 @@ def data_gen(n, m, d, dif, shuffle=True, vis=False):
     """
     assert d == 2 or vis == False
     m = int(m/2)
-    X, y = gen(m, d, dif, vis, shuffle)
-    data = [[X, y]]
+    X_1, y_1, X_2, y_2 = gen(m, d, dif, vis, shuffle)
+    data_1 = [[X_1, y_1]]
+    data_2 = [[X_2, y_2]]
     for i in range(n - 1):
         vis -= 1
-        X, y = gen(m, d, dif, vis, shuffle)
-        data.append([X, y])
-    return data
+        X_1, y_1, X_2, y_2 = gen(m, d, dif, vis, shuffle, i)
+        data_1.append([X_1, y_1])
+        data_2.append([X_2, y_2])
+    return data_1, data_2
 
 def load_mnist():
     transform = transforms.Compose(
