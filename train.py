@@ -12,7 +12,7 @@ import wandb
 
 
 class SimpleMetaNet(nn.Module):
-    def __init__(self, input_dim, dims, output_dim, m, d, k, tau, batch_size, init, device):
+    def __init__(self, input_dim, dims, output_dim, m, d, tau, batch_size, init, device):
         """
         Generates a simple feed-forward neural network with ReLU activations and kernel mean embedding (MLP).
             The kernel has |kernel_dim| layer; the element outputted by the Kernel are multiplied by the label values
@@ -35,26 +35,23 @@ class SimpleMetaNet(nn.Module):
             self.device = "cuda:0"
         else:
             self.device = "cpu"
-        self.kern_1_dim, self.kern_2_dim, self.modl_1_dim, self.modl_2_dim, self.modl_3_dim, self.modl_4_dim = dims  # Dims of all 5 components
-        self.msg, self.msg_size, self.msk = None, self.modl_3_dim[-1], None  # Message and mask (for compression selection)
-        self.m, self.d, self.k, self.tau, self.batch_size = m, d, k, tau, batch_size  # Parameters
-        self.inds = torch.zeros((self.batch_size, self.k), dtype=int)
-        self.output_dim = output_dim
-        assert 0 <= k <= m # Sample compression size is bounded
-        self.output_dim_3 = self.modl_3_dim[-1] # So that input size is (message size + mask size)
-        self.output_dim_4 = output_dim
-        self.modl_3_dim[-1] = self.kern_1_dim[-1]
-        self.modl_4_dim[-1] = self.output_dim_3 + self.kern_2_dim[-1]
+        self.ca_dim, self.mha_dim, self.mod_1_dim, self.mod_2_dim = dims  # Dims of all 4 components
+        self.ca_dim, self.n_ca = self.ca_dim
+        self.k = self.n_ca
 
-        self.modl_1 = relu_fc_layer([self.d + 1] + self.modl_1_dim, self.device, bn=60)
-        self.modl_2 = relu_fc_layer([self.d + 1] + self.modl_2_dim, self.device, bn=60)
-        self.modl_3 = relu_fc_layer([self.kern_1_dim[-1]] + self.modl_3_dim, self.device, bn=0, last = True)
-        self.modl_4 = relu_fc_layer([self.output_dim_3 + self.kern_2_dim[-1]] + self.modl_4_dim, self.device, bn=0, last = True)
-        self.last_l_3 = relu_fc_layer([self.modl_3_dim[-1]] + [self.output_dim_3], self.device, bn=0)
-        self.last_l_4 = relu_fc_layer([self.modl_4_dim[-1]] + [self.output_dim_4], self.device, bn=0)
-        self.kern_1 = relu_fc_layer([input_dim] + self.kern_1_dim, self.device, bn=60)  # The different layers are instanciated
-        self.kern_2 = relu_fc_layer([self.d] + self.kern_2_dim, self.device, bn=60)
-        init_weights_ff(init, [self.modl_1, self.modl_2, self.modl_3, self.last_l_3, self.modl_4, self.last_l_4, self.kern_1, self.kern_2])
+        self.msg, self.msg_size, self.msk = None, None, None  # Message and mask (for compression selection)
+        self.m, self.d, self.tau, self.batch_size = m, d, tau, batch_size  # Parameters
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+
+        self.cas = nn.ModuleList([])
+        for i in range(self.n_ca):
+            self.cas.append(CA([self.d + 1], self.ca_dim, self.ca_dim, [], self.m, device, init, False, False, 'fspool'))
+        self.mha = CA([self.d + 1], self.mha_dim, self.mha_dim, [], self.m, device, init, False, False, 'none')
+        self.kme = FSPool([self.d + 1], self.ca_dim, [], self.m, device, init, False, False)
+        self.mod_1 = MLP([self.ca_dim[-1]], self.mod_1_dim, [], device, init, False, False)
+        self.mod_2 = MLP([self.n_ca ** 2 + self.mod_1_dim[-1]], self.mod_2_dim, [self.output_dim], device, init, False,
+                         False)
 
     def forward(self, x):
         """
@@ -62,235 +59,151 @@ class SimpleMetaNet(nn.Module):
         Args:
             x (torch.tensor of floats): input
         return:
-            torch.tensor Output of the network
+            torch.Tensor Output of the network
         """
-        x_1, x_2 = x, x
+        # Mask computation #
+        if self.n_ca > 0:
+            mask = self.cas[0].forward(x.clone())
+            for j in range(1, len(self.cas)):
+                out = self.cas[j].forward(x.clone())
+                mask = torch.hstack((mask, out))
 
-        ## First module ##
-        for layer in self.modl_1:
-            x_1 = layer(x_1)
+            # Applying the mask to x #
+            x_masked = torch.matmul(mask, x.clone())
 
-        ## Second module ##
-        for layer in self.modl_2:
-            x_2 = layer(x_2)
+        # Computing the message #
+        x = self.kme.forward(x)
+        x = self.mod_1.forward(torch.reshape(x, (len(x), -1)))
+        self.msg = x.clone()
 
-        ## Mask computation ##
-        x_t = torch.sum(torch.mul(x_1, x_2), dim=-1) * self.tau
-        #x_t = torch.softmax(x_t, dim=1).clone()
-        x_t = torch.sigmoid(x_t).clone()
-        self.probs = torch.clone(x_t)
-        #if int(self.k) == self.k:
-        #    odds = F.gumbel_softmax(torch.log(x_t/(1-x_t)+1e-40), hard=False)
-        #    self.inds = torch.topk(odds, self.k).indices  # We retain the top-k examples having the highest odds
-        #    tens = torch.zeros(odds.shape).to(torch.device(self.device))
-        #    tens[torch.arange(tens.size(0)).unsqueeze(1), self.inds] = 1
-        #    tens += odds - odds.detach()
-        #else:
-        #    odds = F.gumbel_softmax(torch.log(x_t/(1-x_t)+1e-40), hard=False)
-        #    self.inds = (odds > self.k)  # We retain the examples having higher odds than k
-        #    tens = torch.zeros(odds.shape).to(torch.device(self.device))
-        #    tens[torch.arange(tens.size(0)).unsqueeze(1), self.inds] = 1
-        #    tens += odds - odds.detach()
-        tens = x_t
-        self.msk = torch.clone(tens)
+        # Computing the compression set description #
+        if self.n_ca > 0:
+            x_masked = self.mha.forward(x_masked)
 
-        ## First KME, all data ##
-        x_2 = x[:, :, :-1]
-        for layer in self.kern_1:
-            x_2 = layer(x_2)
-        x_1 = torch.mean(x_2 * torch.reshape(x[:, :, -1], (self.batch_size, -1, 1)), dim=1)  # ... A compression is done
-
-        ## First KME, masked data ##
-        x_2 = x[:, :, :-1] * torch.reshape(tens, (self.batch_size, -1, 1))
-        if self.k > 0:
-            for layer in self.kern_1:
-                x_2 = layer(x_2)
-            x_2 = torch.mean(x_2 * torch.reshape(x[:, :, -1], (self.batch_size, -1, 1)), dim=1)  # ... A compression is done
+            # Concatenating all the information #
+            x_masked = torch.reshape(x_masked, (len(x_masked), -1))
+            x_red = torch.hstack((x, x_masked))
         else:
-            x_2 = torch.zeros((self.batch_size, self.kern_1_dim[-1])).to(torch.device(self.device))
+            x_red = x
 
-        ## Third module ##
-        x_t = x_1 - x_2
-        skip = x_t  # A skip connection is made
-        for layer in self.modl_3:
-            x_t = layer(x_t)
-        for layer in self.last_l_3:
-            x_t = layer(x_t + skip)  # The skip connection leads to just before applying the last linear layer
-        self.msg = x_t
+        # Final output computation #
+        output = self.mod_2.forward(x_red)
+        return output
 
-        ## Second KME ##
-        x_1 = x[:, :, :-1] * torch.reshape(tens, (self.batch_size, -1, 1))
-        if self.k > 0:
-            for layer in self.kern_2:
-                x_1 = layer(x_1)
-            x_1 = torch.mean(x_1 * torch.reshape(x[:, :, -1], (self.batch_size, -1, 1)), dim=1)  # ... A compression is done
+    def compute_compression_set(self, x):
+        # Mask computation #
+        if self.n_ca > 0:
+            mask = self.cas[0].forward(x.clone())
+            for j in range(1, len(self.cas)):
+                out = self.cas[j].forward(x.clone())
+                mask = torch.hstack((mask, out))
+            self.msk = torch.squeeze(torch.topk(mask, 1, dim=(2)).indices)
+
+
+class CA(nn.Module):
+    def __init__(self, input_dim, hidden_dims_mlp, hidden_dims_kme, output_dim, n, device, init, skip, bn, pool):
+        super(CA, self).__init__()
+        self.k = MLP(input_dim, hidden_dims_mlp, output_dim, device, init, skip, bn)
+        if pool == 'kme':
+            self.q = KME(input_dim, hidden_dims_kme, output_dim, device, init, skip, bn)
+        elif pool == 'fspool':
+            self.q = FSPool(input_dim, hidden_dims_kme, output_dim, n, device, init, skip, bn)
+        elif pool == 'none':
+            self.q = MLP(input_dim, hidden_dims_kme, output_dim, device, init, skip, bn)
         else:
-            x_1 = torch.zeros((self.batch_size, self.kern_2_dim[-1])).to(torch.device(self.device))
+            assert False, 'Wrong pooling choice.'
 
-        ## Fourth module ##
-        x_2 = torch.hstack((x_1, x_t))
-        skip = x_2  # A skip connection is made
-        for layer in self.modl_4:
-            x_2 = layer(x_2)
-        for layer in self.last_l_4:
-            x_2 = layer(x_2 + skip)  # The skip connection leads to just before applying the last linear layer
-        return x_2
-
-    def print_weights(self):
-        for layer in self.kern_1:
-            if isinstance(layer, nn.Linear):
-                print(layer.weight.data[0, :5], layer.bias)
-                break
-
-    def print_grad(self):
-        for layer in self.kern_1:
-            if isinstance(layer, nn.Linear):
-                print(layer.weight.grad[0, :5], layer.bias.grad[:5])
-                break
+    def forward(self, x):
+        x_1, x_2 = x.clone(), x.clone()
+        queries = self.q.forward(x_1)
+        keys = self.k.forward(x_2)
+        qkt = torch.matmul(queries, torch.transpose(keys, 1, 2))
+        dist = torch.softmax(qkt, dim=2)
+        return dist
 
 
-def relu_fc_layer(dims, device, bn, last=False):
-    """
-    Creates a ReLU linear layer, given dimensions.
-    Args:
-        dims (vector of ints): (respectively) size of the input layer, of the hidden layers, and of the output layer
-        last (bool): Whether (True) or not (False) to put an activation function at the end of the last layer
-    return:
-        torch.nn.Module
-    """
-    lay = torch.nn.ModuleList()
-    lay.to(torch.device(device))
-    for i in range(len(dims) - 1):
-        #if bn > 0 :
-        #    lay.append(nn.BatchNorm1d(bn))
-        lay.append(nn.Linear(dims[i], dims[i + 1]))
-        if i < len(dims) - 2 or last:
-            lay.append(nn.ReLU())
-    return lay
+class KME(nn.Module):
+    def __init__(self, input_dim, hidden_dims, output_dim, device, init, skip, bn):
+        super(KME, self).__init__()
+        self.mlp = MLP([input_dim[0] - 1], hidden_dims, output_dim, device, init, skip, bn)
 
-def attention_layer(embed_dim, num_heads, device):
-    """
-    Creates a ReLU linear layer, given dimensions.
-    Args:
-        dims (vector of ints): (respectively) size of the input layer, of the hidden layers, and of the output layer
-        last (bool): Whether (True) or not (False) to put an activation function at the end of the last layer
-    return:
-        torch.nn.Module
-    """
-    lay = torch.nn.ModuleList()
-    lay.to(torch.device(device))
-    lay.append({'attention':nn.MultiheadAttention(embed_dim, num_heads),
-                'query':torch.tensor(embed_dim),
-                'key':torch.tensor(embed_dim),
-                'values':torch.tensor(embed_dim)})
-    return lay
-
-def masked_softmax(X, valid_lens):  #@save
-    """Perform softmax operation by masking elements on the last axis."""
-    # X: 3D tensor, valid_lens: 1D or 2D tensor
-    def _sequence_mask(X, valid_len, value=0):
-        maxlen = X.size(1)
-        mask = torch.arange((maxlen), dtype=torch.float32,
-                            device=X.device)[None, :] < valid_len[:, None]
-        X[~mask] = value
-        return X
-
-    if valid_lens is None:
-        return nn.functional.softmax(X, dim=-1)
-    else:
-        shape = X.shape
-        if valid_lens.dim() == 1:
-            valid_lens = torch.repeat_interleave(valid_lens, shape[1])
-        else:
-            valid_lens = valid_lens.reshape(-1)
-        # On the last axis, replace masked elements with a very large negative
-        # value, whose exponentiation outputs 0
-        X = _sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
-        return nn.functional.softmax(X.reshape(shape), dim=-1)
+    def forward(self, x):
+        batch_size = len(x)
+        x_1 = x[:, :, :-1].clone()
+        out = self.mlp.forward(x_1)
+        x_1 = torch.mean(out * torch.reshape(x[:, :, -1], (batch_size, -1, 1)), dim=1)  # ... A compression is done
+        return torch.reshape(x_1, (x_1.shape[0], 1, -1))
 
 
-class DotProductAttention(nn.Module):  #@save
-    """Scaled dot product attention."""
-    def __init__(self, dropout):
-        super().__init__()
-        self.dropout = nn.Dropout(dropout)
+class FSPool(nn.Module):
+    def __init__(self, input_dim, hidden_dims, output_dim, n, device, init, skip, bn):
+        super(FSPool, self).__init__()
+        self.mlp = MLP([input_dim[0] - 1], hidden_dims, output_dim, device, init, skip, bn)
+        self.mat = torch.rand((n, hidden_dims[-1]))
 
-    # Shape of queries: (batch_size, no. of queries, d)
-    # Shape of keys: (batch_size, no. of key-value pairs, d)
-    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
-    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    def forward(self, queries, keys, values, valid_lens=None):
-        d = queries.shape[-1]
-        # Swap the last two dimensions of keys with keys.transpose(1, 2)
-        scores = torch.bmm(queries, keys.transpose(1, 2)) / math.sqrt(d)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        return torch.bmm(self.dropout(self.attention_weights), values)
+    def forward(self, x):
+        batch_size = len(x)
+        x_1 = x[:, :, :-1].clone()
+        out = self.mlp.forward(x_1)
+        out = torch.sort(out, dim=2)[0]
+        x_1 = torch.mean(out * self.mat * torch.reshape(x[:, :, -1], (batch_size, -1, 1)), dim=1)  # ... A compression is done
+        return torch.reshape(x_1, (x_1.shape[0], 1, -1))
 
-class MultiHeadAttention(d2l.Module):  #@save
-    """Multi-head attention."""
-    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
-        super().__init__()
-        self.num_heads = num_heads
-        self.attention = torch.DotProductAttention(dropout)
-        self.W_q = nn.LazyLinear(num_hiddens, bias=bias)
-        self.W_k = nn.LazyLinear(num_hiddens, bias=bias)
-        self.W_v = nn.LazyLinear(num_hiddens, bias=bias)
-        self.W_o = nn.LazyLinear(num_hiddens, bias=bias)
+class MLP(nn.Module):
+    def __init__(self, input_dim, hidden_dims, output_dim, device, init, skip, bn):
+        super(MLP, self).__init__()
+        """
+        Creates a ReLU linear layer, given dimensions.
+        Args:
+            dims (vector of ints): (respectively) size of the input layer, of the hidden layers, and of the output layer
+            last (bool): Whether (True) or not (False) to put an activation function at the end of the last layer
+        return:
+            torch.nn.Module
+        """
+        self.dims = input_dim + hidden_dims + output_dim
+        self.skip = skip
+        self.module = torch.nn.ModuleList()
+        self.module.to(torch.device(device))
+        if self.skip and len(self.dims) > 2:
+            self.dims.insert(len(self.dims) - 1, self.dims[0])
+        for k in range(len(self.dims) - 1):
+            if bn:
+                self.module.append(nn.LazyBatchNorm1d())
+            self.module.append(nn.Linear(self.dims[k], self.dims[k + 1]))
+            if k < len(self.dims) - 2:
+                self.module.append(nn.ReLU())
 
-    def forward(self, queries, keys, values, valid_lens):
-        # Shape of queries, keys, or values:
-        # (batch_size, no. of queries or key-value pairs, num_hiddens)
-        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-        # After transposing, shape of output queries, keys, or values:
-        # (batch_size * num_heads, no. of queries or key-value pairs,
-        # num_hiddens / num_heads)
-        queries = self.transpose_qkv(self.W_q(queries))
-        keys = self.transpose_qkv(self.W_k(keys))
-        values = self.transpose_qkv(self.W_v(values))
+        self.skip_position = len(self.module) - (1 + 1 * bn)
+        init_weights(init, self.module)
 
-        if valid_lens is not None:
-            # On axis 0, copy the first item (scalar or vector) for num_heads
-            # times, then copy the next item, and so on
-            valid_lens = torch.repeat_interleave(
-                valid_lens, repeats=self.num_heads, dim=0)
+    def forward(self, x):
+        x_1 = x.clone()
+        l = 0
+        for layer in self.module:
+            l += 1
+            if self.skip and l == self.skip_position:
+                x += x_1
+            x = layer(x)
+        return x
 
-        # Shape of output: (batch_size * num_heads, no. of queries,
-        # num_hiddens / num_heads)
-        output = self.attention(queries, keys, values, valid_lens)
-        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
-        output_concat = self.transpose_output(output)
-        return self.W_o(output_concat)
 
-def init_weights_ff(init, modules):
+def init_weights(init, module):
     """
     Instanciate the weights of the linear layers of one or many torch.nn.Module.
     Args:
         init (str): Layer initialization scheme (choices: 'kaiming_unif', '.._norm', 'xavier_unif', '.._norm')
         modules (list of torch.nn.Module): The module(s) of interest
     """
-    for module in modules:
-        for layer in module:
-            if isinstance(layer, nn.Linear):
-                if init == 'kaiming_unif':
-                    nn.init.kaiming_uniform_(layer.weight.data, nonlinearity='relu')
-                elif init == 'kaiming_norm':
-                    nn.init.kaiming_normal_(layer.weight.data, nonlinearity='relu')
-                elif init == 'xavier_unif':
-                    nn.init.xavier_uniform_(layer.weight.data)
-                elif init == 'xavier_norm':
-                    nn.init.xavier_normal_(layer.weight.data)
-
-def init_weights_attention(init, modules):
-    """
-        Instanciate the weights of the linear layers of one or many torch.nn.Module.
-        Args:
-            init (str): Layer initialization scheme (choices: 'kaiming_unif', '.._norm', 'xavier_unif', '.._norm')
-            modules (list of torch.nn.Module): The module(s) of interest
-        """
-
-    for module in modules:
-        for layer in module:
-            pass
+    for layer in module:
+        if isinstance(layer, nn.Linear):
+            if init == 'kaiming_unif':
+                nn.init.kaiming_uniform_(layer.weight.data, nonlinearity='relu')
+            elif init == 'kaiming_norm':
+                nn.init.kaiming_normal_(layer.weight.data, nonlinearity='relu')
+            elif init == 'xavier_unif':
+                nn.init.xavier_uniform_(layer.weight.data)
+            elif init == 'xavier_norm':
+                nn.init.xavier_normal_(layer.weight.data)
 
 
 def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
@@ -327,7 +240,7 @@ def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
     valid_dataset = Subset(dataset, valid_idx)
     test_dataset = Subset(dataset, test_idx)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
@@ -364,7 +277,9 @@ def train(meta_pred, pred, data, dataset, splits, train_splits, optimizer, sched
         Tuple (nn.Module, dict): The trained model; dictionary containing several information about the training
     """
     torch.autograd.set_detect_anomaly(True)
-    train_loader, valid_loader, test_loader = train_valid_loaders(data, batch_size, splits)
+    data_1, data_2 = data
+    train_loader_1, valid_loader_1, test_loader_1 = train_valid_loaders(data_1, batch_size, splits)
+    train_loader_2, valid_loader_2, test_loader_2 = train_valid_loaders(data_2, batch_size, splits)
     best_rolling_val_acc, j = 0, 0
     hist = {'epoch': [],
             'train_loss': [],
@@ -380,8 +295,8 @@ def train(meta_pred, pred, data, dataset, splits, train_splits, optimizer, sched
         wandb.login(key='b7d84000aed68a9db76819fa4935778c47f0b374')
         wandb.init(
             name=str(weightsbiases[-1]['start_lr']) + '_' + str(weightsbiases[-1]['optimizer']) + '_' + \
-                 str(weightsbiases[-1]['predictor'][-1]) + '_' + str(weightsbiases[-1]['modl_3_dim'][-1]) + '_' + \
-                 str(weightsbiases[-1]['k']) + '_' + str(weightsbiases[-1]['seed']),
+                 str(weightsbiases[-1]['predictor'][-1]) + '_' + str(weightsbiases[-1]['mod_1_dim'][-1]) + '_' + \
+                 str(weightsbiases[-1]['ca_dim'][-1]) + '_' + str(weightsbiases[-1]['seed']),
             project=weightsbiases[1],
             config=weightsbiases[2]
         )
@@ -389,57 +304,61 @@ def train(meta_pred, pred, data, dataset, splits, train_splits, optimizer, sched
     for i in range(n_epoch):
         meta_pred.train()
         with torch.enable_grad():
-            for inputs, targets in train_loader:
-                inputs, targets = inputs.float(), targets.float()
+            # k=0
+            for inputs_1, targets_1 in train_loader_1:
+                #    k+=1
+                #    l=0
+                #    for inputs_2, targets_2 in train_loader_2:
+                #        l+=1
+                #        if l != k:
+                #            pass
+                #        else:
+                inputs_1, targets_1 = inputs_1.float(), targets_1.float()
+                #    inputs_2, targets_2 = inputs_2.float(), targets_2.float()
                 if str(DEVICE) == 'gpu':
-                    inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
-                if independent_food:
-                    split = math.floor(train_splits[0] * len(inputs[0]))
-                    inputs_1, inputs_2 = inputs[:,:split], inputs[:,split:]
-                    indices = np.arange(split)
-                    np.random.shuffle(indices)
-                    indices = indices[:train_splits[1]]
-                    inputs_1 = inputs_1[:,indices]
-                    targets_2 = targets[:,split:]
-                else:
-                    inputs_1, inputs_2, targets_2 = inputs, inputs, targets
+                    inputs_1, targets_1, meta_pred = inputs_1.cuda(), targets_1.cuda(), meta_pred.cuda()
+                #        inputs_2, targets_2 = inputs_2.cuda(), targets_2.cuda()
                 optimizer.zero_grad()
+                #    meta_output = meta_pred(inputs_2)  # We compute the parameters of the predictor.
                 meta_output = meta_pred(inputs_1)  # We compute the parameters of the predictor.
                 pred.update_weights(meta_output)
-                output = pred.forward(inputs_2, meta_output)
-                loss = torch.mean(criterion(output, targets_2)) + penalty_msg(meta_pred.msg,
-                                                                            penalty_msg_coef)  # Regularized loss
+                output = pred.forward(inputs_1, meta_output)
+                loss = torch.mean(torch.mean(criterion(output, targets_1), dim=1) ** 0.5) + penalty_msg(meta_pred.msg,
+                                                                              penalty_msg_coef)  # Regularized loss
                 loss.backward()
                 optimizer.step()
         n_sigma = round(torch.sum((torch.abs(meta_pred.msg) > 0) * 1).item() / batch_size)  # Mean message size
-        val_acc, val_loss, _, tr_ac, tr_los = stats(train_splits, meta_pred, pred, criterion, valid_loader, n_sigma, None, None,
+        val_acc, val_loss, _, tr_ac, tr_los = stats(train_splits, meta_pred, pred, criterion, valid_loader_1,
+                                                    valid_loader_2, n_sigma, None, None,
                                                     DEVICE, independent_food)
-        test_acc, test_loss, bound, vd_ac, vd_los = stats(train_splits, meta_pred, pred, criterion, test_loader, n_sigma, bound_type, None,
-                                                      DEVICE, independent_food)
-        train_acc, train_loss, _, te_ac, te_los = stats(train_splits, meta_pred, pred, criterion, train_loader, n_sigma,None, None,
-                                                        DEVICE, independent_food) # bound_type, [val_acc, test_acc]
+        test_acc, test_loss, bound, vd_ac, vd_los = stats(train_splits, meta_pred, pred, criterion, test_loader_1,
+                                                          test_loader_2, n_sigma, bound_type, None,
+                                                          DEVICE, independent_food)
+        train_acc, train_loss, _, te_ac, te_los = stats(train_splits, meta_pred, pred, criterion, train_loader_1,
+                                                        train_loader_2, n_sigma, None, None,
+                                                        DEVICE, independent_food)  # bound_type, [val_acc, test_acc]
         update_hist(hist, (train_acc, train_loss, val_acc, val_loss, test_acc, test_loss,
                            bound, n_sigma, meta_pred.k, i))  # Tracking results
-        rolling_val_acc = torch.mean(torch.tensor(hist['valid_acc'][-min(100,i+1):]))
+        rolling_val_acc = torch.mean(torch.tensor(hist['valid_acc'][-min(100, i + 1):]))
         if len(weightsbiases) != 1:
             update_wandb(wandb, hist)
-        print(f'Epoch {i + 1} - Train acc: {train_acc:.2f} - Val acc: {val_acc:.2f} - Test acc: {test_acc:.2f} - Bound value: {bound:.2f} - Time (s): {round(time()-begin)}')
+        print(
+            f'Epoch {i + 1} - Train acc: {train_acc:.2f} - Val acc: {val_acc:.2f} - Test acc: {test_acc:.2f} - Bound value: {bound:.2f} - Time (s): {round(time() - begin)}')
         scheduler.step(rolling_val_acc)
         if i == 1 or rolling_val_acc > best_rolling_val_acc + tol:  # If an improvement has been done in validation...
             j = copy(i)  # ...We keep track of it
             best_rolling_val_acc = copy(rolling_val_acc)
-        if (train_acc < 0.525 and i > 50) or i - j > early_stop:  # If no improvement for early_stop epoch, stop training.
+        if (
+                train_acc < 0.525 and i > 50) or i - j > early_stop:  # If no improvement for early_stop epoch, stop training.
             break
         if vis_loss_acc == True and i % 20 == 0:
             if len(weightsbiases) != 1:
                 show_loss_acc((tr_los, vd_los, te_los), (tr_ac, vd_ac, te_ac), i, wandb)
             else:
                 show_loss_acc((tr_los, vd_los, te_los), (tr_ac, vd_ac, te_ac), i, None)
-    if vis > 0 and len(inputs[0, 0, :-1]) == 2:
+    if vis > 0 and len(inputs_1[0, 0, :-1]) == 2:
         if len(weightsbiases) != 1:
-            show_decision_boundaries(meta_pred, dataset, test_loader, vis, pred, wandb, DEVICE)
-        else:
-            show_decision_boundaries(meta_pred, dataset, test_loader, vis, pred, None, DEVICE)
+            show_decision_boundaries(meta_pred, dataset, test_loader_1, test_loader_2, vis, pred, wandb, DEVICE)
 
     print()
     if len(weightsbiases) != 1:
@@ -447,7 +366,8 @@ def train(meta_pred, pred, data, dataset, splits, train_splits, optimizer, sched
     return hist, j
 
 
-def stats(splits, meta_pred, pred, criterion, data_loader, n_sigma, bound_type, acc, DEVICE, independent_food):
+def stats(splits, meta_pred, pred, criterion, data_loader_1, data_loader_2, n_sigma, bound_type, acc, DEVICE,
+          independent_food):
     """
     Computes the overall accuracy and loss of a predictor on given task and dataset.
     Args:
@@ -466,36 +386,35 @@ def stats(splits, meta_pred, pred, criterion, data_loader, n_sigma, bound_type, 
         i = 0
         tot_loss = 0
         tot_acc = 0
-        for inputs, targets in data_loader:
-            n = copy(len(targets) * len(targets[0]))
+        k = 0
+        for inputs_1, targets_1 in data_loader_1:
+            # k += 1
+            # l = 0
+            # for inputs_2, targets_2 in data_loader_2:
+            #    l += 1
+            #    if l != k:
+            #        pass
+            #    else:
+            n = copy(len(targets_1) * len(targets_1[0]))
             i += n
-            inputs, targets = inputs.float(), targets.float()
+            inputs_1, targets_1 = inputs_1.float(), targets_1.float()
+            # inputs_2, targets_2 = inputs_2.float(), targets_2.float()
             if str(DEVICE) == 'gpu':
-                inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
-            if independent_food:
-                indices = np.arange(len(inputs))
-                np.random.shuffle(indices)
-                indices = indices[:splits[1]]
-                inputs_1 = inputs[:, indices]
-            else:
-                inputs_1 = inputs
+                inputs_1, targets_1, meta_pred = inputs_1.cuda(), targets_1.cuda(), meta_pred.cuda()
+            #    inputs_2, targets_2 = inputs_2.cuda(), targets_2.cuda()
             meta_output = meta_pred(inputs_1)  # We compute the parameters of the predictor.
             pred.update_weights(meta_output)
-            output = pred.forward(inputs, meta_output, return_sign=True)
-            loss = criterion(output[0], targets)
+            output = pred.forward(inputs_1, meta_output, return_sign=True)
+            loss = criterion(output[0], targets_1)
             tot_loss += torch.sum(loss)
-            acc = lin_loss(output[1], targets * 2 - 1, reduction=None)
+            acc = lin_loss(output[1], targets_1 * 2 - 1, reduction=None)
             tot_acc += torch.sum(acc)
             if i == n:
                 los = torch.clone(loss)
                 ac = torch.clone(acc)
-                # out = torch.reshape(output[1], (-1,))
-                # tar = torch.reshape(targets, (-1,)) * 2 - 1
             else:
                 los = torch.vstack((los, torch.clone(loss)))
                 ac = torch.vstack((ac, torch.clone(acc)))
-                # out = torch.hstack((out, torch.reshape(output[1], (-1,))))
-                # tar = torch.hstack((tar, torch.reshape(targets, (-1,)) * 2 - 1))
         bnd = None
         if bound_type is not None:
             bnd = compute_bound(bound_type=bound_type, n_Z=meta_pred.k, n_sigma=n_sigma,

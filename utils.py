@@ -224,7 +224,7 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-def show_decision_boundaries(meta_pred, dataset, data_loader, vis, pred, wandb, DEVICE):
+def show_decision_boundaries(meta_pred, dataset, data_loader_1, data_loader_2, vis, pred, wandb, DEVICE):
     """
     Computes the overall accuracy and loss of a predictor on given task and dataset.
     Args:
@@ -240,23 +240,29 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, vis, pred, wandb, 
     with torch.no_grad():
         i = 0
         examples = []
-        for inputs, targets in data_loader:
-            for j in range(len(inputs)):
+#        k = 0
+        for inputs_1, targets_1 in data_loader_1:
+#            k += 1
+#            l = 0
+#            for inputs_2, targets_2 in data_loader_2:
+#                l += 1
+#                if l != k:
+#                    pass
+#                else:
+            for j in range(len(inputs_1)):
                 if i < vis:
                     plt.figure().clear()
                     plt.close()
                     plt.cla()
                     plt.clf()
                     i += 1
-                    inputs, targets = inputs.float(), targets.float()
-                    inds = inputs[j, :, -1].sort().indices.tolist()
-                    X = inputs[j, inds][:,:2]
+                    inputs_1, targets_1 = inputs_1.float(), targets_1.float()
+                    inds = inputs_1[j, :, -1].sort().indices.tolist()
+                    X = inputs_1[j, inds][:,:2]
                     m = int(len(X)/2)
-                    plt.scatter(X[m:, 0].cpu(), X[m:, 1].cpu(), c='r', alpha=meta_pred.msk[j,inds][m:].cpu()/1.5+0.33)
-                    plt.scatter(X[:m, 0].cpu(), X[:m, 1].cpu(), c='b', alpha=meta_pred.msk[j,inds][:m].cpu()/1.5+0.33)
                     if str(DEVICE) == 'gpu':
-                        inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
-                    meta_output = meta_pred(inputs)[j]
+                        inputs_1, targets_1, meta_pred = inputs_1.cuda(), targets_1.cuda(), meta_pred.cuda()
+                    meta_output = meta_pred(inputs_1)[j]
                     if pred.pred_type == 'linear_classif':
                         px = [-20,20]
                         py = [-(-20 * meta_output[0] + meta_output[2]) / meta_output[1],
@@ -276,6 +282,12 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, vis, pred, wandb, 
                         Z = pred.forward(input.double(), torch.reshape(meta_output, (1,-1)).double())
                         Z = torch.round(Z.reshape(xx.shape)).cpu()
                         plt.contourf(xx, yy, Z, cmap=plt.cm.Paired, alpha=0.6)
+                    plt.scatter(X[m:, 0].cpu(), X[m:, 1].cpu(), c='r')
+                    plt.scatter(X[:m, 0].cpu(), X[:m, 1].cpu(), c='b')
+                    if meta_pred.k > 0:
+                        meta_pred.compute_compression_set(inputs_1)
+                        plt.scatter(X[meta_pred.msk[j].cpu(), 0].cpu(),
+                                    X[meta_pred.msk[j].cpu(), 1].cpu(), c='black', s=120, marker='*')
                     if dataset in ['easy', 'hard']:
                         plt.xlim(-20, 20)
                         plt.ylim(-20, 20)
