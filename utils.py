@@ -45,6 +45,19 @@ def l1(x, c):
     """
     return torch.mean(torch.abs(x)) * c
 
+
+def l2(x, c):
+    """
+    Computes the l1 loss, given inputs and a regularization parameter.
+    Args:
+        x (torch.tensor of size m): Inputs
+        targets (c): Regularization parameter
+    Return:
+        Float, the l1 loss
+    """
+    return torch.mean(x ** 2) * c
+
+
 class Predictor():
     def __init__(self, d, pred, batch_size):
         super(Predictor, self).__init__()
@@ -136,13 +149,16 @@ def update_hist(hist, values):
         hist (dic): A dictionnary that keep track of training metrics.
         values (Tuple): Elements to be added to the dictionnary.
     """
-    hist['train_acc'].append(values[0].cpu())
-    hist['train_loss'].append(values[1].cpu())
-    hist['valid_acc'].append(values[2].cpu())
-    hist['valid_loss'].append(values[3].cpu())
-    hist['test_acc'].append(values[4].cpu())
-    hist['test_loss'].append(values[5].cpu())
-    hist['bound_value'].append(values[6])
+    hist['train_acc'].append(values[0])
+    hist['train_loss'].append(values[1])
+    hist['valid_acc'].append(values[2])
+    hist['valid_loss'].append(values[3])
+    hist['test_acc'].append(values[4])
+    hist['test_loss'].append(values[5])
+    hist['bound_lin'].append(values[6][0])
+    hist['bound_hyp'].append(values[6][1])
+    hist['bound_kl'].append(values[6][2])
+    hist['bound_mrch'].append(values[6][3])
     hist['n_sigma'].append(values[7])
     hist['n_Z'].append(values[8])
     hist['epoch'].append(values[9])
@@ -154,7 +170,10 @@ def update_wandb(wandb, hist):
                'valid_loss': hist['valid_loss'][-1],
                'test_acc': hist['test_acc'][-1],
                'test_loss': hist['test_loss'][-1],
-               'bound_value': hist['bound_value'][-1],
+               'bound_lin': hist['bound_lin'][-1],
+               'bound_hyp': hist['bound_hyp'][-1],
+               'bound_kl': hist['bound_kl'][-1],
+               'bound_mrch': hist['bound_mrch'][-1],
                'n_sigma': hist['n_sigma'][-1],
                'n_Z': hist['n_Z'][-1],
                'epoch': hist['epoch'][-1]})
@@ -179,7 +198,10 @@ def write(file_name, dict, hist, best_epoch):
     file.write(str(hist['train_acc'][best_epoch].item()) + "\t")
     file.write(str(hist['valid_acc'][best_epoch].item()) + "\t")
     file.write(str(hist['test_acc'][best_epoch].item()) + "\t")
-    file.write(str(hist['bound_value'][best_epoch].item()) + "\t")
+    file.write(str(hist['bound_lin'][best_epoch].item()) + "\t")
+    file.write(str(hist['bound_hyp'][best_epoch].item()) + "\t")
+    file.write(str(hist['bound_kl'][best_epoch]) + "\t")
+    file.write(str(hist['bound_mrch'][best_epoch]) + "\t")
     file.write(str(hist['n_sigma'][best_epoch]) + "\t")
     file.write(str(hist['n_Z'][best_epoch]))
     file.write("\n")
@@ -207,7 +229,10 @@ def is_job_already_done(experiment_name, dict):
         file.write('train_acc' + "\t")
         file.write('valid_acc' + "\t")
         file.write('test_acc' + "\t")
-        file.write('bound_value' + "\t")
+        file.write('bound_lin' + "\t")
+        file.write('bound_hyp' + "\t")
+        file.write('bound_kl' + "\t")
+        file.write('bound_mrch' + "\t")
         file.write('n_sigma' + "\t")
         file.write('n_Z' + "\n")
         file.close()
@@ -348,7 +373,8 @@ def plot_hist(hist, y_max, plot):
     ax2 = ax1.twinx()
     ax1.plot(hist['epoch'], hist[f'train_{plot}'], c='b', lw=2)
     ax1.plot(hist['epoch'], hist[f'test_{plot}'], c='b', lw=2, ls='--')
-    ax1.plot(hist['epoch'], hist['bound_value'], c='b', lw=2, ls=':')
+    ax1.plot(hist['epoch'], hist['bound_lin'], c='b', lw=2, ls=':')
+    ax1.plot(hist['epoch'], hist['bound_hyp'], c='b', lw=2, ls=':')
     ax2.plot(hist['epoch'], hist['n_sigma'], c='r', lw=1)
     ax2.plot(hist['epoch'], hist['n_Z'], c='r', lw=1, ls='--')
     ax1.tick_params(axis='y', labelcolor='b')
@@ -357,6 +383,6 @@ def plot_hist(hist, y_max, plot):
     ax1.set_xlabel('Epoch')
     ax1.set_ylabel(f'{plot}')
     ax2.set_ylabel('cardinality')
-    ax1.legend(['Train', 'Test', 'Bound'], loc=2)
+    ax1.legend(['Train', 'Test', 'Bound (lin)', 'Bound (hyp)'], loc=2)
     ax2.legend(['n_$\sigma$', 'n_Z'], loc=3)
     plt.savefig("figures/hist.png")

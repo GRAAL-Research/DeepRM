@@ -1,4 +1,4 @@
-# Copyright 2023 Benjamin Leblanc, Alexandre Drouin, Mathieu Bazinet, Pascal Germain
+# Copyright 2024 Benjamin Leblanc, Alexandre Drouin, Mathieu Bazinet, Pascal Germain
 # This file is part of the Deep Reconstruction Machine (DeepRM) work.
 
 # DeepRM is free software: you can redistribute it and/or modify
@@ -15,31 +15,30 @@ import torch.nn as nn
 from sklearn.model_selection import ParameterGrid
 import wandb
 
-def deeprm(experiment_name = 'Test_wandb_3',
+def deeprm(experiment_name = 'Test_wandb_4',
            dataset = ['moons'], # easy, hard, moons, mnist
-           seed = [8],
-           n = [4000],  # Total number of datasets
-           m = [60],   # Number of example per dataset
+           seed = [0],
+           n = [400],  # Total number of datasets
+           m = [120],   # Number of example per dataset
            d = [2],     # Dimension of each example
            splits = [[0.55, 0.20, 0.25]], # Train, valid and test proportion of the data
            train_splits = [[0.9, 10]], # Proportion of meta_learner food VS predictor food; number of examples chosen
            meta_predictr = ['simplenet'],                   # per batch for the meta-learner to learn on
-           predictr = [['small_nn', [3]]
+           predictr = [['small_nn', [5]]
                        #['linear_classif', []],
                        ],
-           ca_dim = [[[800,400], 10],
-                     [[800,400], 6]], # Last value: compression set size
+           ca_dim = [[[100,100], 10]], # Last value: compression set size
            mha_dim = [[100]],
-           mod_1_dim = [[0]],        # Last value: message size
-           mod_2_dim = [[800,400,200],
-                        [1000]],
+           mod_1_dim = [[100,8]],        # Last value: message size
+           mod_2_dim = [[100,100,80]],
            tau = [0.1], # Temperature parameter (Gumbel)
            init = ['kaiming_unif'],
            criterion = ['bce_loss'],
            start_lr = [1e-3],
-           pen_msg = ['l1'],
-           pen_msg_coef = [0],#1e2,
-           batch_size = [100],
+           pen_msg = ['l2'],
+           pen_msg_coef = [0],
+           msg_type = ['dsc'], # 'cnt' for continuous, or 'dsc' for discrete (-1,1)
+           batch_size = [200],
            patience = [100],
            factor = [0.5],
            tol = [1e-2],
@@ -48,12 +47,12 @@ def deeprm(experiment_name = 'Test_wandb_3',
            scheduler = ['plateau'],
            n_epoch = [2000],
            DEVICE = ['cpu'], # 'gpu' or 'cpu'
-           bound_type = ['Alex'],
+           #bound_type = ['lin'],
            independent_food = [False],
            vis = 16,
            vis_loss_acc = True,
            plot = None,
-           weightsbiases = []#['graal_deeprm2024', 'deeprm_attention_3'] # []
+           weightsbiases = []#['graal_deeprm2024', 'deeprm_attention_4'] # []
     ):
     weightsbiases.append(1)
     param_grid = ParameterGrid([{'dataset': dataset,
@@ -75,6 +74,7 @@ def deeprm(experiment_name = 'Test_wandb_3',
                                    'start_lr': start_lr,
                                    'pen_msg': pen_msg,
                                    'pen_msg_coef': pen_msg_coef,
+                                   'msg_type': msg_type,
                                    'batch_size': batch_size,
                                     'patience': patience,
                                     'factor': factor,
@@ -84,7 +84,7 @@ def deeprm(experiment_name = 'Test_wandb_3',
                                     'scheduler': scheduler,
                                     'n_epoch': n_epoch,
                                     'DEVICE': DEVICE,
-                                    'bound_type': bound_type,
+                                    #'bound_type': bound_type,
                                     'independent_food': independent_food}])
     param_grid = [t for t in param_grid]
     ordering = {d: i for i, d in enumerate(dataset)}
@@ -98,6 +98,8 @@ def deeprm(experiment_name = 'Test_wandb_3',
         print(f"Launching task {i + 1}/{n_tasks} : {task_dict}\n")
         if is_job_already_done(experiment_name, task_dict):
             print("Already done; passing...\n")
+        if task_dict['msg_type'] == 'dsc' and task_dict['pen_msg_coef'] > 0:
+            print("Doesn't make sens to regularize discrete messages; passing...\n")
         else:
             set_seed(task_dict['seed'])
             if task_dict['dataset'] in ['moons', 'easy', 'hard']:
@@ -108,19 +110,16 @@ def deeprm(experiment_name = 'Test_wandb_3',
             output_dim = pred.num_param
             set_seed(task_dict['seed'])
             if task_dict['meta_predictor'] == 'simplenet':
-                if task_dict['independent_food']:
-                    di = task_dict['train_splits'][-1]
-                else:
-                    di = task_dict['m']
                 meta_pred = SimpleMetaNet(task_dict['d'],
                                             (task_dict['ca_dim'].copy(),
                                                   task_dict['mha_dim'].copy(),
                                                   task_dict['mod_1_dim'].copy(),
                                                   task_dict['mod_2_dim'].copy()),
                                           output_dim,
-                                          di,
+                                          int(task_dict['m'] / 2),
                                           task_dict['d'],
                                           task_dict['tau'],
+                                          task_dict['msg_type'],
                                           task_dict['batch_size'],
                                           task_dict['init'],
                                           task_dict['DEVICE'])
@@ -128,6 +127,8 @@ def deeprm(experiment_name = 'Test_wandb_3',
                 crit = nn.BCELoss(reduction='none')
             if task_dict['pen_msg'] == 'l1':
                 penalty_msg = l1
+            elif task_dict['pen_msg'] == 'l2':
+                penalty_msg = l2
             if task_dict['optimizer'] == 'adam':
                 opti = torch.optim.Adam(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
             elif task_dict['optimizer'] == 'rmsprop':
@@ -167,12 +168,12 @@ def deeprm(experiment_name = 'Test_wandb_3',
                             'scheduler': task_dict['scheduler'],
                             'n_epoch': task_dict['n_epoch'],
                             'DEVICE': task_dict['DEVICE'],
-                            'bound_type': task_dict['bound_type'],
+                            #'bound_type': task_dict['bound_type'],
                             'independent_food': task_dict['independent_food']
                         }
             weightsbiases[-1] = wandb_dico
             hist, best_epoch = train(meta_pred, pred, (data_1, data_2), task_dict['dataset'], task_dict['splits'], task_dict['train_splits'], opti, sched, task_dict['tol'], task_dict['early_stop'], task_dict['n_epoch'],
-                         task_dict['batch_size'], crit, penalty_msg, task_dict['pen_msg_coef'], vis, vis_loss_acc, task_dict['bound_type'], task_dict['DEVICE'], task_dict['independent_food'], weightsbiases)
+                         task_dict['batch_size'], crit, penalty_msg, task_dict['pen_msg_coef'], vis, vis_loss_acc, task_dict['DEVICE'], task_dict['independent_food'], weightsbiases)
             write(experiment_name, task_dict, hist, best_epoch-1)
             if plot in ['loss', 'acc']:
                 plot_hist(hist, task_dict['modl_1_dim'][-1]-task_dict['m'], plot)
