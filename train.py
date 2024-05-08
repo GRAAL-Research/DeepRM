@@ -29,8 +29,8 @@ class SimpleMetaNet(nn.Module):
             nn.Module A feedforward neural network.
         """
         super(SimpleMetaNet, self).__init__()
-        if device == "gpu" and torch.cuda.is_available():
-            self.device = "cuda:0"
+        if device == "gpu":
+            self.device = "gpu"
         else:
             self.device = "cpu"
         self.ca_dim, self.mha_dim, self.mod_1_dim, self.mod_2_dim = dims  # Dims of all 4 components
@@ -195,7 +195,8 @@ class MLP(nn.Module):
                 self.module.append(nn.Tanh())
 
         self.skip_position = len(self.module) - (1 + 1 * bn) + 1 * trans
-        self.module.to(torch.device(device))
+        if device == 'gpu':
+            self.module.to('cuda:0')
         init_weights(init, self.module)
 
     def forward(self, x):
@@ -251,7 +252,8 @@ class TRANS(nn.Module):
                                                 num_decoder_layers=5,
                                                 dropout=0.25))
         self.module.append(nn.Linear(self.m * (self.d+1), self.out))
-        self.module.to(torch.device(device))
+        if device == 'gpu':
+            self.module.to('cuda:0')
         init_weights(init, self.module)
 
     def forward(self, x):
@@ -376,10 +378,10 @@ def train(meta_pred, pred, data, dataset, splits, train_splits, optimizer, sched
     if len(weightsbiases) != 1:
         wandb.login(key='b7d84000aed68a9db76819fa4935778c47f0b374')
         wandb.init(
-            name=str(weightsbiases[-1]['start_lr']) + '_' + str(weightsbiases[-1]['optimizer']) + '_' + \
+            name=str(weightsbiases[-1]['start_lr']) + '_' + str(weightsbiases[-1]['optimizer']) + '_' +
                  str(weightsbiases[-1]['msg_type'][-1]) + '_' + str(weightsbiases[-1]['predictor'][-1]) + '_' +
                  str(weightsbiases[-1]['mod_1_dim'][-1]) + '_' + str(weightsbiases[-1]['ca_dim'][-1]) + '_' +
-                 str(weightsbiases[-1]['seed']),
+                 str(weightsbiases[-1]['pen_msg_coef']) + '_' + str(weightsbiases[-1]['seed']),
             project=weightsbiases[1],
             config=weightsbiases[2]
         )
@@ -488,7 +490,7 @@ def stats(splits, meta_pred, pred, criterion, data_loader_1, data_loader_2, n_si
             pred.update_weights(meta_output)
             output = pred.forward(inputs_1[:,m:], meta_output, return_sign=True)
             loss = criterion(output[0], targets_1[:,m:])
-            tot_loss.append(torch.sum(loss))
+            tot_loss.append(torch.sum(loss).cpu())
             acc = torch.sum(lin_loss(output[1], targets_1[:,m:] * 2 - 1, reduction=None), dim=1)
             if msg_type is not None:
                 for b in range(len(inputs_1)):
@@ -504,5 +506,7 @@ def stats(splits, meta_pred, pred, criterion, data_loader_1, data_loader_2, n_si
                     bnd_mrch.append(compute_bound(bound_info=msg_type, meta_pred=meta_pred, pred=pred, data_loader=data_loader_1,
                                             n_sigma=n_sigma, m=m, r=(m - acc[b]).cpu(), delta=0.05, bnd_type='marchand',
                                             batch_size=batch_size, a=0, b=1, inputs=inputs_1[[b],m:], targets=targets_1[[b],m:]))
-            tot_acc.append(torch.mean(acc / m))
+            tot_acc.append(torch.mean(acc / m).cpu())
+        if msg_type is None:
+            return np.mean(tot_acc), np.mean(tot_loss), []
         return np.mean(tot_acc), np.mean(tot_loss), [np.mean(bnd_lin), np.mean(bnd_hyp), np.mean(bnd_kl), np.mean(bnd_mrch)]
