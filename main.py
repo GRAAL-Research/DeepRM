@@ -19,7 +19,7 @@ def deeprm(experiment_name = 'Test_wandb_4',
            dataset = ['moons'], # easy, hard, moons, mnist
            seed = [0],
            n = [1000],  # Total number of datasets
-           m = [120],   # Number of example per dataset
+           m = [100],   # Number of example per dataset
            d = [2],     # Dimension of each example
            splits = [[0.55, 0.20, 0.25]], # Train, valid and test proportion of the data
            train_splits = [[0.9, 10]], # Proportion of meta_learner food VS predictor food; number of examples chosen
@@ -45,7 +45,7 @@ def deeprm(experiment_name = 'Test_wandb_4',
                            1e-1,
                            1e-0],
            msg_type = ['dsc', 'cnt'], # 'cnt' for continuous, or 'dsc' for discrete (-1,1)
-           batch_size = [200],
+           batch_size = [100],
            patience = [100],
            factor = [0.5],
            tol = [1e-2],

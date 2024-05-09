@@ -229,7 +229,7 @@ def compute_bound(bound_info, meta_pred, pred, data_loader, n_sigma, m, r, delta
                               np.log(delta / n_grid)) / lambd
                              )
                 if bound > best_bnd:
-                    best_bnd = bound
+                    best_bnd = bound.cpu()
         elif bnd_type == 'hyperparam':
             grid_start = -5
             for beta in np.logspace(grid_start, grid_start + n_grid):
@@ -247,7 +247,7 @@ def compute_bound(bound_info, meta_pred, pred, data_loader, n_sigma, m, r, delta
         if bnd_type == 'kl':
             epsilon = (log_binomial_coefficient(m, n_Z) +
                        np.log(2 * np.sqrt(m - n_Z) / zeta(n_Z) / p_sigma / delta)) / (m - n_Z)
-            best_bnd = 1 - kl_inv(min((r / (m - n_Z)).item(), 1), epsilon.item(), 'MAX')
+            best_bnd = 1 - kl_inv(min((r / (m - n_Z)).item(), 1), epsilon.item(), 'MAX').cpu()
         elif bnd_type == 'linear':
             grid_start = -5
             for beta in np.logspace(grid_start, grid_start + n_grid):
@@ -259,7 +259,7 @@ def compute_bound(bound_info, meta_pred, pred, data_loader, n_sigma, m, r, delta
                               np.log(delta / n_grid)) / (lambd * (m - n_Z))
                              )
                 if bound > best_bnd:
-                    best_bnd = bound
+                    best_bnd = bound.cpu()
         elif bnd_type == 'hyperparam':
             grid_start = -5
             for beta in np.logspace(grid_start, grid_start + n_grid):

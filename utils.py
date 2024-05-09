@@ -220,7 +220,7 @@ def is_job_already_done(experiment_name, dict):
             tess = [line.strip().split('\t') for line in tes]
         tes.close()
         for i in range(len(tess)):
-            if tess[i][:-6] == new:
+            if tess[i][:-9] == new:
                 cnt_nw += 1
     except FileNotFoundError:
         file = open("results/" + str(experiment_name) + ".txt", "a")
