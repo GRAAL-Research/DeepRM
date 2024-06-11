@@ -10,58 +10,81 @@ import wandb
 
 
 class SimpleMetaNet(nn.Module):
-    def __init__(self, input_dim, dims, output_dim, m, d, tau, msg_type, batch_size, init, device):
+    def __init__(self, pred_input_dim, task_dict):
         """
-        Generates a simple feed-forward neural network with ReLU activations and kernel mean embedding (MLP).
-            The kernel has |kernel_dim| layer; the element outputted by the Kernel are multiplied by the label values
-            before applying the mean function. Then, there are |hidden_dim| hidden layers, and an output layer.
+        Generates the DeepRM meta-predictor.
         Args:
-            intput_dim (int): Input dimension of the network.
-            dims (tuple of list of int):
-            output_dim (int): Outputput dimension of the network
-            m (int): Number of examples per dataset
-            d (int): Input dimension of each dataset
-            k (int): Sample compression size
-            tau (float): Temperature parameter for the Gumbel-Softmax component
-            batch_size (int): Batch size.
-            init (string): Layer initialization scheme (choices: 'kaiming_unif', '.._norm', 'xavier_unif', '.._norm')
-        Output:
-            nn.Module A feedforward neural network.
+            pred_input_dim (int): Input dimension of the predictor;
+            task_dict (dictionary) containing the following:
+                m (int): Number of examples per dataset;
+                d (int): Input dimension of each dataset;
+                comp_set_size (int): compression set size;
+                msg_size (int): message size;
+                ca_dim (list of int): custom attention's MLP architecture;
+                kme_dim (list of int): KME's MLP architecture;
+                mod_1_dim (list of int): MLP #1 architecture;
+                mod_2_dim (list of int): MLP #2 architecture;
+                tau (int): temperature parameter (softmax in custom attention);
+                msg_type (str): type of message (choices: 'dsc' (discret), 'cnt' (continuous));
+                batch_size (int): Batch size.
+                init (str): rand. init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
+                device (str): device on which to compute (choices: 'cpu', 'gpu');
         """
         super(SimpleMetaNet, self).__init__()
-        if device == "gpu":
-            self.device = "gpu"
-        else:
-            self.device = "cpu"
-        self.ca_dim, self.mha_dim, self.mod_1_dim, self.mod_2_dim = dims  # Dims of all 4 components
-        self.ca_dim, self.n_ca = self.ca_dim
-        self.k, self.m, self.msg_type = self.n_ca, m, msg_type
-        self.msg, self.msg_size, self.msk = None, None, None  # Message and mask (for compression selection)
-        self.d, self.tau, self.batch_size = d, tau, batch_size  # Parameters
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        self.mod_2_input = self.n_ca ** 2 + self.mod_1_dim[-1]
+        # Saving the parameters of the meta-learner
+        self.device = task_dict['device']
+        self.comp_set_size, self.msg_size = task_dict['comp_set_size'], task_dict['msg_size']
+        self.ca_dim, self.kme_dim = task_dict['ca_dim'], task_dict['kme_dim']
+        self.mod_1_dim, self.mod_2_dim = task_dict['mod_1_dim'], task_dict['mod_2_dim']
+        self.m, self.msg_type, self.init = int(task_dict['m'] / 2), task_dict['msg_type'], task_dict['init']
+        self.msg, self.msg_size, self.msk = None, task_dict[
+            'msg_size'], None  # Message and mask (for compression selection)
+        self.d, self.tau, self.batch_size = task_dict['d'], task_dict['tau'], task_dict['batch_size']  # Parameters
+        self.input_dim = self.d
+        self.output_dim = pred_input_dim
+        self.mod_2_input = self.comp_set_size ** 2 + self.mod_1_dim[-1]
 
+        # Generating the many components (custom attention (CA) multi-heads, KME #1-2, MLP #1-2) of the meta-learner
         self.cas = nn.ModuleList([])
-        for i in range(self.n_ca):
-            self.cas.append(CA([self.d + 1], self.ca_dim, self.ca_dim, [], self.m, device, init, False, False, 'fspool'))
-        self.mha = CA([self.d + 1], self.mha_dim, self.mha_dim, [], self.m, device, init, False, False, 'none')
-        self.kme = TRANS(self.batch_size, self.m, self.d, self.ca_dim[-1], device, init)
-        #self.kme = FSPool([d + 1], self.ca_dim, [], self.m, device, init, False, False)
-        self.kme = KME([d + 1], self.ca_dim, [], device, init, False, False)
-        self.mod_1 = MLP([self.ca_dim[-1]], self.mod_1_dim, [], device, init, False, False, False, self.msg_type)
-        self.mod_2 = MLP([self.mod_2_input], self.mod_2_dim, [self.output_dim], device, init, False,False, False, 'cnt')
+        for i in range(self.comp_set_size):
+            self.cas.append(CA(self.d + 1, self.ca_dim, self.ca_dim, self.m, self.device,
+                               self.init, False, False, 'fspool', self.tau))
+        self.kme_1 = KME(self.d + 1, self.ca_dim, self.device, self.init, False, False)
+        self.kme_2 = KME(self.d + 1, self.kme_dim, self.device, self.init, False, False)
+        self.mod_1 = MLP(self.ca_dim[-1], self.mod_1_dim, self.device, self.init,
+                         False, False, self.msg_type)
+        self.mod_2 = MLP(self.mod_2_input, self.mod_2_dim + [self.output_dim], self.device,
+                         self.init, False, False, 'cnt')
 
-    def forward(self, x, n_sample=0):
+    def forward(self, x, n_samples=0):
         """
         Computes a forward pass, given an input.
         Args:
-            x (torch.tensor of floats): input
+            x (torch.tensor of floats): input;
+            n_samples (int): number of random message to generate (0 to use mean as single message).
         return:
-            torch.Tensor Output of the network
+            torch.Tensor: output of the network.
         """
-        # Mask computation #
-        if self.n_ca > 0:
+        # Message computation #
+        if self.msg_size > 0:
+            # Computing the message #
+            x = self.kme_1.forward(x)
+            x = self.mod_1.forward(torch.reshape(x, (len(x), -1)))
+            if self.msg_type == 'cnt':
+                x = x * 3
+            if n_samples == 0:
+                self.msg = x.clone()
+            if n_samples > 0:
+                x_reshaped = torch.reshape(x, (-1, 1))
+                for sample in range(n_samples):
+                    if sample == 0:
+                        self.msg = torch.reshape(torch.normal(x_reshaped, 1), (len(x), -1))
+                    else:
+                        self.msg = torch.vstack((self.msg, torch.reshape(torch.normal(x_reshaped, 1), (len(x), -1))))
+                x = self.msg
+
+        # Mask computation
+        if self.comp_set_size > 0:
             mask = self.cas[0].forward(x.clone())
             for j in range(1, len(self.cas)):
                 out = self.cas[j].forward(x.clone())
@@ -70,28 +93,13 @@ class SimpleMetaNet(nn.Module):
             # Applying the mask to x #
             x_masked = torch.matmul(mask, x.clone())
 
-        # Computing the message #
-        x = self.kme.forward(x)
-        x = self.mod_1.forward(torch.reshape(x, (len(x), -1)))
-        if self.msg_type == 'cnt':
-            x = x * 3
-        if n_sample == 0:
-            self.msg = x.clone()
-        if n_sample > 0:
-            x_reshaped = torch.reshape(x, (-1,1))
-            for sample in range(n_sample):
-                if sample == 0:
-                    self.msg = torch.reshape(torch.normal(x_reshaped, 1), (len(x),-1))
-                else:
-                    self.msg = torch.vstack((self.msg, torch.reshape(torch.normal(x_reshaped, 1), (len(x),-1))))
-            x = self.msg
-
-        # Computing the compression set description #
-        if self.n_ca > 0:
-            x_masked = self.mha.forward(x_masked)
+            # Computing the compression set description #
+            x_masked = self.kme_2.forward(x_masked)
 
             # Concatenating all the information #
             x_masked = torch.reshape(x_masked, (len(x_masked), -1))
+            if n_samples > 0:
+                x_masked = x_masked.repeat(n_samples, 1)
             x_red = torch.hstack((x, x_masked))
         else:
             x_red = x
@@ -101,190 +109,130 @@ class SimpleMetaNet(nn.Module):
         return output
 
     def compute_compression_set(self, x):
+        """
+        Targets the examples that have the most contributed in the compression set.
+        Args:
+            x (torch.tensor of floats): input.
+        """
         # Mask computation #
-        if self.n_ca > 0:
+        if self.comp_set_size > 0:
             mask = self.cas[0].forward(x.clone())
             for j in range(1, len(self.cas)):
                 out = self.cas[j].forward(x.clone())
                 mask = torch.hstack((mask, out))
             self.msk = torch.squeeze(torch.topk(mask, 1, dim=(2)).indices)
+        else:
+            assert False, 'Cannot compute the compression set when it is of size 0.'
 
 
 class CA(nn.Module):
-    def __init__(self, input_dim, hidden_dims_mlp, hidden_dims_kme, output_dim, m, device, init, skip, bn, pool):
+    def __init__(self, input_dim, hidden_dims_mlp, hidden_dims_kme, m, device, init, skip, bn, pool, temp):
+        """
+        Initialize a custom attention head.
+        Args:
+            input_dim (int): input dimension of the custom attention head;
+            hidden_dims_mlp (list of int): architecture of the MLP;
+            hidden_dims_kme (list of int): architecture of the embedding (MLP) in the KME;
+            m (int): number of examples per dataset;
+            device (str): device on which to compute (choices: 'cpu', 'gpu');
+            init (str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
+            skip (bool): whether to include a skip connection or not;
+            bn (bool): whether to include batch normalization or not;
+            pool (str): type of pooling to apply for the query computation (choices: 'kme', 'fspool', 'none');
+            temp (float): temperature parameter for the softmax computation.
+        """
         super(CA, self).__init__()
-        self.k = MLP(input_dim, hidden_dims_mlp, output_dim, device, init, skip, bn, False, 'cnt')
+        self.temp = temp
+        #   The Keys are always computed by an MLP...
+        self.k = MLP(input_dim, hidden_dims_mlp, device, init, skip, bn, 'cnt')
+        #   While the Queries might be the result of a pooling component.
         if pool == 'kme':
-            self.q = KME(input_dim, hidden_dims_kme, output_dim, device, init, skip, bn)
+            self.q = KME(input_dim, hidden_dims_kme, device, init, skip, bn)
         elif pool == 'fspool':
-            self.q = FSPool(input_dim, hidden_dims_kme, output_dim, m, device, init, skip, bn)
+            self.q = FSPool(input_dim, hidden_dims_kme, m, device, init, skip, bn)
         elif pool == 'none':
-            self.q = MLP(input_dim, hidden_dims_kme, output_dim, device, init, skip, bn, False, 'cnt')
+            self.q = MLP(input_dim, hidden_dims_kme, device, init, skip, bn, 'cnt')
         else:
             assert False, 'Wrong pooling choice.'
 
     def forward(self, x):
+        """
+        Computes a forward pass, given an input.
+        Args:
+            x (torch.tensor of floats): input;
+        return:
+            torch.Tensor: output of the custom attention heads layer.
+        """
         x_1, x_2 = x.clone(), x.clone()
         queries = self.q.forward(x_1)
         keys = self.k.forward(x_2)
         qkt = torch.matmul(queries, torch.transpose(keys, 1, 2))
-        dist = torch.softmax(qkt, dim=2)
+        dist = torch.softmax(self.temp * qkt / torch.max(qkt, dim=-1).values, dim=2)
         return dist
 
 
 class KME(nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim, device, init, skip, bn):
+    def __init__(self, input_dim, hidden_dims, device, init, skip, bn):
+        """
+        Initialize a custom attention head.
+        Args:
+            input_dim (int): input dimension of the custom attention head;
+            hidden_dims (list of int): architecture of the embedding;
+            device (str): device on which to compute (choices: 'cpu', 'gpu');
+            init (str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
+            skip (bool): whether to include a skip connection or not;
+            bn (bool): whether to include batch normalization or not.
+        """
         super(KME, self).__init__()
-        self.mlp = MLP([input_dim[0] - 1], hidden_dims, output_dim, device, init, skip, bn, False, 'cnt')
+        self.embedding = MLP(input_dim - 1, hidden_dims, device, init, skip, bn, 'cnt')
 
     def forward(self, x):
-        batch_size = len(x)
+        """
+        Computes the KME output, given an input.
+        Args:
+            x (torch.tensor of floats): input;
+        return:
+            torch.Tensor: output of the custom attention heads layer.
+        """
         x_1 = x[:, :, :-1].clone()
-        out = self.mlp.forward(x_1)
-        x_1 = torch.mean(out * torch.reshape(x[:, :, -1], (batch_size, -1, 1)), dim=1)  # ... A compression is done
+        out = self.embedding.forward(x_1)
+        x_1 = torch.mean(out * torch.reshape(x[:, :, -1], (len(x), -1, 1)), dim=1)  # ... A compression is done
         return torch.reshape(x_1, (x_1.shape[0], 1, -1))
 
 
 class FSPool(nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim, m, device, init, skip, bn):
+    def __init__(self, input_dim, hidden_dims, m, device, init, skip, bn):
+        """
+        Initialize a custom attention head.
+        Args:
+            input_dim (int): input dimension of the custom attention head;
+            hidden_dims (list of int): architecture of the embedding;
+            m (int): number of examples per dataset;
+            device (str): device on which to compute (choices: 'cpu', 'gpu');
+            init (str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
+            skip (bool): whether to include a skip connection or not;
+            bn (bool): whether to include batch normalization or not.
+        """
         super(FSPool, self).__init__()
-        self.mlp = MLP([input_dim[0] - 1], hidden_dims, output_dim, device, init, skip, bn, False, 'cnt')
+        self.mlp = MLP(input_dim, hidden_dims, device, init, skip, bn, 'cnt')
         self.mat = torch.rand((m, hidden_dims[-1]))
+        if device == 'gpu':
+            self.mat = self.mat.to('cuda:0')
 
     def forward(self, x):
-        batch_size = len(x)
+        """
+        Computes FSPool output, given an input.
+        Args:
+            x (torch.tensor of floats): input;
+        return:
+            torch.Tensor: output of the custom attention heads layer.
+        """
         x_1 = x[:, :, :-1].clone()
         out = self.mlp.forward(x_1)
         out = torch.sort(out, dim=2)[0]
-        x_1 = torch.mean(out * self.mat * torch.reshape(x[:, :, -1], (batch_size, -1, 1)), dim=1)  # ... A compression is done
+
+        x_1 = torch.mean(out * self.mat * torch.reshape(x[:, :, -1], (len(x), -1, 1)), dim=1)
         return torch.reshape(x_1, (x_1.shape[0], 1, -1))
-
-class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dims, output_dim, device, init, skip, bn, trans, msg_type):
-        super(MLP, self).__init__()
-        """
-        Creates a ReLU linear layer, given dimensions.
-        Args:
-            dims (vector of ints): (respectively) size of the input layer, of the hidden layers, and of the output layer
-            last (bool): Whether (True) or not (False) to put an activation function at the end of the last layer
-        return:
-            torch.nn.Module
-        """
-        self.trans = trans
-        self.dims = input_dim + hidden_dims + output_dim
-        self.skip = skip
-        self.module = torch.nn.ModuleList()
-        if self.trans:
-            self.module.append(torch.nn.Transformer(d_model=3,
-                                                    nhead=3,
-                                                    dim_feedforward=20,
-                                                    num_encoder_layers=2,
-                                                    num_decoder_layers=2,
-                                                    dropout=0))
-        if self.skip and len(self.dims) > 2:
-            self.dims.insert(len(self.dims) - 1, self.dims[0])
-        for k in range(len(self.dims) - 1):
-            if bn:
-                self.module.append(nn.LazyBatchNorm1d())
-            self.module.append(nn.Linear(self.dims[k], self.dims[k + 1]))
-            if k < len(self.dims) - 2:
-                self.module.append(nn.ReLU())
-            elif k == len(self.dims) - 2 and msg_type == 'dsc':
-                self.module.append(SignStraightThrough())
-            elif k == len(self.dims) - 2 and msg_type == 'cnt':
-                self.module.append(nn.Tanh())
-
-        self.skip_position = len(self.module) - (1 + 1 * bn) + 1 * trans
-        if device == 'gpu':
-            self.module.to('cuda:0')
-        init_weights(init, self.module)
-
-    def forward(self, x):
-        l = 0
-        for layer in self.module:
-            l += 1
-            if l == 1:
-                if self.trans:
-                    x = layer(x, x)
-            x_1 = x.clone()
-            if self.skip and l == self.skip_position:
-                x += x_1
-            if l != 1 or not self.trans:
-                x = layer(x)
-        return x
-
-class SignStraightThrough(nn.Module):
-    """
-    Implementation of the Straigh trough estimator; basically a sign function
-    for which the gradient passes trough the sign function (if the input value
-    isn't too big) during the backward phase of the training :
-
-    g_a = 1_{|a| < 1} * g_a^b
-
-    """
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        out = input + torch.sign(input + 1e-20) - input.detach()
-        out[torch.abs(input) > 1] = out[torch.abs(input) > 1].detach()
-        return out
-class TRANS(nn.Module):
-    def __init__(self, batch_size, m, d, out, device, init):
-        super(TRANS, self).__init__()
-        """
-        Creates a ReLU linear layer, given dimensions.
-        Args:
-            dims (vector of ints): (respectively) size of the input layer, of the hidden layers, and of the output layer
-            last (bool): Whether (True) or not (False) to put an activation function at the end of the last layer
-        return:
-            torch.nn.Module
-        """
-        self.batch_size = batch_size
-        self.m = m
-        self.d = d
-        self.out = out
-        self.module = torch.nn.ModuleList()
-        self.module.append(torch.nn.Transformer(d_model=3,
-                                                nhead=3,
-                                                dim_feedforward=1000,
-                                                num_encoder_layers=5,
-                                                num_decoder_layers=5,
-                                                dropout=0.25))
-        self.module.append(nn.Linear(self.m * (self.d+1), self.out))
-        if device == 'gpu':
-            self.module.to('cuda:0')
-        init_weights(init, self.module)
-
-    def forward(self, x):
-        l = 0
-        for layer in self.module:
-            if l == 0:
-                x = layer(x, x)
-            else:
-                x = x.reshape((self.batch_size, 1,-1))
-                x = layer(x)
-            l += 1
-        return x
-
-
-def init_weights(init, module):
-    """
-    Instanciate the weights of the linear layers of one or many torch.nn.Module.
-    Args:
-        init (str): Layer initialization scheme (choices: 'kaiming_unif', '.._norm', 'xavier_unif', '.._norm')
-        modules (list of torch.nn.Module): The module(s) of interest
-    """
-    for layer in module:
-        if isinstance(layer, nn.Linear):
-            if init == 'kaiming_unif':
-                nn.init.kaiming_uniform_(layer.weight.data, nonlinearity='relu')
-            elif init == 'kaiming_norm':
-                nn.init.kaiming_normal_(layer.weight.data, nonlinearity='relu')
-            elif init == 'xavier_unif':
-                nn.init.xavier_uniform_(layer.weight.data)
-            elif init == 'xavier_norm':
-                nn.init.xavier_normal_(layer.weight.data)
 
 
 def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
@@ -293,12 +241,13 @@ def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
     Args:
         dataset (torch.utils.data.Dataset): Dataset
         batch_size (int): Desired batch-size for the DataLoader
-        train_split (float): Desired proportion of training example.
+        splits (list of float): Desired proportion of training, validation and test example must sum to 1).
         shuffle (bool): Whether the examples are shuffled before train/validation split.
         seed (int): A random seed.
     Returns:
         Tuple (training DataLoader, validation DataLoader).
     """
+    assert sum(splits) == 1, 'The sum of splits must be 1.'
     if len(dataset) > 3:
         num_data = len(dataset)
     else:
@@ -328,40 +277,48 @@ def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
     return train_loader, valid_loader, test_loader
 
 
-def train(meta_pred, pred, data, dataset, splits, train_splits, optimizer, scheduler, tol, early_stop, n_epoch,
-          batch_size, criterion, penalty_msg, penalty_msg_coef, vis, vis_loss_acc, DEVICE, independent_food,
-          weightsbiases):
+def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict):
     """
     Trains a meta predictor using PyTorch.
 
     Args:
         meta_pred (nn.Module): A meta predictor (neural network) to train.
-        pred (function): A predictor whose parameters are computed by the meta predictor.
-        dataset (Dataset): A dataset.
-        test_split (float): Desired proportion of test example.
-        valid_split (float): Desired proportion of validation examples (in the remaining).
-        optimizer (torch.optim): Optimisation algorithm
-        scheduler (torch.optim.lr_scheduler): Scheduler for the learning rate
-        tol (float): Quantity by which the loss must diminishes in order for this increment not to be marginal
-        early_stop (int): Number of epochs by which, if the loss hasn't diminished by tol (see above), the training stops
-        n_epoch (int): The maximum number of epochs.
-        batch_size (int): Batch size.
-        criterion (torch.nn, function): Loss function
-        penalty_msg (func): A regularization function for the message. (See utils.l1 for an example of such function)
-        penalty_msg_coef (float): Message regularization factor.
-        vis (int): Number of created predictors to visualize (plot) at the end of the training (only works for
-                        linear classifier with 2-d datasets).
-        bound_type (str): The type of PAC bound to compute (choices: "Alex", "Mathieu").
-        DEVICE (str): 'cuda', or 'cpu'; whether to use the gpu
-
+        pred (Predictor): A predictor whose parameters are computed by the meta predictor.
+        data (Dataset): A dataset.
+        optimizer (torch.optim): meta-neural network optimizer;
+        scheduler (torch.optim.lr_scheduler): learning rate decay scheduler;
+        criterion (function): loss function (choices: 'bce_loss');
+        pen_msg (function): message penalty function;
+        task_dict (dictionary) containing the following:
+            splits ([float, float, float]): train, valid and test proportion of the data;
+            tol (float): Quantity by which the loss must diminish in order for this increment not to be marginal
+            early_stop (int): Number of epochs by which, if the loss hasn't diminished by tol (see above), the training stops
+            n_epoch (int): The maximum number of epochs.
+            batch_size (int): Batch size.
+            pen_msg_coef (float): Message regularization factor.
+            device (str): whether to use the gpu (choices: 'gpu', 'cpu');
+            weightsbiases (list of [str, str]): list with WandB team and project if data is to be stocked on WandB;
+                          (empty list): if data is not to be stocked in WandB.
     Returns:
-        Tuple (nn.Module, dict): The trained model; dictionary containing several information about the training
+        tuple of: information about the model at the best training epoch (dictionary), best training epoch (int).
     """
+    # Retrieving information
+    splits = task_dict['splits']
+    tol = task_dict['tol']
+    early_stop = task_dict['early_stop']
+    n_epoch = task_dict['n_epoch']
+    batch_size = task_dict['batch_size']
+    msg_size = task_dict['msg_size']
+    msg_type = task_dict['msg_type']
+    pen_msg_coef = task_dict['pen_msg_coef']
+    device = task_dict['device']
+    weightsbiases = task_dict['weightsbiases']
+    m = int(meta_pred.m / 2)
+
     torch.autograd.set_detect_anomaly(True)
-    data_1, data_2 = data
-    train_loader_1, valid_loader_1, test_loader_1 = train_valid_loaders(data_1, batch_size, splits)
-    train_loader_2, valid_loader_2, test_loader_2 = train_valid_loaders(data_2, batch_size, splits)
-    best_rolling_val_acc, j = 0, 0
+    train_loader, valid_loader, test_loader = train_valid_loaders(data, batch_size, splits)
+    best_rolling_val_acc, best_epoch = 0, 0
+    # The following information will be recorded at each epoch
     hist = {'epoch': [],
             'train_loss': [],
             'valid_loss': [],
@@ -372,141 +329,105 @@ def train(meta_pred, pred, data, dataset, splits, train_splits, optimizer, sched
             'bound_lin': [],
             'bound_hyp': [],
             'bound_kl': [],
-            'bound_mrch': [],
-            'n_sigma': [],
-            'n_Z': []}
-    if len(weightsbiases) != 1:
+            'bound_mrch': []}
+    if len(weightsbiases) > 1:  # If condition is true, then metrics about the experiment are recorded in WandB
         wandb.login(key='b7d84000aed68a9db76819fa4935778c47f0b374')
         wandb.init(
-            name=str(weightsbiases[-1]['start_lr']) + '_' + str(weightsbiases[-1]['optimizer']) + '_' +
-                 str(weightsbiases[-1]['msg_type'][-1]) + '_' + str(weightsbiases[-1]['predictor'][-1]) + '_' +
-                 str(weightsbiases[-1]['mod_1_dim'][-1]) + '_' + str(weightsbiases[-1]['ca_dim'][-1]) + '_' +
-                 str(weightsbiases[-1]['pen_msg_coef']) + '_' + str(weightsbiases[-1]['seed']),
+            name=str(task_dict['start_lr']) + '_' + str(task_dict['optimizer']) + '_' +
+                 str(task_dict['msg_type']) + '_' + str(task_dict['pred_arch']) + '_' +
+                 str(task_dict['msg_size']) + '_' + str(task_dict['comp_set_size']) + '_' +
+                 str(task_dict['pen_msg_coef']) + '_' + str(task_dict['seed']),
             project=weightsbiases[1],
-            config=weightsbiases[2]
+            config=task_dict
         )
-    m = meta_pred.m
     begin = time()
     for i in range(n_epoch):
-        meta_pred.train()
-        with torch.enable_grad():
-            # k=0
-            for inputs_1, targets_1 in train_loader_1:
-                #    k+=1
-                #    l=0
-                #    for inputs_2, targets_2 in train_loader_2:
-                #        l+=1
-                #        if l != k:
-                #            pass
-                #        else:
-                inputs_1, targets_1 = inputs_1.float(), targets_1.float()
-                #    inputs_2, targets_2 = inputs_2.float(), targets_2.float()
-                if str(DEVICE) == 'gpu':
-                    inputs_1, targets_1, meta_pred = inputs_1.cuda(), targets_1.cuda(), meta_pred.cuda()
-                #        inputs_2, targets_2 = inputs_2.cuda(), targets_2.cuda()
-                optimizer.zero_grad()
-                #    meta_output = meta_pred(inputs_2)  # We compute the parameters of the predictor.
-                meta_output = meta_pred(inputs_1[:,:m])  # We compute the parameters of the predictor.
-                pred.update_weights(meta_output)
-                output = pred.forward(inputs_1[:,m:], meta_output)
-                loss = torch.mean(torch.mean(criterion(output, targets_1[:,m:]), dim=1) ** 0.5) + penalty_msg(meta_pred.msg,
-                                                                              penalty_msg_coef)  # Regularized loss
-                #print(torch.mean(torch.mean(criterion(output, targets_1), dim=1) ** 0.5), penalty_msg(meta_pred.msg, penalty_msg_coef))
-                loss.backward()
-                optimizer.step()
-        n_sigma = round(torch.sum((torch.abs(meta_pred.msg) > 0) * 1).item() / len(meta_pred.msg))  # Mean message size
-        val_acc, val_loss, _ = stats(train_splits, meta_pred, pred, criterion, valid_loader_1,
-                                    valid_loader_2, n_sigma, None, None, batch_size,
-                                    DEVICE, 'valid', independent_food)
-        test_acc, test_loss, bound = stats(train_splits, meta_pred, pred, criterion, test_loader_1,
-                                          test_loader_2, n_sigma, meta_pred.msg_type, None, batch_size,
-                                          DEVICE, 'test', independent_food)
-        train_acc, train_loss, _ = stats(train_splits, meta_pred, pred, criterion, train_loader_1,
-                                        train_loader_2, n_sigma, None, None, batch_size,
-                                        DEVICE, 'train', independent_food)
-        update_hist(hist, (train_acc, train_loss, val_acc, val_loss, test_acc, test_loss,
-                           bound, n_sigma, meta_pred.k, i))  # Tracking results
+        meta_pred.train()  # We put the meta predictor in training mode
+        with (torch.enable_grad()):
+            for inputs, targets in train_loader:  # Iterating over the various batches
+                inputs, targets = inputs.float(), targets.float()
+                if str(device) == 'gpu':
+                    inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
+                optimizer.zero_grad()  # Zeroing the gradient everywhere in the meta-learner
+                meta_output = meta_pred(inputs[:, m:])  # Computing the parameters of the predictor.
+                pred.update_weights(meta_output, batch_size)  # Updating the weights of the predictor
+                output = pred.forward(inputs[:, m:])  # Computing the predictions for the task
+                loss = torch.mean(torch.mean(criterion(output, targets[:, m:]), dim=1) ** 0.5)
+                loss += pen_msg(meta_pred.msg, pen_msg_coef)  # Regularized loss
+                loss.backward()  # Gradient computation
+                optimizer.step()  # Backprop step
+        # Computation of statistics about the current training epoch
+        tr_acc, tr_loss, _ = stats(meta_pred, pred, criterion, train_loader, msg_size, msg_type, batch_size, device)
+        vd_acc, vd_loss, _ = stats(meta_pred, pred, criterion, valid_loader, msg_size, msg_type, batch_size, device)
+        te_acc, te_loss, bound = stats(meta_pred, pred, criterion, test_loader, msg_size, msg_type, batch_size, device)
+        update_hist(hist, (tr_acc, tr_loss, vd_acc, vd_loss, te_acc, te_loss,
+                           bound, msg_size, meta_pred.comp_set_size, i))  # Tracking results
         rolling_val_acc = torch.mean(torch.tensor(hist['valid_acc'][-min(100, i + 1):]))
-        if len(weightsbiases) != 1:
-            update_wandb(wandb, hist)
-        print(f'Epoch {i + 1} - Train acc: {train_acc:.2f} - Val acc: {val_acc:.2f} - Test acc: {test_acc:.2f} - '
-              f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), (Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')
-        scheduler.step(rolling_val_acc)
+        if len(weightsbiases) > 1:
+            update_wandb(wandb, hist)  # Upload information to WandB
+        print(f'Epoch {i + 1} - Train acc: {tr_acc:.2f} - Val acc: {vd_acc:.2f} - Test acc: {te_acc:.2f} - '
+              f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
+              f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)} \n')  # Print information in console
+        scheduler.step(rolling_val_acc)  # Scheduler step
         if i == 1 or rolling_val_acc > best_rolling_val_acc + tol:  # If an improvement has been done in validation...
-            j = copy(i)  # ...We keep track of it
+            best_epoch = copy(i)  # ...We keep track of it
             best_rolling_val_acc = copy(rolling_val_acc)
-        if (
-                train_acc < 0.525 and i > 50) or i - j > early_stop:  # If no improvement for early_stop epoch, stop training.
-            break
-    if vis > 0 and len(inputs_1[0, 0, :-1]) == 2:
-        if len(weightsbiases) != 1:
-            show_decision_boundaries(meta_pred, dataset, test_loader_1, test_loader_2, vis, pred, wandb, DEVICE)
-
-    print()
-    if len(weightsbiases) != 1:
-        wandb.finish()
-    return hist, j
+        if ((tr_acc < 0.525 and i > 50) or  # If no learning has been made...
+                i - best_epoch > early_stop):  # ... or no improvements for a while ...
+            break  # Early stopping is made
+    if task_dict['d'] == 2 and len(weightsbiases) > 1:  # Plotting the decision boundary for a few problems
+        show_decision_boundaries(meta_pred, task_dict['dataset'], test_loader, pred, wandb, device)
+    if len(weightsbiases) > 1:
+        wandb.finish()  # End the run on WandB
+    return hist, best_epoch
 
 
-def stats(splits, meta_pred, pred, criterion, data_loader_1, data_loader_2, n_sigma, msg_type, acc, batch_size, DEVICE,
-          data_type, independent_food):
+def stats(meta_pred, pred, criterion, data_loader, msg_size, msg_type, batch_size, device):
     """
-    Computes the overall accuracy and loss of a predictor on given task and dataset.
+    Computes the overall accuracy, loss and bounds of a predictor on given task and dataset.
     Args:
         meta_pred (nn.Module): A meta predictor (neural network) to train.
-        pred (function): A predictor whose parameters are computed by the meta predictor.
+        pred (Predictor): A predictor whose parameters are computed by the meta predictor.
         criterion (torch.nn, function): Loss function
         data_loader (DataLoader): A DataLoader to test on.
-        n_sigma (int): Size of the message
-        bound_type (str): The type of PAC bound to compute (choices: "Alex", "Mathieu").
-        DEVICE (str): 'cuda', or 'cpu'; whether to use the gpu
+        msg_size (int): Size of the message
+        msg_type (str): type of message (choices: 'dsc' (discret), 'cnt' (continuous));
+        batch_size (int): Batch size.
+        device (str): 'cuda', or 'cpu'; whether to use the gpu
     Returns:
         Tuple (float, float): the 0-1 accuracy and loss.
     """
-    bnd_lin, bnd_hyp, bnd_kl, bnd_mrch = [], [], [], []
-    meta_pred.eval()
+    bnd_lin, bnd_hyp, bnd_kl, bnd_mrch = [], [], [], []  # The various bounds to compute
+    meta_pred.eval()  # We put the meta predictor in evaluation mode
     m = meta_pred.m
-    with (torch.no_grad()):
-        i = 0
-        tot_loss = []
-        tot_acc = []
-        k = 0
-        for inputs_1, targets_1 in data_loader_1:
-            k += 1
-            # l = 0
-            # for inputs_2, targets_2 in data_loader_2:
-            #    l += 1
-            #    if l != k:
-            #        pass
-            #    else:
-            n = copy(len(targets_1) * len(targets_1[0]))
+    with torch.no_grad():
+        i, k = 0, 0  # Number of batches / examples we have been through
+        tot_loss, tot_acc = [], []
+        for inputs, targets in data_loader:
+            n = copy(len(targets) * len(targets[0]))
             i += n
-            inputs_1, targets_1 = inputs_1.float(), targets_1.float()
-            # inputs_2, targets_2 = inputs_2.float(), targets_2.float()
-            if str(DEVICE) == 'gpu':
-                inputs_1, targets_1, meta_pred = inputs_1.cuda(), targets_1.cuda(), meta_pred.cuda()
-            #    inputs_2, targets_2 = inputs_2.cuda(), targets_2.cuda()
-            meta_output = meta_pred(inputs_1[:,:m])  # We compute the parameters of the predictor.
-            pred.update_weights(meta_output)
-            output = pred.forward(inputs_1[:,m:], meta_output, return_sign=True)
-            loss = criterion(output[0], targets_1[:,m:])
+            k += 1
+            inputs, targets = inputs.float(), targets.float()
+            if str(device) == 'gpu':
+                inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
+            meta_output = meta_pred(inputs[:, :m])  # Computing the parameters of the predictor
+            pred.update_weights(meta_output, batch_size)  # Updating the weights of the predictor
+            output = pred.forward(inputs[:, m:], True)  # Computing the predictions for the task
+            loss = criterion(output[0], targets[:, m:])  # Loss computation
             tot_loss.append(torch.sum(loss).cpu())
-            acc = torch.sum(lin_loss(output[1], targets_1[:,m:] * 2 - 1, reduction=None), dim=1)
-            if msg_type is not None:
-                for b in range(len(inputs_1)):
-                    bnd_lin.append(compute_bound(bound_info=msg_type, meta_pred=meta_pred, pred=pred, data_loader=data_loader_1,
-                                            n_sigma=n_sigma, m=m, r=(m - acc[b]).cpu(), delta=0.05, bnd_type='linear',
-                                            batch_size=batch_size, a=0, b=1, inputs=inputs_1[[b],m:], targets=targets_1[[b],m:]))
-                    bnd_hyp.append(compute_bound(bound_info=msg_type, meta_pred=meta_pred, pred=pred, data_loader=data_loader_1,
-                                            n_sigma=n_sigma, m=m, r=(m - acc[b]).cpu(), delta=0.05, bnd_type='hyperparam',
-                                            batch_size=batch_size, a=0, b=1, inputs=inputs_1[[b],m:], targets=targets_1[[b],m:]))
-                    bnd_kl.append(compute_bound(bound_info=msg_type, meta_pred=meta_pred, pred=pred, data_loader=data_loader_1,
-                                            n_sigma=n_sigma, m=m, r=(m - acc[b]).cpu(), delta=0.05, bnd_type='kl',
-                                            batch_size=batch_size, a=0, b=1, inputs=inputs_1[[b],m:], targets=targets_1[[b],m:]))
-                    bnd_mrch.append(compute_bound(bound_info=msg_type, meta_pred=meta_pred, pred=pred, data_loader=data_loader_1,
-                                            n_sigma=n_sigma, m=m, r=(m - acc[b]).cpu(), delta=0.05, bnd_type='marchand',
-                                            batch_size=batch_size, a=0, b=1, inputs=inputs_1[[b],m:], targets=targets_1[[b],m:]))
+            acc = torch.sum(lin_loss(output[1], targets[:, m:] * 2 - 1, reduction=False), dim=1)  # Accuracy computation
             tot_acc.append(torch.mean(acc / m).cpu())
+            if msg_type is not None:
+                for b in range(len(inputs)):  # For all datasets, we compute the bounds
+                    bnds = compute_bound(msg_type, meta_pred, pred, msg_size, m, m - acc[b].cpu(),
+                                         0.05, ['linear', 'hyperparam', 'kl', 'marchand'],
+                                         0, 1, inputs[[b], m:], targets[[b], m:])
+                    bnd_lin.append(bnds[0])
+                    bnd_hyp.append(bnds[1])
+                    bnd_kl.append(bnds[2])
+                    bnd_mrch.append(bnds[3])
         if msg_type is None:
             return np.mean(tot_acc), np.mean(tot_loss), []
-        return np.mean(tot_acc), np.mean(tot_loss), [np.mean(bnd_lin), np.mean(bnd_hyp), np.mean(bnd_kl), np.mean(bnd_mrch)]
+        # We only return the mean bound obtained on the various datasets
+        return np.mean(tot_acc), np.mean(tot_loss), [np.mean(bnd_lin), np.mean(bnd_hyp), np.mean(bnd_kl),
+                                                     np.mean(bnd_mrch)]

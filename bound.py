@@ -9,7 +9,6 @@ from utils import *
 def log_stirlings_approximation(n):
     """
     Stirling's approximation for the logarithm of the factorial
-
     """
     if n == 0:
         return 0
@@ -26,17 +25,25 @@ def log_binomial_coefficient(n, k):
 
 
 def log_prob_bin(k, n, r):
+    """
+    Logarithm of P(x = k), if X ~ Bin(n, r)
+    """
     return log_binomial_coefficient(n, k) + k * math.log(max(r, 1e-10)) + (n - k) * math.log(max(1 - r, 1e-10))
 
 
 def bin_cum(k, n, r):
+    """
+    Logarithm of P(x <= k), if X ~ Bin(n, r)
+    """
     prob_cum = 0
     for i in range(k + 1):
         prob_cum += math.exp(log_prob_bin(i, n, r))
     return prob_cum
 
-
 def sup_bin(k, m, delta):
+    """
+    Estimation of sup(r : P(x <= k) >= delta), if X ~ Bin(m, r)
+    """
     gamma_sup = 1
     gamma_inf = 0
     for j in range(10):
@@ -50,6 +57,9 @@ def sup_bin(k, m, delta):
 
 
 def inf_bin(k, m, delta):
+    """
+    Estimation of inf(r : P(x <= k) >= 1 - delta), if X ~ Bin(m, r)
+    """
     gamma_sup = 1
     gamma_inf = 0
     for j in range(10):
@@ -67,46 +77,6 @@ def zeta(x):
     Mario's function...
     """
     return (6 / np.pi ** 2) * (x + 1) ** -2
-
-
-def eta(x, m):
-    """
-    Uniform
-    """
-    return 1 / m
-
-
-def prior(sigma):
-    """
-    Prior on the value of messages (this is an arbitrary choice)
-
-    """
-    # Length prior: we make an arbitrary choice that decays with message length (favor smaller messages)
-    p_len = zeta(len(sigma))
-
-    # Content prior: we use a simple isotropic standard normal prior (favors small weights)
-    p_content = np.prod(norm.pdf(sigma))  # Product of likelihood of each dimension
-
-    return p_len * p_content
-
-
-def a_star(m, n_Z, r, a):
-    return (1 -
-            np.exp(1 / (m - n_Z - r) * (
-                        r * np.log(r / (m - n_Z)) + (m - n_Z - r) * np.log(1 - r / (m - n_Z)) - r * np.log(
-                    r / (m - n_Z) + a))) -
-            r / (m - n_Z))
-
-
-def bnd(m, n_Z, r, p_sigma, delta, a):
-    return 1 - np.exp(
-        -1 / (m - n_Z - r) *
-        (r * np.log(r / (m - n_Z) + a) +
-         log_binomial_coefficient(m, n_Z) +
-         log_binomial_coefficient(m - n_Z, r) +
-         np.log(1 / p_sigma) +
-         np.log(1 / (zeta(n_Z) * zeta(r) * delta))
-         ))
 
 
 def kl_inv(q, epsilon, mode, tol=10 ** -9, nb_iter_max=1000):
@@ -165,12 +135,10 @@ def kl_inv(q, epsilon, mode, tol=10 ** -9, nb_iter_max=1000):
             p_min = p
         elif (mode == "MIN" and kl(q, p) < epsilon):
             p_max = p
-
     return p
 
 
-def compute_bound(bound_info, meta_pred, pred, data_loader, n_sigma, m, r, delta, bnd_type, batch_size, a, b, inputs,
-                  targets):
+def compute_bound(bound_info, meta_pred, pred, n_sigma, m, r, delta, bnds_type, a, b, inputs, targets):
     """
     Sample compression bound of Marchand and someone else
 
@@ -193,85 +161,91 @@ def compute_bound(bound_info, meta_pred, pred, data_loader, n_sigma, m, r, delta
         The bound value
 
     """
-    n_Z = meta_pred.k
+    n_Z = meta_pred.comp_set_size
     n_sample = 2
     msg_type = bound_info
     best_bnd = 0
     n_grid = 11
-    if msg_type == 'cnt':
-        tot_acc, k = 0, 0
-        # for inputs, targets in data_loader:
-        #    inputs, targets = inputs.float(), targets.float()
-        #    #    inputs_2, targets_2 = inputs_2.float(), targets_2.float()
-        #    #if str(DEVICE) == 'gpu':
-        #    #    inputs_1, targets_1, meta_pred = inputs_1.cuda(), targets_1.cuda(), meta_pred.cuda()
-        meta_output = meta_pred(inputs, n_sample=n_sample)
-        for sample in range(n_sample):
-            outp = meta_output[[sample]]
-            pred.update_weights(outp)
-            output = pred.forward(inputs, outp, return_sign=True)
-            acc = lin_loss(output[1], targets * 2 - 1, reduction=None)
-            tot_acc += torch.sum(acc)
-        tot_acc /= n_sample
-        r = m - tot_acc
-        KL = torch.mean(torch.sum(meta_pred.msg ** 2, dim=1))
-        #print(KL)
-        if bnd_type == 'kl':
-            epsilon = (KL + np.log(2 * np.sqrt(m - n_Z) / zeta(n_Z) / delta)) / (m - n_Z)
-            best_bnd = 1 - kl_inv(min((r / (m - n_Z)).item(), 1), epsilon.item(), 'MAX')
-        elif bnd_type == 'linear':
-            grid_start = -5
-            for beta in np.logspace(grid_start, grid_start + n_grid):
-                lambd = beta / m ** 0.5
-                bound = 1 - ((r / (m - n_Z)) + lambd * (b - a) ** 2 / (8 * (m - n_Z)) +
-                             (KL -
-                              np.log(zeta(n_Z)) -
-                              np.log(delta / n_grid)) / lambd
-                             )
-                if bound > best_bnd:
-                    best_bnd = bound.cpu()
-        elif bnd_type == 'hyperparam':
-            grid_start = -5
-            for beta in np.logspace(grid_start, grid_start + n_grid):
-                C = beta / m ** 0.5
-                bound = 1 - ((1 - math.exp(-C * (r / (m - n_Z)) -
-                                           (KL -
-                                            np.log(zeta(n_Z)) -
-                                            np.log(delta / n_grid)) / (m - n_Z))) / (1 - math.e ** (-C)))
-                if bound > best_bnd:
-                    best_bnd = bound
-        elif bnd_type == 'marchand':
-            best_bnd = 0
-    elif msg_type == 'dsc':
-        p_sigma = 2 ** (-n_sigma)
-        if bnd_type == 'kl':
-            epsilon = (log_binomial_coefficient(m, n_Z) +
-                       np.log(2 * np.sqrt(m - n_Z) / zeta(n_Z) / p_sigma / delta)) / (m - n_Z)
-            best_bnd = 1 - kl_inv(min((r / (m - n_Z)).item(), 1), epsilon.item(), 'MAX').cpu()
-        elif bnd_type == 'linear':
-            grid_start = -5
-            for beta in np.logspace(grid_start, grid_start + n_grid):
-                lambd = beta / m ** 0.5
-                bound = 1 - ((r / (m - n_Z)) + lambd * (b - a) ** 2 / 8 +
-                             (log_binomial_coefficient(m, n_Z) -
-                              np.log(p_sigma) -
-                              np.log(zeta(n_Z)) -
-                              np.log(delta / n_grid)) / (lambd * (m - n_Z))
-                             )
-                if bound > best_bnd:
-                    best_bnd = bound.cpu()
-        elif bnd_type == 'hyperparam':
-            grid_start = -5
-            for beta in np.logspace(grid_start, grid_start + n_grid):
-                C = beta / m ** 0.5
-                bound = 1 - ((1 - math.exp(-C * (r / (m - n_Z)) -
-                                           (log_binomial_coefficient(m, n_Z) -
-                                            np.log(p_sigma) -
-                                            np.log(zeta(n_Z)) -
-                                            np.log(delta / n_grid)) / (m - n_Z))) / (1 - math.e ** (-C))
-                             )
-                if bound > best_bnd:
-                    best_bnd = bound
-        elif bnd_type == 'marchand':
-            best_bnd = 1 - sup_bin(int(r - n_Z), int(m - n_Z), delta * p_sigma * zeta(n_Z))
-    return best_bnd
+    best_bnds = []
+    for bnd_type in bnds_type:
+        if msg_type == 'cnt':
+            tot_acc, k = 0, 0
+            meta_output = meta_pred(inputs, n_sample=n_sample)
+            for sample in range(n_sample):
+                outp = meta_output[[sample]]
+                pred.update_weights(outp)
+                output = pred.forward(inputs, outp, return_sign=True)
+                acc = lin_loss(output[1], targets * 2 - 1, reduction=False)
+                tot_acc += torch.sum(acc)
+            tot_acc /= n_sample
+            r = m - tot_acc
+            KL = torch.mean(torch.sum(meta_pred.msg ** 2, dim=1))
+            if bnd_type == 'kl':
+                epsilon = (KL + np.log(2 * np.sqrt(m - n_Z) / zeta(n_Z) / delta)) / (m - n_Z)
+                best_bnd = 1 - kl_inv(min((r / (m - n_Z)).item(), 1), epsilon.item(), 'MAX')
+            elif bnd_type == 'linear':
+                grid_start = -5
+                for beta in np.logspace(grid_start, grid_start + n_grid):
+                    lambd = beta / m ** 0.5
+                    bound = 1 - ((r / (m - n_Z)) + lambd * (b - a) ** 2 / (8 * (m - n_Z)) +
+                                 (KL -
+                                  np.log(zeta(n_Z)) -
+                                  np.log(delta / n_grid)) / lambd
+                                 ).item()
+                    if bound > best_bnd:
+                        best_bnd = bound
+            elif bnd_type == 'hyperparam':
+                grid_start = -5
+                for beta in np.logspace(grid_start, grid_start + n_grid):
+                    C = beta / m ** 0.5
+                    bound = 1 - ((1 - math.exp(-C * (r / (m - n_Z)) -
+                                               (KL -
+                                                np.log(zeta(n_Z)) -
+                                                np.log(delta / n_grid)) / (m - n_Z))) / (1 - math.e ** (-C)))
+                    if bound > best_bnd:
+                        best_bnd = bound
+            elif bnd_type == 'marchand':
+                best_bnd = 0
+        elif msg_type == 'dsc':
+            p_sigma = 2 ** (-n_sigma)
+            if bnd_type == 'kl':
+                epsilon = (log_binomial_coefficient(m, n_Z) +
+                           np.log(2 * np.sqrt(m - n_Z) / zeta(n_Z) / p_sigma / delta)) / (m - n_Z)
+                best_bnd = 1 - kl_inv(min(1, r / (m - n_Z)), epsilon, 'MAX')
+            elif bnd_type == 'linear':
+                grid_start = -5
+                for beta in np.logspace(grid_start, grid_start + n_grid):
+                    lambd = beta / m ** 0.5
+                    bound = 1 - ((r / (m - n_Z)) + lambd * (b - a) ** 2 / 8 +
+                                 (log_binomial_coefficient(m, n_Z) -
+                                  np.log(p_sigma) -
+                                  np.log(zeta(n_Z)) -
+                                  np.log(delta / n_grid)) / (lambd * (m - n_Z))
+                                 )
+                    if bound > best_bnd:
+                        best_bnd = bound
+            elif bnd_type == 'hyperparam':
+                grid_start = -5
+                for beta in np.logspace(grid_start, grid_start + n_grid):
+                    C = beta / m ** 0.5
+                    bound = 1 - ((1 - math.exp(-C * (r / (m - n_Z)) -
+                                               (log_binomial_coefficient(m, n_Z) -
+                                                np.log(p_sigma) -
+                                                np.log(zeta(n_Z)) -
+                                                np.log(delta / n_grid)) / (m - n_Z)))
+                                 / (1 - math.exp(-C))
+                                 )
+                    if bound > best_bnd:
+                        best_bnd = bound
+            elif bnd_type == 'marchand':
+                best_bnd = 1 - sup_bin(int(min(r, m - n_Z)), int(m - n_Z),
+                                       delta * p_sigma * zeta(n_Z) / math.exp(log_binomial_coefficient(m, n_Z)))
+                # best_bnd = math.exp((-1 / (m - r - n_Z)) * (
+                #                 log_binomial_coefficient(m - n_Z, r) -
+                #                 np.log(p_sigma) -
+                #                 np.log(zeta(n_Z)) -
+                #                 np.log(delta)
+                #                 )
+                #               )
+        best_bnds.append(best_bnd)
+    return best_bnds
