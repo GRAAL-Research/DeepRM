@@ -114,8 +114,8 @@ def kl_inv(q, epsilon, mode, tol=10 ** -9, nb_iter_max=1000):
         return q * math.log(q / p) + (1 - q) * math.log((1 - q) / (1 - p))
 
     # We optimize the problem with the bisection method
-
-    if (mode == "MAX"):
+    p = 0
+    if mode == "MAX":
         p_max = 1 - 1e-10
         p_min = float(q)
     else:
@@ -124,42 +124,37 @@ def kl_inv(q, epsilon, mode, tol=10 ** -9, nb_iter_max=1000):
     q = min(max(q, 1e-10), 1 - 1e-10)
     for _ in range(nb_iter_max):
         p = (p_min + p_max) / 2.0
-        if (kl(q, p) == epsilon or (p_max - p_min) / 2.0 < tol):
+        if kl(q, p) == epsilon or (p_max - p_min) / 2.0 < tol:
             return p
-
-        if (mode == "MAX" and kl(q, p) > epsilon):
+        if mode == "MAX" and kl(q, p) > epsilon:
             p_max = p
-        elif (mode == "MAX" and kl(q, p) < epsilon):
+        elif mode == "MAX" and kl(q, p) < epsilon:
             p_min = p
-        elif (mode == "MIN" and kl(q, p) > epsilon):
+        elif mode == "MIN" and kl(q, p) > epsilon:
             p_min = p
-        elif (mode == "MIN" and kl(q, p) < epsilon):
+        elif mode == "MIN" and kl(q, p) < epsilon:
             p_max = p
     return p
 
 
 def compute_bound(bound_info, meta_pred, pred, n_sigma, m, r, delta, bnds_type, a, b, inputs, targets):
     """
-    Sample compression bound of Marchand and someone else
-
-    Parameters:
-    -----------
-    n_Z: uint
-        Number of examples in the compression set
-    n_sigma: uint
-        Number of floating point values in the messages
-    m: uint
-        Number of examples in the training set
-    r: uint
-        Number of errors made by the classifier on the training set
-    delta: float
-        Confidence on the value of the bound is 1 - delta
-
-    Returns:
-    --------
-    bound: float
-        The bound value
-
+    Generates the DeepRM meta-predictor.
+        Args:
+            bound_info (): ;
+            meta_pred (): ;
+            pred (): ;
+            n_sigma (): ;
+            m (): ;
+            r (): ;
+            delta (): ;
+            bnds_type (): ;
+            a (): ;
+            b (): ;
+            inputs (): ;
+            targets (): ;
+        Return:
+            list of floats, the bound values.
     """
     n_Z = meta_pred.comp_set_size
     n_sample = 2
@@ -240,12 +235,13 @@ def compute_bound(bound_info, meta_pred, pred, n_sigma, m, r, delta, bnds_type, 
             elif bnd_type == 'marchand':
                 best_bnd = 1 - sup_bin(int(min(r, m - n_Z)), int(m - n_Z),
                                        delta * p_sigma * zeta(n_Z) / math.exp(log_binomial_coefficient(m, n_Z)))
-                # best_bnd = math.exp((-1 / (m - r - n_Z)) * (
-                #                 log_binomial_coefficient(m - n_Z, r) -
-                #                 np.log(p_sigma) -
-                #                 np.log(zeta(n_Z)) -
-                #                 np.log(delta)
-                #                 )
-                #               )
+            elif bnd_type == 'marchand_approx':
+                best_bnd = math.exp((-1 / (m - r - n_Z)) * (
+                                log_binomial_coefficient(m - n_Z, r) -
+                                np.log(p_sigma) -
+                                np.log(zeta(n_Z)) -
+                                np.log(delta)
+                                )
+                              )
         best_bnds.append(best_bnd)
     return best_bnds

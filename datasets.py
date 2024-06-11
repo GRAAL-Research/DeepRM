@@ -57,7 +57,7 @@ def gen(dataset, m, d, shuffle=True):
         indx = np.arange(2 * m)  # Randomize the position of the points in the dataset
         np.random.shuffle(indx)
         X, y = X[indx], y[indx]
-    return [np.hstack((X, y)), np.squeeze(y)]
+    return [np.hstack((X, y * 2 - 1)), np.squeeze(y)]
 
 
 def data_gen(dataset, n, m, d, shuffle=True):

@@ -169,7 +169,7 @@ deeprm(experiment_name='Test_wandb_4',
        tol=[1e-2],
        early_stop=[100],
        optimizer=['adam'],
-       n_epoch=[2],
+       n_epoch=[200],
        device=['cpu'],
        weightsbiases=[[]]#['graal_deeprm2024', 'deeprm_attention_5']]
        )
