@@ -1,1 +1,0 @@
-DEVICE	batch_size	bound_type	criterion	d	dataset	early_stop	factor	independent_food	init	k	kern_1_dim	kern_2_dim	m	meta_predictor	modl_1_dim	modl_2_dim	n	n_epoch	optimizer	patience	pen_msg	pen_msg_coef	predictor	scheduler	seed	start_lr	tau	test_split	tol	valid_split	train_acc	valid_acc	test_acc	bound_value	n_sigma	n_Z
