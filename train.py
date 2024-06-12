@@ -370,7 +370,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
             update_wandb(wandb, hist)  # Upload information to WandB
         print(f'Epoch {i + 1} - Train acc: {tr_acc:.2f} - Val acc: {vd_acc:.2f} - Test acc: {te_acc:.2f} - '
               f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
-              f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)} \n')  # Print information in console
+              f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
         scheduler.step(rolling_val_acc)  # Scheduler step
         if i == 1 or rolling_val_acc > best_rolling_val_acc + tol:  # If an improvement has been done in validation...
             best_epoch = copy(i)  # ...We keep track of it
