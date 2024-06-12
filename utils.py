@@ -16,7 +16,7 @@ def lin_loss(output, targets, reduction=True):
     Return:
         Float, the total linear loss incurred.
     """
-    return torch.mean(((output * targets) + 1) / 2) if reduction == True else ((output * targets) + 1) / 2
+    return torch.mean(((output * targets) + 1) / 2) if reduction else ((output * targets) + 1) / 2
 
 
 def set_seed(seed):
@@ -65,7 +65,7 @@ class MLP(nn.Module):
             init (str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
             skip (bool): whether to include a skip connection or not;
             bn (bool): whether to include batch normalization or not;
-            msg_type (str): type of message (choices: 'dsc' (discret), 'cnt' (continuous)).
+            msg_type (str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous)).
         return:
             torch.nn.Module
         """
@@ -100,11 +100,11 @@ class MLP(nn.Module):
         return:
             torch.Tensor: output of the custom attention heads layer.
         """
-        l = 0
+        lay_cnt = 0
         for layer in self.module:
-            l += 1
+            lay_cnt += 1
             x_1 = x.clone()
-            if self.skip and l == self.skip_position:
+            if self.skip and lay_cnt == self.skip_position:
                 x += x_1
             x = layer(x)
         return x
@@ -113,20 +113,21 @@ class MLP(nn.Module):
 class SignStraightThrough(nn.Module):
     def __init__(self):
         """
-        Implementation of the Straigh through estimator.
+        Implementation of the Straight through estimator.
         """
         super().__init__()
 
-    def forward(self, input):
+    @staticmethod
+    def forward(inputs):
         """
-        Forward pass for the Straigh through estimator.
+        Forward pass for the Straight through estimator.
         Args:
-            input (torch.tensor of floats): input;
+            inputs (torch.tensor of floats): input;
         return:
             torch.Tensor: output of the custom attention heads layer.
         """
-        out = input + torch.sign(input + 1e-20) - input.detach()
-        out[torch.abs(input) > 1] = out[torch.abs(input) > 1].detach()
+        out = inputs + torch.sign(inputs + 1e-20) - inputs.detach()
+        out[torch.abs(inputs) > 1] = out[torch.abs(inputs) > 1].detach()
         return out
 
 
@@ -147,6 +148,7 @@ def init_weights(init, module):
                 nn.init.xavier_uniform_(layer.weight.data)
             elif init == 'xavier_norm':
                 nn.init.xavier_normal_(layer.weight.data)
+
 
 class Predictor(nn.Module):
     def __init__(self, d, pred_arch, batch_size):
@@ -233,37 +235,37 @@ class Predictor(nn.Module):
             out = torch.sum(torch.transpose(inputs[:, :, :-1], 0, 1)*self.weights[:, :-1], dim=-1) + self.weights[:, -1]
             out = torch.transpose(out, 0, 1)
         elif self.pred_type == 'small_nn':
-            input = inputs[0, :, :-1]
+            input_0 = inputs[0, :, :-1]
             count_1, count_2, j = 0, 0, 0
             for layer in self.pred[0].module:
                 if isinstance(layer, nn.Linear):
                     count_2 += self.pred_arch[j] * self.pred_arch[j + 1]
-                    W = torch.reshape(self.weights[0, count_1:count_2], (self.pred_arch[j + 1], self.pred_arch[j]))
+                    w = torch.reshape(self.weights[0, count_1:count_2], (self.pred_arch[j + 1], self.pred_arch[j]))
                     count_1 += self.pred_arch[j] * self.pred_arch[j + 1]
                     count_2 += self.pred_arch[j + 1]
                     b = torch.reshape(self.weights[0, count_1:count_2], (self.pred_arch[j + 1],))
                     count_1 += self.pred_arch[j + 1]
                     j += 1
-                    input = torch.matmul(input, W.T) + b
+                    input_0 = torch.matmul(input_0, w.T) + b
                 else:
-                    input = layer(input)
-            out = input
+                    input_0 = layer(input_0)
+            out = input_0
             for i in range(1, len(inputs)):
-                input = inputs[i, :, :-1]
+                input_i = inputs[i, :, :-1]
                 count_1, count_2, j = 0, 0, 0
                 for layer in self.pred[i].module:
                     if isinstance(layer, nn.Linear):
                         count_2 += self.pred_arch[j] * self.pred_arch[j + 1]
-                        W = torch.reshape(self.weights[i, count_1:count_2], (self.pred_arch[j + 1], self.pred_arch[j]))
+                        w = torch.reshape(self.weights[i, count_1:count_2], (self.pred_arch[j + 1], self.pred_arch[j]))
                         count_1 += self.pred_arch[j] * self.pred_arch[j + 1]
                         count_2 += self.pred_arch[j + 1]
                         b = torch.reshape(self.weights[i, count_1:count_2], (self.pred_arch[j + 1],))
                         count_1 += self.pred_arch[j + 1]
                         j += 1
-                        input = torch.matmul(input, W.T) + b
+                        input_i = torch.matmul(input_i, w.T) + b
                     else:
-                        input = layer(input)
-                out = torch.hstack((out, input))
+                        input_i = layer(input_i)
+                out = torch.hstack((out, input_i))
             out = torch.transpose(out, 0, 1)
         if not return_sign:
             return torch.sigmoid(out)
@@ -351,7 +353,7 @@ def is_job_already_done(experiment_name, task_dict):
         keys.append(key)
     keys.sort()
     for key in keys:
-        new.append(str(dict[key]))
+        new.append(str(task_dict[key]))
     try:
         with open("results/" + str(experiment_name) + ".txt", "r") as tes:
             tess = [line.strip().split('\t') for line in tes]
@@ -387,7 +389,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
         wandb (package): the weights and biases package;
         device (str): 'gpu', or 'cpu'; whether to use the gpu.
     """
-    max_number_vis = 16     # Maximum number of decision boundaries to compute
+    max_number_vis = 16  # Maximum number of decision boundaries to compute
     meta_pred.eval()
     with torch.no_grad():
         i = 0
@@ -401,45 +403,46 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                     plt.clf()
                     i += 1
                     inputs_1, targets_1 = inputs_1.float(), targets_1.float()
-                    inds = inputs_1[j, :, -1].sort().indices.tolist()   # Sorts the examples by their labels
+                    inds = inputs_1[j, :, -1].sort().indices.tolist()  # Sorts the examples by their labels
                     # ... so that each class can be plotted with different colours
-                    X = inputs_1[j, inds][:, :2]
-                    m = int(len(X) / 2)
+                    x = inputs_1[j, inds][:, :2]
+                    m = int(len(x) / 2)
                     if str(device) == 'gpu':
                         inputs_1, targets_1, meta_pred = inputs_1.cuda(), targets_1.cuda(), meta_pred.cuda()
-                    meta_output = meta_pred(inputs_1[:, :m])[j]
+                    meta_output = meta_pred(inputs_1[:, :m])[j:j+1]
                     if pred.pred_type == 'linear_classif':
                         px = [-20, 20]
-                        py = [-(-20 * meta_output[0] + meta_output[2]) / meta_output[1],
-                              -(20 * meta_output[0] + meta_output[2]) / meta_output[1]]
-                        plt.plot(px, py)    # With a linea classifier, only a line needs to be draw
+                        py = [-(-20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1],
+                              -(20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1]]
+                        plt.plot(px, py)  # With a linea classifier, only a line needs to be drawn
                     if pred.pred_type == 'small_nn':
                         # With small nn: we plot the decision boundary by colouring each decision zone by its prediction
                         h = .05  # step size in the mesh
-                        x_min, x_max = X[:, 0].cpu().min() - 10, X[:, 0].cpu().max() + 10
-                        y_min, y_max = X[:, 1].cpu().min() - 10, X[:, 1].cpu().max() + 10
+                        x_min, x_max = x[:, 0].cpu().min() - 10, x[:, 0].cpu().max() + 10
+                        y_min, y_max = x[:, 1].cpu().min() - 10, x[:, 1].cpu().max() + 10
                         xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                                              np.arange(y_min, y_max, h))
-                        input = np.array(np.c_[xx.ravel(), yy.ravel()])
-                        input = np.hstack((input, np.ones((len(input), 1))))
-                        input = torch.from_numpy(np.array([input]))
+                        mesh = np.array(np.c_[xx.ravel(), yy.ravel()])
+                        mesh = np.hstack((mesh, np.ones((len(mesh), 1))))
+                        mesh = torch.from_numpy(np.array([mesh])).float()
                         if str(device) == 'gpu':
-                            input = input.cuda()
-                        Z = pred.forward(input.double(), torch.reshape(meta_output, (1, -1)).double())
-                        Z = torch.round(Z.reshape(xx.shape)).cpu()
-                        plt.contourf(xx, yy, Z, cmap=plt.cm.Paired, alpha=0.6)
-                    plt.scatter(X[m:, 0].cpu(), X[m:, 1].cpu(), c='r')
-                    plt.scatter(X[:m, 0].cpu(), X[:m, 1].cpu(), c='b')
-                    if meta_pred.k > 0:
+                            mesh = mesh.cuda()
+                        pred.update_weights(meta_output, 1)
+                        z = pred.forward(mesh)
+                        z = torch.round(z.reshape(xx.shape)).cpu()
+                        plt.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha=0.6)
+                    plt.scatter(x[m:, 0].cpu(), x[m:, 1].cpu(), c='r')
+                    plt.scatter(x[:m, 0].cpu(), x[:m, 1].cpu(), c='b')
+                    if meta_pred.comp_set_size > 0:
                         meta_pred.compute_compression_set(inputs_1[:, :m])
-                        plt.scatter(X[meta_pred.msk[j].cpu(), 0].cpu(),
-                                    X[meta_pred.msk[j].cpu(), 1].cpu(), c='black', s=120, marker='*')
+                        plt.scatter(x[meta_pred.msk[j].cpu(), 0].cpu(),
+                                    x[meta_pred.msk[j].cpu(), 1].cpu(), c='black', s=120, marker='*')
                     if dataset in ['easy', 'hard']:
                         plt.xlim(-20, 20)
                         plt.ylim(-20, 20)
                     if dataset == 'moons':
-                        plt.xlim(torch.mean(X[:, 0].cpu()) - 10, torch.mean(X[:, 0].cpu()) + 10)
-                        plt.ylim(torch.mean(X[:, 1].cpu()) - 10, torch.mean(X[:, 1].cpu()) + 10)
+                        plt.xlim(torch.mean(x[:, 0].cpu()) - 10, torch.mean(x[:, 0].cpu()) + 10)
+                        plt.ylim(torch.mean(x[:, 1].cpu()) - 10, torch.mean(x[:, 1].cpu()) + 10)
                     plt.savefig(f"figures/decision_boundaries/decision_boundaries_{i}.png")
                     if wandb is not None:
                         im_frame = Image.open(f"figures/decision_boundaries/decision_boundaries_{i}.png")

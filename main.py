@@ -40,7 +40,7 @@ def deeprm(experiment_name, dataset, seed, n, m, d, splits, meta_pred, pred_arch
         start_lr (list of float): initial learning rate;
         pen_msg (list of str): type of message penalty (choices: 'l1', 'l2');
         pen_msg_coef (list of float): message penalty coefficient;
-        msg_type (list of str): type of message (choices: 'dsc' (discret), 'cnt' (continuous));
+        msg_type (list of str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
         batch_size (list of int): batch size;
         scheduler (list of str): learning rate decay type (choices: 'plateau');
         patience (list of int): learning rate decay patience;
@@ -98,19 +98,18 @@ def deeprm(experiment_name, dataset, seed, n, m, d, splits, meta_pred, pred_arch
         if task_dict['msg_size'] == 0:
             task_dict['msg_type'] = 'none'
         print(f"Launching task {i + 1}/{n_tasks} : {task_dict}\n")
-        if is_job_already_done(experiment_name, task_dict): # Verify if this hyp. param. comb. has already been tested
-            print("Already done; passing...\n")
-        elif task_dict['msg_type'] == 'dsc' and task_dict['pen_msg_coef'] > 0:  # Passes on incoherent hyp. param. comb.
+        if task_dict['msg_type'] == 'dsc' and task_dict['pen_msg_coef'] > 0:  # Passes on incoherent hyp. param. comb.
             print("Doesn't make sens to regularize discrete messages; passing...\n")
         elif task_dict['comp_set_size'] + task_dict['msg_size'] == 0:   # Passes on incoherent hyp. param. comb.
             print("Opaque network; passing...\n")
+        elif is_job_already_done(experiment_name, task_dict):  # Verify if the hyp. param. comb. has already been tested
+            print("Already done; passing...\n")
         else:   # The current hyp. param. comb. will be tested
-            set_seed(task_dict['seed']) # Sets the random seed for numpy, torch and random packages
+            set_seed(task_dict['seed'])  # Sets the random seed for numpy, torch and random packages
             if task_dict['dataset'] in ['moons', 'easy', 'hard']:  # Generating the datasets
                 data = data_gen(task_dict['dataset'], task_dict['n'], task_dict['m'], task_dict['d'], True)
             elif task_dict['dataset'] == 'mnist':
-                pass    # TODO
-
+                data = load_mnist()
             pred = Predictor(task_dict['d'], task_dict['pred_arch'], task_dict['batch_size'])   # Predictor init.
             if task_dict['meta_pred'] == 'simplenet':  # Meta-predictor initialization
                 meta_pred = SimpleMetaNet(pred.num_param, task_dict)
@@ -136,7 +135,7 @@ def deeprm(experiment_name, dataset, seed, n, m, d, splits, meta_pred, pred_arch
 
 
 # Experiments launcher
-deeprm(experiment_name='Test_wandb_4',
+deeprm(experiment_name='DeepRM_moons',
        dataset=['moons'],
        seed=[0],
        n=[4000],
@@ -146,8 +145,8 @@ deeprm(experiment_name='Test_wandb_4',
        meta_pred=['simplenet'],
        pred_arch=[[3],
                   [7]],
-       comp_set_size=[0,8,15],
-       msg_size=[0,5,10],
+       comp_set_size=[0, 8, 15],
+       msg_size=[0, 50, 10],
        ca_dim=[[100],
                [100, 100]],
        kme_dim=[[100],
@@ -162,7 +161,7 @@ deeprm(experiment_name='Test_wandb_4',
        pen_msg=['l2'],
        pen_msg_coef=[0],
        msg_type=['dsc', 'cnt'],
-       batch_size=[100],
+       batch_size=[200],
        scheduler=['plateau'],
        patience=[100],
        factor=[0.5],
@@ -171,5 +170,5 @@ deeprm(experiment_name='Test_wandb_4',
        optimizer=['adam'],
        n_epoch=[200],
        device=['cpu'],
-       weightsbiases=[[]]#['graal_deeprm2024', 'deeprm_attention_5']]
+       weightsbiases=[['graal_deeprm2024', 'deeprm_new']]
        )

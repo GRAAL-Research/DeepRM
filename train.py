@@ -25,7 +25,7 @@ class SimpleMetaNet(nn.Module):
                 mod_1_dim (list of int): MLP #1 architecture;
                 mod_2_dim (list of int): MLP #2 architecture;
                 tau (int): temperature parameter (softmax in custom attention);
-                msg_type (str): type of message (choices: 'dsc' (discret), 'cnt' (continuous));
+                msg_type (str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
                 batch_size (int): Batch size.
                 init (str): rand. init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
                 device (str): device on which to compute (choices: 'cpu', 'gpu');
@@ -67,9 +67,12 @@ class SimpleMetaNet(nn.Module):
         """
         # Message computation #
         if self.msg_size > 0:
-            # Computing the message #
+
+            # Passing through KME #1 #
             x = self.kme_1.forward(x)
+            # Passing through MLP #1 #
             x = self.mod_1.forward(torch.reshape(x, (len(x), -1)))
+
             if self.msg_type == 'cnt':
                 x = x * 3
             if n_samples == 0:
@@ -93,10 +96,10 @@ class SimpleMetaNet(nn.Module):
             # Applying the mask to x #
             x_masked = torch.matmul(mask, x.clone())
 
-            # Computing the compression set description #
+            # Passing through KME #1 #
             x_masked = self.kme_2.forward(x_masked)
 
-            # Concatenating all the information #
+            # Concatenating all the information (mask + msg) #
             x_masked = torch.reshape(x_masked, (len(x_masked), -1))
             if n_samples > 0:
                 x_masked = x_masked.repeat(n_samples, 1)
@@ -120,7 +123,7 @@ class SimpleMetaNet(nn.Module):
             for j in range(1, len(self.cas)):
                 out = self.cas[j].forward(x.clone())
                 mask = torch.hstack((mask, out))
-            self.msk = torch.squeeze(torch.topk(mask, 1, dim=(2)).indices)
+            self.msk = torch.squeeze(torch.topk(mask, 1, dim=2).indices)
         else:
             assert False, 'Cannot compute the compression set when it is of size 0.'
 
@@ -292,7 +295,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         task_dict (dictionary) containing the following:
             splits ([float, float, float]): train, valid and test proportion of the data;
             tol (float): Quantity by which the loss must diminish in order for this increment not to be marginal
-            early_stop (int): Number of epochs by which, if the loss hasn't diminished by tol (see above), the training stops
+            early_stop (int): Number of epochs by which, if the loss hasn't diminished by « tol », the train stops
             n_epoch (int): The maximum number of epochs.
             batch_size (int): Batch size.
             pen_msg_coef (float): Message regularization factor.
@@ -334,9 +337,9 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         wandb.login(key='b7d84000aed68a9db76819fa4935778c47f0b374')
         wandb.init(
             name=str(task_dict['start_lr']) + '_' + str(task_dict['optimizer']) + '_' +
-                 str(task_dict['msg_type']) + '_' + str(task_dict['pred_arch']) + '_' +
-                 str(task_dict['msg_size']) + '_' + str(task_dict['comp_set_size']) + '_' +
-                 str(task_dict['pen_msg_coef']) + '_' + str(task_dict['seed']),
+            str(task_dict['msg_type']) + '_' + str(task_dict['pred_arch']) + '_' +
+            str(task_dict['msg_size']) + '_' + str(task_dict['comp_set_size']) + '_' +
+            str(task_dict['pen_msg_coef']) + '_' + str(task_dict['seed']),
             project=weightsbiases[1],
             config=task_dict
         )
@@ -350,18 +353,18 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
                     inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
                 optimizer.zero_grad()  # Zeroing the gradient everywhere in the meta-learner
                 meta_output = meta_pred(inputs[:, m:])  # Computing the parameters of the predictor.
-                pred.update_weights(meta_output, batch_size)  # Updating the weights of the predictor
+                pred.update_weights(meta_output, len(inputs))  # Updating the weights of the predictor
                 output = pred.forward(inputs[:, m:])  # Computing the predictions for the task
                 loss = torch.mean(torch.mean(criterion(output, targets[:, m:]), dim=1) ** 0.5)
                 loss += pen_msg(meta_pred.msg, pen_msg_coef)  # Regularized loss
                 loss.backward()  # Gradient computation
                 optimizer.step()  # Backprop step
         # Computation of statistics about the current training epoch
-        tr_acc, tr_loss, _ = stats(meta_pred, pred, criterion, train_loader, msg_size, msg_type, batch_size, device)
-        vd_acc, vd_loss, _ = stats(meta_pred, pred, criterion, valid_loader, msg_size, msg_type, batch_size, device)
-        te_acc, te_loss, bound = stats(meta_pred, pred, criterion, test_loader, msg_size, msg_type, batch_size, device)
-        update_hist(hist, (tr_acc, tr_loss, vd_acc, vd_loss, te_acc, te_loss,
-                           bound, msg_size, meta_pred.comp_set_size, i))  # Tracking results
+        tr_acc, tr_loss, _ = stats(meta_pred, pred, criterion, train_loader, msg_type, device)
+        vd_acc, vd_loss, _ = stats(meta_pred, pred, criterion, valid_loader, msg_type, device)
+        te_acc, te_loss, bound = stats(meta_pred, pred, criterion, test_loader, msg_type, device)
+        update_hist(hist, (tr_acc, tr_loss, vd_acc, vd_loss, te_acc, te_loss, bound, msg_size,
+                           meta_pred.comp_set_size, i))  # Tracking results
         rolling_val_acc = torch.mean(torch.tensor(hist['valid_acc'][-min(100, i + 1):]))
         if len(weightsbiases) > 1:
             update_wandb(wandb, hist)  # Upload information to WandB
@@ -382,7 +385,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
     return hist, best_epoch
 
 
-def stats(meta_pred, pred, criterion, data_loader, msg_size, msg_type, batch_size, device):
+def stats(meta_pred, pred, criterion, data_loader, msg_type, device):
     """
     Computes the overall accuracy, loss and bounds of a predictor on given task and dataset.
     Args:
@@ -390,9 +393,7 @@ def stats(meta_pred, pred, criterion, data_loader, msg_size, msg_type, batch_siz
         pred (Predictor): A predictor whose parameters are computed by the meta predictor.
         criterion (torch.nn, function): Loss function
         data_loader (DataLoader): A DataLoader to test on.
-        msg_size (int): Size of the message
-        msg_type (str): type of message (choices: 'dsc' (discret), 'cnt' (continuous));
-        batch_size (int): Batch size.
+        msg_type (str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
         device (str): 'cuda', or 'cpu'; whether to use the gpu
     Returns:
         Tuple (float, float): the 0-1 accuracy and loss.
@@ -411,7 +412,7 @@ def stats(meta_pred, pred, criterion, data_loader, msg_size, msg_type, batch_siz
             if str(device) == 'gpu':
                 inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
             meta_output = meta_pred(inputs[:, :m])  # Computing the parameters of the predictor
-            pred.update_weights(meta_output, batch_size)  # Updating the weights of the predictor
+            pred.update_weights(meta_output, len(inputs))  # Updating the weights of the predictor
             output = pred.forward(inputs[:, m:], True)  # Computing the predictions for the task
             loss = criterion(output[0], targets[:, m:])  # Loss computation
             tot_loss.append(torch.sum(loss).cpu())
@@ -419,9 +420,8 @@ def stats(meta_pred, pred, criterion, data_loader, msg_size, msg_type, batch_siz
             tot_acc.append(torch.mean(acc / m).cpu())
             if msg_type is not None:
                 for b in range(len(inputs)):  # For all datasets, we compute the bounds
-                    bnds = compute_bound(msg_type, meta_pred, pred, msg_size, m, m - acc[b].cpu(),
-                                         0.05, ['linear', 'hyperparam', 'kl', 'marchand'],
-                                         0, 1, inputs[[b], m:], targets[[b], m:])
+                    bnds = compute_bound(['linear', 'hyperparam', 'kl', 'marchand'], meta_pred, pred, m,
+                                         m - acc[b].cpu(), 0.05, 0, 1, inputs[[b], m:], targets[[b], m:])
                     bnd_lin.append(bnds[0])
                     bnd_hyp.append(bnds[1])
                     bnd_kl.append(bnds[2])
