@@ -161,7 +161,7 @@ def compute_bound(bnds_type, meta_pred, pred, m, r, delta, a, b, inputs, targets
     for bnd_type in bnds_type:
         if msg_type == 'cnt':  # The bounds are calculated differently, depending on the message type
             tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
-            meta_output = meta_pred(inputs, n_sample=n_sample)
+            meta_output = meta_pred(inputs, n_samples=n_sample)
             for sample in range(n_sample):
                 outp = meta_output[[sample]]
                 pred.update_weights(outp)
