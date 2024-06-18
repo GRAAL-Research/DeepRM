@@ -164,8 +164,8 @@ def compute_bound(bnds_type, meta_pred, pred, m, r, delta, a, b, inputs, targets
             meta_output = meta_pred(inputs, n_samples=n_sample)
             for sample in range(n_sample):
                 outp = meta_output[[sample]]
-                pred.update_weights(outp)
-                output = pred.forward(inputs, outp, return_sign=True)
+                pred.update_weights(outp, 1)
+                output = pred.forward(inputs, return_sign=True)
                 acc = lin_loss(output[1], targets * 2 - 1, reduction=False)
                 tot_acc += torch.sum(acc)
             tot_acc /= n_sample  # An average accuracy is computed...
