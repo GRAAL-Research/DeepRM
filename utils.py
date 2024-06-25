@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PIL import Image
 import numpy as np
 import random
@@ -443,10 +445,16 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                     if dataset == 'moons':
                         plt.xlim(torch.mean(x[:, 0].cpu()) - 10, torch.mean(x[:, 0].cpu()) + 10)
                         plt.ylim(torch.mean(x[:, 1].cpu()) - 10, torch.mean(x[:, 1].cpu()) + 10)
-                    plt.savefig(f"figures/decision_boundaries/decision_boundaries_{i}.png")
+
+                    decision_boundaries_folder_path = Path("figures/decision_boundaries")
+                    if not decision_boundaries_folder_path.exists():
+                        decision_boundaries_folder_path.mkdir()
+
+                    plt.savefig(decision_boundaries_folder_path / f"decision_boundaries_{i}.png")
                     if wandb is not None:
-                        im_frame = Image.open(f"figures/decision_boundaries/decision_boundaries_{i}.png")
+                        im_frame = Image.open(decision_boundaries_folder_path / f"decision_boundaries_{i}.png")
                         image = wandb.Image(np.array(im_frame),
                                             caption=f"decision_boundaries/decision_boundaries_{i}")  # file_type="jpg"
                         examples.append(image)
+
     wandb.log({"Decision boundaries": examples})
