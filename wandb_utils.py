@@ -8,4 +8,4 @@ def create_run_name(task_dict: dict) -> str:
     for parameter_name in run_name_content:
         run_name_elements.append(f"{parameter_name.replace('_', '-')}={task_dict[parameter_name]}")
 
-    return run_name_elements.join("_")
+    return "_".join(run_name_elements)

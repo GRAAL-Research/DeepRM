@@ -107,7 +107,7 @@ def main(param_grid: ParameterGrid, dataset: list[str]):
 
 
 if __name__ == "__main__":
-    config_name = "kme_msg_config.yaml"
+    config_name = "config.yaml"
 
     omega_config = OmegaConf.load(Path("config") / config_name)
     config = OmegaConf.to_container(omega_config, resolve=True)

@@ -422,7 +422,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                     x = inputs[j, inds][:, :2]
                     m = int(len(x) / 2)
                     if str(device) == 'gpu':
-                        inputs, targets_1, meta_pred = inputs.cuda(), targets_1.cuda(), meta_pred.cuda()
+                        inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
                     meta_output = meta_pred(inputs[:, :m])[j:j+1]
                     if pred.pred_type == 'linear_classif':
                         px = [-20, 20]
