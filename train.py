@@ -9,6 +9,8 @@ from time import time
 import wandb
 from loguru import logger
 
+from wandb_utils import create_run_name
+
 
 class SimpleMetaNet(nn.Module):
     def __init__(self, pred_input_dim, task_dict):
@@ -281,7 +283,7 @@ def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
     return train_loader, valid_loader, test_loader
 
 
-def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict):
+def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict):
     """
     Trains a meta predictor using PyTorch.
 
@@ -333,18 +335,9 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
             'bound_mrch': []}
 
     if task_dict["is_using_wandb"]:
-        experiment_name = (
-            f"msg=({task_dict['msg_type']},{task_dict['msg_size']})"
-            f"_nb-dataset={task_dict['n']}"
-            f"_pred-arch={task_dict['pred_arch']}"
-            f"_lr={task_dict['start_lr']}"
-        )
+        run_name = create_run_name(task_dict)
+        wandb.init(name=run_name, project=task_dict["project_name"], config=task_dict)
 
-        wandb.init(
-            name=experiment_name,
-            project=task_dict["project_name"],
-            config=task_dict
-        )
     begin = time()
     for i in range(n_epoch):
         meta_pred.train()  # We put the meta predictor in training mode

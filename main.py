@@ -5,7 +5,7 @@ from datasets import *
 from train import *
 
 
-def deeprm(param_grid, dataset):
+def main(param_grid: ParameterGrid, dataset: list[str]):
     """
     Args:
         dataset (list of str): datasets (choices: 'mnist', 'moons', 'easy', 'both',
@@ -28,7 +28,7 @@ def deeprm(param_grid, dataset):
         tau (list of int): temperature parameter (softmax in custom attention);
         init (list of str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
         criterion (list of str): loss function (choices: 'bce_loss');
-        start_lr (list of float): initial learning rate;
+        lr (list of float): initial learning rate;
         pen_msg (list of str): type of message penalty (choices: 'l1', 'l2');
         pen_msg_coef (list of float): message penalty coefficient;
         msg_type (list of str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
@@ -51,7 +51,7 @@ def deeprm(param_grid, dataset):
     for i, task_dict in enumerate(param_grid):  # Iterating on the different hyperparameters combinations.
         if task_dict['dataset'] == 'mnist':
             # For non-synthetic data, these are fixed
-            task_dict['n'] = 90
+            task_dict['n_dataset'] = 90
             task_dict['m'] = 6313 * 2
             task_dict['d'] = 784
         elif task_dict['dataset'] in ['MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure']:
@@ -73,11 +73,11 @@ def deeprm(param_grid, dataset):
             set_seed(task_dict['seed'])  # Sets the random seed for numpy, torch and random packages
 
             if task_dict['dataset'] in ['moons', 'easy', 'hard']:  # Generating the datasets
-                data = data_gen(task_dict['dataset'], task_dict['n'], task_dict['m'], task_dict['d'], True)
+                data = data_gen(task_dict['dataset'], task_dict['n_dataset'], task_dict['m'], task_dict['d'], True)
             elif task_dict['dataset'] == 'mnist':
                 data = load_mnist()
             elif task_dict['dataset'] in ['MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure']:
-                data = load_MTPL(task_dict['dataset'][6:], task_dict['n'], task_dict['m'])
+                data = load_MTPL(task_dict['dataset'][6:], task_dict['n_dataset'], task_dict['m'])
             pred = Predictor(task_dict['d'], task_dict['pred_arch'], task_dict['batch_size'])  # Predictor init.
             if task_dict['meta_pred'] == 'simplenet':  # Meta-predictor initialization
                 meta_pred = SimpleMetaNet(pred.num_param, task_dict)
@@ -91,9 +91,9 @@ def deeprm(param_grid, dataset):
                 penalty_msg = l2
 
             if task_dict['optimizer'] == 'adam':  # Optimizer initialization
-                opti = torch.optim.Adam(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
+                opti = torch.optim.Adam(meta_pred.parameters(), lr=copy(task_dict['lr']))
             elif task_dict['optimizer'] == 'rmsprop':
-                opti = torch.optim.RMSprop(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
+                opti = torch.optim.RMSprop(meta_pred.parameters(), lr=copy(task_dict['lr']))
 
             if task_dict['scheduler'] == 'plateau':
                 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti, mode='max',
@@ -114,4 +114,4 @@ if __name__ == "__main__":
     param_grid = ParameterGrid([config])
     dataset = config["dataset"]
 
-    deeprm(param_grid, dataset)
+    main(param_grid, dataset)
