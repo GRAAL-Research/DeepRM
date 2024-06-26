@@ -446,15 +446,21 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                         plt.xlim(torch.mean(x[:, 0].cpu()) - 10, torch.mean(x[:, 0].cpu()) + 10)
                         plt.ylim(torch.mean(x[:, 1].cpu()) - 10, torch.mean(x[:, 1].cpu()) + 10)
 
-                    decision_boundaries_folder_path = Path("figures/decision_boundaries")
+                    figure_folder_path = Path("figures")
+                    if not figure_folder_path.exists():
+                        figure_folder_path.mkdir()
+
+                    decision_boundaries_folder_name = "decision_boundaries"
+                    decision_boundaries_folder_path = figure_folder_path / decision_boundaries_folder_name
                     if not decision_boundaries_folder_path.exists():
                         decision_boundaries_folder_path.mkdir()
 
-                    plt.savefig(decision_boundaries_folder_path / f"decision_boundaries_{i}.png")
+                    fig_prefix = "decision_boundaries"
+                    plt.savefig(decision_boundaries_folder_path / f"{fig_prefix}_{i}.png")
                     if wandb is not None:
-                        im_frame = Image.open(decision_boundaries_folder_path / f"decision_boundaries_{i}.png")
+                        im_frame = Image.open(decision_boundaries_folder_path / f"{fig_prefix}_{i}.png")
                         image = wandb.Image(np.array(im_frame),
-                                            caption=f"decision_boundaries/decision_boundaries_{i}")  # file_type="jpg"
+                                            caption=f"{decision_boundaries_folder_name}/{fig_prefix}_{i}")  # file_type="jpg"
                         examples.append(image)
 
     wandb.log({"Decision boundaries": examples})
