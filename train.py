@@ -7,7 +7,7 @@ from copy import copy
 from bound import compute_bound
 from time import time
 import wandb
-
+from loguru import logger
 
 class SimpleMetaNet(nn.Module):
     def __init__(self, pred_input_dim, task_dict):
@@ -294,8 +294,8 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         pen_msg (function): message penalty function;
         task_dict (dictionary) containing the following:
             splits ([float, float, float]): train, valid and test proportion of the data;
-            tol (float): Quantity by which the loss must diminish in order for this increment not to be marginal
-            early_stop (int): Number of epochs by which, if the loss hasn't diminished by « tol », the train stops
+            early_stopping_tolerance (float): Quantity by which the loss must diminish in order for this increment not to be marginal
+            early_stopping_patience (int): Number of epochs by which, if the loss hasn't diminished by « early_stopping_tolerance », the train stops
             n_epoch (int): The maximum number of epochs.
             batch_size (int): Batch size.
             pen_msg_coef (float): Message regularization factor.
@@ -307,8 +307,8 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
     """
     # Retrieving information
     splits = task_dict['splits']
-    tol = task_dict['tol']
-    early_stop = task_dict['early_stop']
+    early_stopping_tolerance = task_dict['early_stopping_tolerance']
+    early_stopping_patience = task_dict['early_stopping_patience']
     n_epoch = task_dict['n_epoch']
     batch_size = task_dict['batch_size']
     msg_size = task_dict['msg_size']
@@ -371,11 +371,12 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
               f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
               f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
         scheduler.step(rolling_val_acc)  # Scheduler step
-        if i == 1 or rolling_val_acc > best_rolling_val_acc + tol:  # If an improvement has been done in validation...
+        if i == 1 or rolling_val_acc > best_rolling_val_acc + early_stopping_tolerance:  # If an improvement has been done in validation...
             best_epoch = copy(i)  # ...We keep track of it
             best_rolling_val_acc = copy(rolling_val_acc)
         if ((tr_acc < 0.525 and i > 50) or  # If no learning has been made...
-                i - best_epoch > early_stop):  # ... or no improvements for a while ...
+                i - best_epoch > early_stopping_patience):  # ... or no improvements for a while ...
+            logger.info("The early stopping stopped the training.")
             break  # Early stopping is made
     if task_dict['d'] == 2 and len(weightsbiases) > 1:  # Plotting the decision boundary for a few problems
         show_decision_boundaries(meta_pred, task_dict['dataset'], test_loader, pred, wandb, device)

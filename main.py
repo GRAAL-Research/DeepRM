@@ -32,10 +32,9 @@ def deeprm(experiment_name, param_grid, dataset):
         msg_type (list of str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
         batch_size (list of int): batch size;
         scheduler (list of str): learning rate decay type (choices: 'plateau');
-        patience (list of int): learning rate decay patience;
+        scheduler_patience (list of int): learning rate decay scheduler_patience;
         factor (list of float): factor by which the learning rate is multiplied (one decay step);
-        tol (list of float): tolerance for learning rate decay to apply;
-        early_stop (list of int): early stopping number of epoch;
+        early_stopping_patience (list of int): early stopping number of epoch;
         optimizer (list of str): meta-neural network optimizer (choices: 'adam', 'rmsprop');
         n_epoch (list of int): maximum number of epoch for the training phase;
         device (list of str): device on which to compute (choices: 'cpu', 'gpu');
@@ -47,7 +46,7 @@ def deeprm(experiment_name, param_grid, dataset):
     ordering = {d: i for i, d in enumerate(dataset)}
     param_grid = sorted(param_grid, key=lambda p: ordering[p['dataset']])
     n_tasks = len(param_grid)
-    meta_pred, data, opti, sched, crit, penalty_msg, task_dict = None, None, None, None, None, None, None
+    meta_pred, data, opti, scheduler, crit, penalty_msg, task_dict = None, None, None, None, None, None, None
 
     for i, task_dict in enumerate(param_grid):  # Iterating on the different hyperparameters combinations.
         if task_dict['dataset'] == 'mnist':
@@ -64,35 +63,46 @@ def deeprm(experiment_name, param_grid, dataset):
             print("Already done; passing...\n")
         else:  # The current hyp. param. comb. will be tested
             set_seed(task_dict['seed'])  # Sets the random seed for numpy, torch and random packages
+            
             if task_dict['dataset'] in ['moons', 'easy', 'hard']:  # Generating the datasets
                 data = data_gen(task_dict['dataset'], task_dict['n'], task_dict['m'], task_dict['d'], True)
             elif task_dict['dataset'] == 'mnist':
                 data = load_mnist()
+
             pred = Predictor(task_dict['d'], task_dict['pred_arch'], task_dict['batch_size'])  # Predictor init.
+
             if task_dict['meta_pred'] == 'simplenet':  # Meta-predictor initialization
                 meta_pred = SimpleMetaNet(pred.num_param, task_dict)
+
             if task_dict['criterion'] == 'bce_loss':  # Criterion initialization
                 crit = nn.BCELoss(reduction='none')
+
             if task_dict['pen_msg'] == 'l1':  # Message penalty initialization
                 penalty_msg = l1
             elif task_dict['pen_msg'] == 'l2':
                 penalty_msg = l2
+
             if task_dict['optimizer'] == 'adam':  # Optimizer initialization
                 opti = torch.optim.Adam(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
             elif task_dict['optimizer'] == 'rmsprop':
                 opti = torch.optim.RMSprop(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
-            if task_dict['scheduler'] == 'plateau':  # Scheduler initialization
-                sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti, mode='max',
+        
+            if task_dict['scheduler'] == 'plateau':
+                scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti, mode='max',
                                                                    factor=task_dict['factor'],
-                                                                   patience=task_dict['patience'],
-                                                                   threshold=task_dict['tol'], verbose=True)
-            hist, best_epoch = train(meta_pred, pred, data, opti, sched, crit, penalty_msg, task_dict)  # Launch train.
+                                                                   patience=task_dict['scheduler_patience'],
+                                                                   threshold=task_dict['scheduler_threshold'], verbose=True)
+            hist, best_epoch = train(meta_pred, pred, data, opti, scheduler, crit, penalty_msg, task_dict)  # Launch train.
             write(experiment_name, task_dict, hist, best_epoch)  # Training details are written in a .txt file
 
 
 if __name__ == "__main__":
+    config_files_path = Path("config")
+
     experiment_name = "DeepRM - message exp"
-    omega_config = OmegaConf.load("config.yaml")
+    config_name = "debug-config.yaml"
+
+    omega_config = OmegaConf.load(config_files_path / config_name)
     config = OmegaConf.to_container(omega_config, resolve=True)
     param_grid = ParameterGrid([config])
     dataset = config["dataset"]
