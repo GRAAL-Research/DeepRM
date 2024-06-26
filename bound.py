@@ -1,5 +1,4 @@
 import math
-import torch
 from utils import *
 
 
@@ -166,8 +165,7 @@ def compute_bound(bnds_type, meta_pred, pred, m, r, delta, a, b, inputs, targets
                 outp = meta_output[[sample]]
                 pred.update_weights(outp, 1)
                 output = pred.forward(inputs, return_sign=True)
-                acc = lin_loss(output[1], targets * 2 - 1, reduction=False)
-                tot_acc += torch.sum(acc)
+                tot_acc += m * lin_loss(output[1], targets * 2 - 1)
             tot_acc /= n_sample  # An average accuracy is computed...
             r = m - tot_acc
             kl = torch.mean(torch.sum(meta_pred.msg ** 2, dim=1))  # ... as well as an avg KL value (shortcut, lighter)

@@ -2,21 +2,32 @@ from PIL import Image
 import numpy as np
 import random
 from matplotlib import pyplot as plt
+plt.switch_backend('agg')
 import torch
 import torch.nn as nn
 
 
-def lin_loss(output, targets, reduction=True):
+def lin_loss(output, targets):
     """
     Computes the linear loss.
     Args:
         output (torch.tensor of size (batch_size, m)): The output (0 or 1) of the predictor;
         targets (torch.tensor of size (batch_size, m)): The labels (0 or 1);
-        reduction (bool): whether a mean should be applied
     Return:
         Float, the total linear loss incurred.
     """
-    return torch.mean(((output * targets) + 1) / 2) if reduction else ((output * targets) + 1) / 2
+    tot = 0
+    if torch.sum(targets == 1) > 0:
+        tot += torch.mean(((output[targets == 1] * targets[targets == 1]) + 1) / 4, dim=0)
+    else:
+        tot += torch.tensor(0.5)
+        print("This batch contains only examples from a single class.")
+    if torch.sum(targets == -1) > 0:
+        tot += torch.mean(((output[targets == -1] * targets[targets == -1]) + 1) / 4, dim=0)
+    else:
+        tot += torch.tensor(0.5)
+        print("This batch contains only examples from a single class.")
+    return tot
 
 
 def set_seed(seed):
@@ -126,7 +137,7 @@ class SignStraightThrough(nn.Module):
         return:
             torch.Tensor: output of the custom attention heads layer.
         """
-        out = inputs + torch.sign(inputs + 1e-20) - inputs.detach()
+        out = torch.sign(inputs + 1e-20) + inputs - inputs.detach()
         out[torch.abs(inputs) > 1] = out[torch.abs(inputs) > 1].detach()
         return out
 
@@ -394,22 +405,23 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
     with torch.no_grad():
         i = 0
         examples = []
-        for inputs_1, targets_1 in data_loader:
-            for j in range(len(inputs_1)):
+        for inputs in data_loader:
+            for j in range(len(inputs)):
                 if i < max_number_vis:
                     plt.figure().clear()
                     plt.close()
                     plt.cla()
                     plt.clf()
                     i += 1
-                    inputs_1, targets_1 = inputs_1.float(), targets_1.float()
-                    inds = inputs_1[j, :, -1].sort().indices.tolist()  # Sorts the examples by their labels
+                    targets = (inputs.clone()[:, :, -1] + 1) / 2
+                    inputs, targets = inputs.float(), targets.float()
+                    inds = inputs[j, :, -1].sort().indices.tolist()  # Sorts the examples by their labels
                     # ... so that each class can be plotted with different colours
-                    x = inputs_1[j, inds][:, :2]
+                    x = inputs[j, inds][:, :2]
                     m = int(len(x) / 2)
                     if str(device) == 'gpu':
-                        inputs_1, targets_1, meta_pred = inputs_1.cuda(), targets_1.cuda(), meta_pred.cuda()
-                    meta_output = meta_pred(inputs_1[:, :m])[j:j+1]
+                        inputs, targets_1, meta_pred = inputs.cuda(), targets_1.cuda(), meta_pred.cuda()
+                    meta_output = meta_pred(inputs[:, :m])[j:j+1]
                     if pred.pred_type == 'linear_classif':
                         px = [-20, 20]
                         py = [-(-20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1],
@@ -434,7 +446,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                     plt.scatter(x[m:, 0].cpu(), x[m:, 1].cpu(), c='r')
                     plt.scatter(x[:m, 0].cpu(), x[:m, 1].cpu(), c='b')
                     if meta_pred.comp_set_size > 0:
-                        meta_pred.compute_compression_set(inputs_1[:, :m])
+                        meta_pred.compute_compression_set(inputs[:, :m])
                         plt.scatter(x[meta_pred.msk[j].cpu(), 0].cpu(),
                                     x[meta_pred.msk[j].cpu(), 1].cpu(), c='black', s=120, marker='*')
                     if dataset in ['easy', 'hard']:
