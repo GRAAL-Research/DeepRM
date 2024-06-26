@@ -37,12 +37,12 @@ class SimpleMetaNet(nn.Module):
         self.ca_dim, self.kme_dim = task_dict['ca_dim'], task_dict['kme_dim']
         self.mod_1_dim, self.mod_2_dim = task_dict['mod_1_dim'], task_dict['mod_2_dim']
         self.m, self.msg_type, self.init = int(task_dict['m'] / 2), task_dict['msg_type'], task_dict['init']
-        self.msg, self.msg_size, self.msk = None, task_dict[
-            'msg_size'], None  # Message and mask (for compression selection)
+        self.msg, self.msk = torch.tensor(0.0), None  # Message and mask (compression selection)
+        self.msg_size = task_dict['msg_size']
         self.d, self.tau, self.batch_size = task_dict['d'], task_dict['tau'], task_dict['batch_size']  # Parameters
         self.input_dim = self.d
         self.output_dim = pred_input_dim
-        self.mod_2_input = self.comp_set_size ** 2 + self.mod_1_dim[-1]
+        self.mod_2_input = self.kme_dim[-1] * (self.comp_set_size > 0) + self.mod_1_dim[-1] * (self.msg_size > 0)
 
         # Generating the many components (custom attention (CA) multi-heads, KME #1-2, MLP #1-2) of the meta-learner
         self.cas = nn.ModuleList([])
@@ -66,6 +66,7 @@ class SimpleMetaNet(nn.Module):
             torch.Tensor: output of the network.
         """
         # Message computation #
+        x_ori = x.clone()
         if self.msg_size > 0:
 
             # Passing through KME #1 #
@@ -74,7 +75,7 @@ class SimpleMetaNet(nn.Module):
             x = self.mod_1.forward(torch.reshape(x, (len(x), -1)))
 
             if self.msg_type == 'cnt':
-                x = x * 3
+                x = x * 3   # See bound computation
             if n_samples == 0:
                 self.msg = x.clone()
             if n_samples > 0:
@@ -88,13 +89,13 @@ class SimpleMetaNet(nn.Module):
 
         # Mask computation
         if self.comp_set_size > 0:
-            mask = self.cas[0].forward(x.clone())
+            mask = self.cas[0].forward(x_ori.clone())
             for j in range(1, len(self.cas)):
-                out = self.cas[j].forward(x.clone())
+                out = self.cas[j].forward(x_ori.clone())
                 mask = torch.hstack((mask, out))
 
             # Applying the mask to x #
-            x_masked = torch.matmul(mask, x.clone())
+            x_masked = torch.matmul(mask, x_ori.clone())
 
             # Passing through KME #1 #
             x_masked = self.kme_2.forward(x_masked)
@@ -103,7 +104,10 @@ class SimpleMetaNet(nn.Module):
             x_masked = torch.reshape(x_masked, (len(x_masked), -1))
             if n_samples > 0:
                 x_masked = x_masked.repeat(n_samples, 1)
-            x_red = torch.hstack((x, x_masked))
+            if self.msg_size > 0:
+                x_red = torch.hstack((x, x_masked))
+            else:
+                x_red = x_masked
         else:
             x_red = x
 
@@ -206,7 +210,7 @@ class KME(nn.Module):
 class FSPool(nn.Module):
     def __init__(self, input_dim, hidden_dims, m, device, init, skip, bn):
         """
-        Initialize a custom attention head.
+        Initialize .
         Args:
             input_dim (int): input dimension of the custom attention head;
             hidden_dims (list of int): architecture of the embedding;
@@ -217,7 +221,7 @@ class FSPool(nn.Module):
             bn (bool): whether to include batch normalization or not.
         """
         super(FSPool, self).__init__()
-        self.mlp = MLP(input_dim, hidden_dims, device, init, skip, bn, 'cnt')
+        self.mlp = MLP(input_dim - 1, hidden_dims, device, init, skip, bn, 'cnt')
         self.mat = torch.rand((m, hidden_dims[-1]))
         if device == 'gpu':
             self.mat = self.mat.to('cuda:0')
@@ -251,11 +255,7 @@ def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
         Tuple (training DataLoader, validation DataLoader).
     """
     assert sum(splits) == 1, 'The sum of splits must be 1.'
-    if len(dataset) > 3:
-        num_data = len(dataset)
-    else:
-        num_data = len(dataset[0])
-
+    num_data = len(dataset)
     indices = np.arange(num_data)
     if shuffle:
         np.random.seed(seed)
@@ -316,7 +316,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
     pen_msg_coef = task_dict['pen_msg_coef']
     device = task_dict['device']
     weightsbiases = task_dict['weightsbiases']
-    m = int(meta_pred.m / 2)
+    m = meta_pred.m
 
     torch.autograd.set_detect_anomaly(True)
     train_loader, valid_loader, test_loader = train_valid_loaders(data, batch_size, splits)
@@ -350,7 +350,8 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
     for i in range(n_epoch):
         meta_pred.train()  # We put the meta predictor in training mode
         with (torch.enable_grad()):
-            for inputs, targets in train_loader:  # Iterating over the various batches
+            for inputs in train_loader:  # Iterating over the various batches
+                targets = (inputs.clone()[:, :, -1] + 1) / 2
                 inputs, targets = inputs.float(), targets.float()
                 if str(device) == 'gpu':
                     inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
@@ -371,7 +372,8 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         rolling_val_acc = torch.mean(torch.tensor(hist['valid_acc'][-min(100, i + 1):]))
         if len(weightsbiases) > 1:
             update_wandb(wandb, hist)  # Upload information to WandB
-        print(f'Epoch {i + 1} - Train acc: {tr_acc:.2f} - Val acc: {vd_acc:.2f} - Test acc: {te_acc:.2f} - '
+        epo = '0' * (i + 1 < 100) + '0' * (i + 1 < 10) + str(i+1)
+        print(f'Epoch {epo} - Train acc: {tr_acc:.2f} - Val acc: {vd_acc:.2f} - Test acc: {te_acc:.2f} - '
               f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
               f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
         scheduler.step(rolling_val_acc)  # Scheduler step
@@ -408,7 +410,8 @@ def stats(meta_pred, pred, criterion, data_loader, msg_type, device):
     with torch.no_grad():
         i, k = 0, 0  # Number of batches / examples we have been through
         tot_loss, tot_acc = [], []
-        for inputs, targets in data_loader:
+        for inputs in data_loader:
+            targets = (inputs.clone()[:, :, -1] + 1) / 2
             n = copy(len(targets) * len(targets[0]))
             i += n
             k += 1
@@ -420,12 +423,12 @@ def stats(meta_pred, pred, criterion, data_loader, msg_type, device):
             output = pred.forward(inputs[:, m:], True)  # Computing the predictions for the task
             loss = criterion(output[0], targets[:, m:])  # Loss computation
             tot_loss.append(torch.sum(loss).cpu())
-            acc = torch.sum(lin_loss(output[1], targets[:, m:] * 2 - 1, reduction=False), dim=1)  # Accuracy computation
+            acc = m * lin_loss(output[1], targets[:, m:] * 2 - 1)  # Accuracy computation
             tot_acc.append(torch.mean(acc / m).cpu())
             if msg_type is not None:
                 for b in range(len(inputs)):  # For all datasets, we compute the bounds
                     bnds = compute_bound(['linear', 'hyperparam', 'kl', 'marchand'], meta_pred, pred, m,
-                                         m - acc[b].cpu(), 0.05, 0, 1, inputs[[b], m:], targets[[b], m:])
+                                         m - acc.item(), 0.05, 0, 1, inputs[[b], m:], targets[[b], m:])
                     bnd_lin.append(bnds[0])
                     bnd_hyp.append(bnds[1])
                     bnd_kl.append(bnds[2])

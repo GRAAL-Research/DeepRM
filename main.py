@@ -9,7 +9,8 @@ def deeprm(experiment_name, param_grid, dataset):
     """
     Args:
         experiment_name: (list of str) experiment name;
-        dataset (list of str): datasets (choices: 'moons', 'easy', 'both');
+        dataset (list of str): datasets (choices: 'mnist', 'moons', 'easy', 'both',
+                                                  'MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure');
         seed (list of int): random seeds;
         n (list of int): total number of datasets
         m (list of int): number of examples per dataset;
@@ -17,12 +18,14 @@ def deeprm(experiment_name, param_grid, dataset):
         splits (list of [float, float, float]): train, valid and test proportion of the data;
         meta_pred (list of str): meta_predictor to use (choices: 'simplenet');
         pred_arch (list of list of int): architecture of the predictor (a ReLU network);
+
         comp_set_size (list of int): compression set size;
         msg_size (list of int): message size;
         ca_dim (list of list of int): custom attention's MLP architecture;
         kme_dim (list of list of int): KME's MLP architecture;
         mod_1_dim (list of list of int): MLP #1 architecture;
         mod_2_dim (list of list of int): MLP #2 architecture;
+
         tau (list of int): temperature parameter (softmax in custom attention);
         init (list of str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
         criterion (list of str): loss function (choices: 'bce_loss');
@@ -50,8 +53,9 @@ def deeprm(experiment_name, param_grid, dataset):
 
     for i, task_dict in enumerate(param_grid):  # Iterating on the different hyperparameters combinations.
         if task_dict['dataset'] == 'mnist':
-            task_dict['n'], task_dict['m'], task_dict[
-                'd'] = 90, 6313 * 2, 784  # For non-synthetic data, these are fixed
+            task_dict['n'], task_dict['m'], task_dict['d'] = 90, 6313*2, 784  # For non-synthetic data, these are fixed
+        elif task_dict['dataset'] in ['MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure']:
+            task_dict['d'], task_dict['batch_size'] = 76, 50  # For non-synthetic data, these are fixed
         if task_dict['msg_size'] == 0:
             task_dict['msg_type'] = 'none'
         print(f"Launching task {i + 1}/{n_tasks} : {task_dict}\n")
@@ -68,9 +72,9 @@ def deeprm(experiment_name, param_grid, dataset):
                 data = data_gen(task_dict['dataset'], task_dict['n'], task_dict['m'], task_dict['d'], True)
             elif task_dict['dataset'] == 'mnist':
                 data = load_mnist()
-
-            pred = Predictor(task_dict['d'], task_dict['pred_arch'], task_dict['batch_size'])  # Predictor init.
-
+            elif task_dict['dataset'] in ['MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure']:
+                data = load_MTPL(task_dict['dataset'][6:], task_dict['n'], task_dict['m'])
+            pred = Predictor(task_dict['d'], task_dict['pred_arch'], task_dict['batch_size'])   # Predictor init.
             if task_dict['meta_pred'] == 'simplenet':  # Meta-predictor initialization
                 meta_pred = SimpleMetaNet(pred.num_param, task_dict)
 
