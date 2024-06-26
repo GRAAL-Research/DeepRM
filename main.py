@@ -5,10 +5,9 @@ from datasets import *
 from train import *
 
 
-def deeprm(experiment_name, param_grid, dataset):
+def deeprm(param_grid, dataset):
     """
     Args:
-        experiment_name: (list of str) experiment name;
         dataset (list of str): datasets (choices: 'mnist', 'moons', 'easy', 'both',
                                                   'MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure');
         seed (list of int): random seeds;
@@ -41,8 +40,6 @@ def deeprm(experiment_name, param_grid, dataset):
         optimizer (list of str): meta-neural network optimizer (choices: 'adam', 'rmsprop');
         n_epoch (list of int): maximum number of epoch for the training phase;
         device (list of str): device on which to compute (choices: 'cpu', 'gpu');
-        weightsbiases (list of [str, str]): list with WandB team and project if data is to be stocked on WandB;
-                      (empty list): if data is not to be stocked in WandB.
     """
     # Creating a parameter grid for iterating on the different hyperparameters combinations.
     param_grid = [t for t in param_grid]
@@ -53,9 +50,15 @@ def deeprm(experiment_name, param_grid, dataset):
 
     for i, task_dict in enumerate(param_grid):  # Iterating on the different hyperparameters combinations.
         if task_dict['dataset'] == 'mnist':
-            task_dict['n'], task_dict['m'], task_dict['d'] = 90, 6313*2, 784  # For non-synthetic data, these are fixed
+            # For non-synthetic data, these are fixed
+            task_dict['n'] = 90
+            task_dict['m'] = 6313 * 2
+            task_dict['d'] = 784
         elif task_dict['dataset'] in ['MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure']:
-            task_dict['d'], task_dict['batch_size'] = 76, 50  # For non-synthetic data, these are fixed
+            # For non-synthetic data, these are fixed
+            task_dict['d'] = 76
+            task_dict['batch_size'] = 50
+
         if task_dict['msg_size'] == 0:
             task_dict['msg_type'] = 'none'
         print(f"Launching task {i + 1}/{n_tasks} : {task_dict}\n")
@@ -63,18 +66,19 @@ def deeprm(experiment_name, param_grid, dataset):
             print("Doesn't make sens to regularize discrete messages; passing...\n")
         elif task_dict['comp_set_size'] + task_dict['msg_size'] == 0:  # Passes on incoherent hyp. param. comb.
             print("Opaque network; passing...\n")
-        elif is_job_already_done(experiment_name, task_dict):  # Verify if the hyp. param. comb. has already been tested
+        elif is_job_already_done(task_dict["project_name"],
+                                 task_dict):  # Verify if the hyp. param. comb. has already been tested
             print("Already done; passing...\n")
         else:  # The current hyp. param. comb. will be tested
             set_seed(task_dict['seed'])  # Sets the random seed for numpy, torch and random packages
-            
+
             if task_dict['dataset'] in ['moons', 'easy', 'hard']:  # Generating the datasets
                 data = data_gen(task_dict['dataset'], task_dict['n'], task_dict['m'], task_dict['d'], True)
             elif task_dict['dataset'] == 'mnist':
                 data = load_mnist()
             elif task_dict['dataset'] in ['MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure']:
                 data = load_MTPL(task_dict['dataset'][6:], task_dict['n'], task_dict['m'])
-            pred = Predictor(task_dict['d'], task_dict['pred_arch'], task_dict['batch_size'])   # Predictor init.
+            pred = Predictor(task_dict['d'], task_dict['pred_arch'], task_dict['batch_size'])  # Predictor init.
             if task_dict['meta_pred'] == 'simplenet':  # Meta-predictor initialization
                 meta_pred = SimpleMetaNet(pred.num_param, task_dict)
 
@@ -90,24 +94,24 @@ def deeprm(experiment_name, param_grid, dataset):
                 opti = torch.optim.Adam(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
             elif task_dict['optimizer'] == 'rmsprop':
                 opti = torch.optim.RMSprop(meta_pred.parameters(), lr=copy(task_dict['start_lr']))
-        
+
             if task_dict['scheduler'] == 'plateau':
                 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti, mode='max',
-                                                                   factor=task_dict['factor'],
-                                                                   patience=task_dict['scheduler_patience'],
-                                                                   threshold=task_dict['scheduler_threshold'], verbose=True)
-            hist, best_epoch = train(meta_pred, pred, data, opti, scheduler, crit, penalty_msg, task_dict)  # Launch train.
-            write(experiment_name, task_dict, hist, best_epoch)  # Training details are written in a .txt file
+                                                                       factor=task_dict['factor'],
+                                                                       patience=task_dict['scheduler_patience'],
+                                                                       threshold=task_dict['scheduler_threshold'],
+                                                                       verbose=True)
+
+            hist, best_epoch = train(meta_pred, pred, data, opti, scheduler, crit, penalty_msg, task_dict)
+            write(task_dict["project_name"], task_dict, hist, best_epoch)  # Training details are written in a .txt file
 
 
 if __name__ == "__main__":
-    config_files_path = Path("config")
-
-    experiment_name = "Message-module"
     config_name = "kme_msg_config.yaml"
 
-    omega_config = OmegaConf.load(config_files_path / config_name)
+    omega_config = OmegaConf.load(Path("config") / config_name)
     config = OmegaConf.to_container(omega_config, resolve=True)
     param_grid = ParameterGrid([config])
     dataset = config["dataset"]
-    deeprm(experiment_name, param_grid, dataset)
+
+    deeprm(param_grid, dataset)

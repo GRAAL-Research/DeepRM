@@ -1,3 +1,6 @@
+is_using_wandb: [True]
+project_name: [message_module_with_kme]
+
 dataset: [moons]
 splits: [[0.55, 0.20, 0.25]]
 n: [4000]
@@ -36,4 +39,3 @@ early_stopping_tolerance: [1e-2]
 
 n_epoch: [50]
 device: [gpu]
-weightsbiases: [[graal_deeprm2024, deeprm_new]]
