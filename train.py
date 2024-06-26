@@ -334,11 +334,15 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
             'bound_kl': [],
             'bound_mrch': []}
     if len(weightsbiases) > 1:  # If condition is true, then metrics about the experiment are recorded in WandB
+        experiment_name = (
+                           f"msg=({task_dict['msg_type']},{task_dict['msg_size']})"
+                           f"_nb-dataset={task_dict['n']}"
+                           f"_pred-arch={task_dict['pred_arch']}"
+                           f"_lr={task_dict['start_lr']}"
+                           )
+
         wandb.init(
-            name=str(task_dict['start_lr']) + '_' + str(task_dict['optimizer']) + '_' +
-            str(task_dict['msg_type']) + '_' + str(task_dict['pred_arch']) + '_' +
-            str(task_dict['msg_size']) + '_' + str(task_dict['comp_set_size']) + '_' +
-            str(task_dict['pen_msg_coef']) + '_' + str(task_dict['seed']),
+            name=experiment_name,
             project=weightsbiases[1],
             config=task_dict
         )

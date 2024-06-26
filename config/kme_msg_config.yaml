@@ -1,0 +1,40 @@
+weightsbiases: [[graal_deeprm2024, message_module_with_kme]]
+
+dataset: [moons]
+splits: [[0.55, 0.20, 0.25]]
+n: [200, 1000]
+m: [100]
+d: [2]
+
+seed: [0]
+
+meta_pred: [simplenet]
+pred_arch: [[3], [3, 3], [5, 5, 5]]
+comp_set_size: [0]
+
+msg_size: [5, 10, 50, 100, 1000]
+ca_dim: [[100]]
+kme_dim: [[100]]
+mod_1_dim: [[100]]
+mod_2_dim: [[100]]
+tau: [20]
+init: [kaiming_unif]
+criterion: [bce_loss]
+
+start_lr: [1e-1, 1e-2, 1e-3, 1e-4]
+pen_msg: [l2]
+pen_msg_coef: [0]
+msg_type: [dsc, cnt]
+batch_size: [200]
+
+optimizer: [adam]
+scheduler: [plateau]
+scheduler_patience: [10]
+factor: [0.1]
+scheduler_threshold: [5e-3]
+
+early_stopping_patience: [10]
+early_stopping_tolerance: [5e-3]
+
+n_epoch: [100]
+device: [gpu]

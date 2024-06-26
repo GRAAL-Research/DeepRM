@@ -34,6 +34,6 @@ scheduler_threshold: [1e-2]
 early_stopping_patience: [5]
 early_stopping_tolerance: [5e-3]
 
-n_epoch: [50]
+n_epoch: [100]
 device: [gpu]
 weightsbiases: [[graal_deeprm2024, deeprm_new]]

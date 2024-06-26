@@ -99,8 +99,8 @@ def deeprm(experiment_name, param_grid, dataset):
 if __name__ == "__main__":
     config_files_path = Path("config")
 
-    experiment_name = "DeepRM - message exp"
-    config_name = "debug-config.yaml"
+    experiment_name = "Message-module"
+    config_name = "kme_msg_config.yaml"
 
     omega_config = OmegaConf.load(config_files_path / config_name)
     config = OmegaConf.to_container(omega_config, resolve=True)
