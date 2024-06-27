@@ -7,6 +7,9 @@ from copy import copy
 from bound import compute_bound
 from time import time
 import wandb
+from loguru import logger
+
+from wandb_utils import create_run_name
 
 
 class SimpleMetaNet(nn.Module):
@@ -75,7 +78,7 @@ class SimpleMetaNet(nn.Module):
             x = self.mod_1.forward(torch.reshape(x, (len(x), -1)))
 
             if self.msg_type == 'cnt':
-                x = x * 3   # See bound computation
+                x = x * 3  # See bound computation
             if n_samples == 0:
                 self.msg = x.clone()
             if n_samples > 0:
@@ -280,7 +283,7 @@ def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
     return train_loader, valid_loader, test_loader
 
 
-def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict):
+def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict):
     """
     Trains a meta predictor using PyTorch.
 
@@ -294,28 +297,25 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         pen_msg (function): message penalty function;
         task_dict (dictionary) containing the following:
             splits ([float, float, float]): train, valid and test proportion of the data;
-            tol (float): Quantity by which the loss must diminish in order for this increment not to be marginal
-            early_stop (int): Number of epochs by which, if the loss hasn't diminished by « tol », the train stops
+            early_stopping_tolerance (float): Quantity by which the loss must diminish in order for this increment not to be marginal
+            early_stopping_patience (int): Number of epochs by which, if the loss hasn't diminished by « early_stopping_tolerance », the train stops
             n_epoch (int): The maximum number of epochs.
             batch_size (int): Batch size.
             pen_msg_coef (float): Message regularization factor.
             device (str): whether to use the gpu (choices: 'gpu', 'cpu');
-            weightsbiases (list of [str, str]): list with WandB team and project if data is to be stocked on WandB;
-                          (empty list): if data is not to be stocked in WandB.
     Returns:
         tuple of: information about the model at the best training epoch (dictionary), best training epoch (int).
     """
     # Retrieving information
     splits = task_dict['splits']
-    tol = task_dict['tol']
-    early_stop = task_dict['early_stop']
+    early_stopping_tolerance = task_dict['early_stopping_tolerance']
+    early_stopping_patience = task_dict['early_stopping_patience']
     n_epoch = task_dict['n_epoch']
     batch_size = task_dict['batch_size']
     msg_size = task_dict['msg_size']
     msg_type = task_dict['msg_type']
     pen_msg_coef = task_dict['pen_msg_coef']
     device = task_dict['device']
-    weightsbiases = task_dict['weightsbiases']
     m = meta_pred.m
 
     torch.autograd.set_detect_anomaly(True)
@@ -333,16 +333,11 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
             'bound_hyp': [],
             'bound_kl': [],
             'bound_mrch': []}
-    if len(weightsbiases) > 1:  # If condition is true, then metrics about the experiment are recorded in WandB
-        wandb.login(key='b7d84000aed68a9db76819fa4935778c47f0b374')
-        wandb.init(
-            name=str(task_dict['start_lr']) + '_' + str(task_dict['optimizer']) + '_' +
-            str(task_dict['msg_type']) + '_' + str(task_dict['pred_arch']) + '_' +
-            str(task_dict['msg_size']) + '_' + str(task_dict['comp_set_size']) + '_' +
-            str(task_dict['pen_msg_coef']) + '_' + str(task_dict['seed']),
-            project=weightsbiases[1],
-            config=task_dict
-        )
+
+    if task_dict["is_using_wandb"]:
+        run_name = create_run_name(task_dict)
+        wandb.init(name=run_name, project=task_dict["project_name"], config=task_dict)
+
     begin = time()
     for i in range(n_epoch):
         meta_pred.train()  # We put the meta predictor in training mode
@@ -367,23 +362,27 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         update_hist(hist, (tr_acc, tr_loss, vd_acc, vd_loss, te_acc, te_loss, bound, msg_size,
                            meta_pred.comp_set_size, i))  # Tracking results
         rolling_val_acc = torch.mean(torch.tensor(hist['valid_acc'][-min(100, i + 1):]))
-        if len(weightsbiases) > 1:
+        if task_dict["is_using_wandb"]:
             update_wandb(wandb, hist)  # Upload information to WandB
-        epo = '0' * (i + 1 < 100) + '0' * (i + 1 < 10) + str(i+1)
+        epo = '0' * (i + 1 < 100) + '0' * (i + 1 < 10) + str(i + 1)
         print(f'Epoch {epo} - Train acc: {tr_acc:.2f} - Val acc: {vd_acc:.2f} - Test acc: {te_acc:.2f} - '
               f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
               f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
         scheduler.step(rolling_val_acc)  # Scheduler step
-        if i == 1 or rolling_val_acc > best_rolling_val_acc + tol:  # If an improvement has been done in validation...
+        if i == 1 or rolling_val_acc > best_rolling_val_acc + early_stopping_tolerance:  # If an improvement has been done in validation...
             best_epoch = copy(i)  # ...We keep track of it
             best_rolling_val_acc = copy(rolling_val_acc)
         if ((tr_acc < 0.525 and i > 50) or  # If no learning has been made...
-                i - best_epoch > early_stop):  # ... or no improvements for a while ...
+                i - best_epoch > early_stopping_patience):  # ... or no improvements for a while ...
+            logger.info("The early stopping stopped the training.")
             break  # Early stopping is made
-    if task_dict['d'] == 2 and len(weightsbiases) > 1:  # Plotting the decision boundary for a few problems
+
+    if task_dict['d'] == 2 and task_dict["is_using_wandb"]:
         show_decision_boundaries(meta_pred, task_dict['dataset'], test_loader, pred, wandb, device)
-    if len(weightsbiases) > 1:
-        wandb.finish()  # End the run on WandB
+
+    if task_dict["is_using_wandb"]:
+        wandb.finish()
+
     return hist, best_epoch
 
 

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PIL import Image
 import numpy as np
 import random
@@ -349,11 +351,11 @@ def write(file_name, task_dict, hist, best_epoch):
     file.close()
 
 
-def is_job_already_done(experiment_name, task_dict):
+def is_job_already_done(project_name, task_dict):
     """
     Verifies if a hyperparameter combination has already been tested.
     Args:
-        experiment_name (str): The name of the experiment;
+        project_name (str): The name of the wandb project;
         task_dict (dictionary): the dictionary containing the current hyperparameters combination;
     Return:
         bool, whether the combination has already been tested or not
@@ -366,14 +368,14 @@ def is_job_already_done(experiment_name, task_dict):
     for key in keys:
         new.append(str(task_dict[key]))
     try:
-        with open("results/" + str(experiment_name) + ".txt", "r") as tes:
+        with open("results/" + str(project_name) + ".txt", "r") as tes:
             tess = [line.strip().split('\t') for line in tes]
         tes.close()
         for i in range(len(tess)):
             if tess[i][:len(new)] == new:
                 cnt_nw += 1
     except FileNotFoundError:
-        file = open("results/" + str(experiment_name) + ".txt", "a")
+        file = open("results/" + str(project_name) + ".txt", "a")
         for key in keys:
             file.write(key + "\t")
         file.write('train_acc' + "\t")
@@ -420,7 +422,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                     x = inputs[j, inds][:, :2]
                     m = int(len(x) / 2)
                     if str(device) == 'gpu':
-                        inputs, targets_1, meta_pred = inputs.cuda(), targets_1.cuda(), meta_pred.cuda()
+                        inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
                     meta_output = meta_pred(inputs[:, :m])[j:j+1]
                     if pred.pred_type == 'linear_classif':
                         px = [-20, 20]
@@ -455,10 +457,22 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                     if dataset == 'moons':
                         plt.xlim(torch.mean(x[:, 0].cpu()) - 10, torch.mean(x[:, 0].cpu()) + 10)
                         plt.ylim(torch.mean(x[:, 1].cpu()) - 10, torch.mean(x[:, 1].cpu()) + 10)
-                    plt.savefig(f"figures/decision_boundaries/decision_boundaries_{i}.png")
+
+                    figure_folder_path = Path("figures")
+                    if not figure_folder_path.exists():
+                        figure_folder_path.mkdir()
+
+                    decision_boundaries_folder_name = "decision_boundaries"
+                    decision_boundaries_folder_path = figure_folder_path / decision_boundaries_folder_name
+                    if not decision_boundaries_folder_path.exists():
+                        decision_boundaries_folder_path.mkdir()
+
+                    fig_prefix = "decision_boundaries"
+                    plt.savefig(decision_boundaries_folder_path / f"{fig_prefix}_{i}.png")
                     if wandb is not None:
-                        im_frame = Image.open(f"figures/decision_boundaries/decision_boundaries_{i}.png")
+                        im_frame = Image.open(decision_boundaries_folder_path / f"{fig_prefix}_{i}.png")
                         image = wandb.Image(np.array(im_frame),
-                                            caption=f"decision_boundaries/decision_boundaries_{i}")  # file_type="jpg"
+                                            caption=f"{decision_boundaries_folder_name}/{fig_prefix}_{i}")  # file_type="jpg"
                         examples.append(image)
+
     wandb.log({"Decision boundaries": examples})
