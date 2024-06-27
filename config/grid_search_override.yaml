@@ -1,0 +1,9 @@
+pred_arch: [[3], [10]]
+msg_size: [100]  # Fixer msg_size avec mod_1_dim
+lr: [1e-1, 1e-2, 1e-3, 1e-4]
+kme_dim: [[100]]
+mod_1_dim: [[50], [100], [500], [1000]]
+mod_2_dim: [[100]]  # Fixer mod_2_dim avec mod_1_dim
+batch_size: [10, 50, 200]  # Nb de dataset par batch
+
+# Verifier le problème du msg size avant de run le tout

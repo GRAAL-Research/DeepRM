@@ -1,7 +1,9 @@
 from omegaconf import OmegaConf
 from sklearn.model_selection import ParameterGrid
 
+from config_utils import get_config
 from datasets import *
+from model.simple_meta_net import SimpleMetaNet
 from train import *
 
 
@@ -108,9 +110,8 @@ def main(param_grid: ParameterGrid, dataset: list[str]):
 
 if __name__ == "__main__":
     config_name = "config.yaml"
+    config = get_config(config_name)
 
-    omega_config = OmegaConf.load(Path("config") / config_name)
-    config = OmegaConf.to_container(omega_config, resolve=True)
     param_grid = ParameterGrid([config])
     dataset = config["dataset"]
 
