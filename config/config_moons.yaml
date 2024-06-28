@@ -1,0 +1,44 @@
+is_using_wandb: [False]
+project_name: [message_module_with_kme]
+run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
+
+dataset: [moons]
+balanced: [True]
+splits: [[0.55, 0.20, 0.25]]
+n_dataset: [4000]
+m: [100]
+d: [2]
+
+seed: [0]
+
+meta_pred: [simplenet]
+pred_arch: [[3]]
+comp_set_size: [0]
+
+ca_dim: [[100], [100, 100]]
+kme_dim: [[100], [100, 100]]
+mod_1_dim: [[100]]
+mod_2_dim: [[100], [100, 50]]
+tau: [20]
+init: [kaiming_unif]
+criterion: [bce_loss]
+loss_power: [0.5]
+
+msg_type: [dsc, cnt]
+msg_size: [3, 5, 7, 10, 15, 20, 30, 50, 100, 250, 500, 1000]
+pen_msg: [l2]
+pen_msg_coef: [0]
+batch_size: [200]
+
+optimizer: [adam]
+lr: [1e-2, 1e-3]
+scheduler: [plateau]
+scheduler_patience: [5]
+factor: [0.5]
+scheduler_threshold: [1e-2]
+
+early_stopping_patience: [5]
+early_stopping_tolerance: [1e-2]
+
+n_epoch: [50]
+device: [cpu]
