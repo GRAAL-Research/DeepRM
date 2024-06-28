@@ -9,6 +9,8 @@ def main(config_combinations: list[dict]):
     Args:
         dataset (list of str): datasets (choices: 'mnist', 'moons', 'easy', 'both',
                                                   'MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure');
+
+        balanced (list of bool): whether to consider balanced datasets during forward pass losses computation;                                          
         m (list of int): number of examples per dataset;
         d (list of int): dimension of each example;
         splits (list of [float, float, float]): train, valid and test proportion of the data;
@@ -21,6 +23,7 @@ def main(config_combinations: list[dict]):
         tau (list of int): temperature parameter (softmax in custom attention);
         init (list of str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
         criterion (list of str): loss function (choices: 'bce_loss');
+        loss_power (list of floats): power to be applied, by dataset;
         pen_msg (list of str): type of message penalty (choices: 'l1', 'l2');
         pen_msg_coef (list of float): message penalty coefficient;
         msg_type (list of str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
