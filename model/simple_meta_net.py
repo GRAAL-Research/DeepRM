@@ -1,9 +1,9 @@
 import torch
 from torch import nn as nn
 
-from model.get_message_dimensionality_reducer import get_message_dimensionality_reducer
-from model.kme import KME
 from model.custom_attention import CA
+from model.data_compressor import create_data_compressor_1
+from model.kme import KME
 from utils import MLP
 
 
@@ -39,19 +39,20 @@ class SimpleMetaNet(nn.Module):
         self.d, self.tau, self.batch_size = task_dict['d'], task_dict['tau'], task_dict['batch_size']  # Parameters
         self.input_dim = self.d
         self.output_dim = pred_input_dim
-        self.mod_2_input = task_dict["msg_dim_reducer_output_dim"] * (self.comp_set_size > 0) + self.mod_1_dim[-1] * (
-                    self.msg_size > 0)
+        self.mod_2_input = task_dict["data_compressor_dim"][-1] * (self.comp_set_size > 0) + self.mod_1_dim[-1] * (
+                self.msg_size > 0)
 
         # Generating the many components (custom attention (CA) multi-heads, KME #1-2, MLP #1-2) of the meta-learner
+        self.kme_1 = create_data_compressor_1(task_dict)
+        self.mod_1 = MLP(task_dict["data_compressor_dim"][-1], self.mod_1_dim, self.device, self.init,
+                         False, False, self.msg_type)
+
         self.cas = nn.ModuleList([])
         for i in range(self.comp_set_size):
             self.cas.append(CA(self.d + 1, self.ca_dim, self.ca_dim, self.m, self.device,
                                self.init, False, False, 'fspool', self.tau))
-        self.kme_1 = get_message_dimensionality_reducer(task_dict)
-        self.kme_2 = KME(self.d + 1, self.kme_dim, self.device, self.init, False, False)
+        self.kme_2 = KME(self.d + 1, task_dict["data_compressor_dim"], self.device, self.init, False, False)
 
-        self.mod_1 = MLP(self.ca_dim[-1], self.mod_1_dim, self.device, self.init,
-                         False, False, self.msg_type)
         self.mod_2 = MLP(self.mod_2_input, self.mod_2_dim + [self.output_dim], self.device,
                          self.init, False, False, 'cnt')
 

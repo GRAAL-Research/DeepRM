@@ -1,19 +1,46 @@
+import copy
 from pathlib import Path
-from typing import Any
 
 from omegaconf import OmegaConf
+from sklearn.model_selection import ParameterGrid
 
 
-def get_config(config_name: str) -> dict[str, Any]:
-    omega_config = OmegaConf.load(Path("config") / config_name)
-    omega_grid_search_config = OmegaConf.load(Path("config") / "grid_search_override.yaml")
-    config = OmegaConf.to_container(omega_config, resolve=True)
-    grid_search_config = OmegaConf.to_container(omega_grid_search_config, resolve=True)
+def create_config_combinations_sorted_by_dataset(config: dict) -> list[dict]:
+    config_combinations = generate_combinations(config)
+    return sort_config_combinations_by_dataset_name_idx(config_combinations, config["dataset"])
 
-    for parameter in grid_search_config:
-        if parameter in config:
-            config[parameter] = grid_search_config[parameter]
+
+def generate_combinations(config: dict) -> list[dict]:
+    grid_search_config = load_yaml_config_file(Path("config") / "grid_search_override.yaml")
+
+    overrided_config = override_config_with_grid_search_config(config, grid_search_config)
+    parameter_grid = create_parameter_grid(overrided_config, grid_search_config)
+
+    return [config_combination for config_combination in parameter_grid]
+
+
+def sort_config_combinations_by_dataset_name_idx(config_combinations: list[dict], datasets: list[str]) -> list[dict]:
+    return sorted(config_combinations, key=lambda config_combination: datasets.index(config_combination["dataset"]))
+
+
+def override_config_with_grid_search_config(config: dict, grid_search_config: dict) -> None:
+    overrided_config = copy.deepcopy(config)
+
+    for param_name in grid_search_config:
+        if param_name in overrided_config:
+            overrided_config[param_name] = grid_search_config[param_name]
         else:
-            config[parameter] = [config[parameter]]
+            error_message = (f"You cannot override the parameter '{param_name}'"
+                             "during grid search because it's not in the config.")
+            raise KeyError(error_message)
 
-    return config
+    return overrided_config
+
+def create_parameter_grid(config: dict, grid_search_config: dict) -> ParameterGrid:
+    config = {key: [value] if key not in grid_search_config else value for key, value in config.items()}
+    return ParameterGrid([config])
+
+
+def load_yaml_config_file(file_path: Path) -> dict:
+    omega_config = OmegaConf.load(file_path)
+    return OmegaConf.to_container(omega_config, resolve=True)

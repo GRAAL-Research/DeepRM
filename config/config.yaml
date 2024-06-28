@@ -10,17 +10,18 @@ d: 2
 
 seed: 0
 
+comp_set_size: 0
+ca_dim: [100]
+tau: 20
+
+data_compressor_name: KME
+data_compressor_dim: [100]
+mod_1_dim: [100]
+
+mod_2_dim: [100]
 meta_pred: simplenet
 pred_arch: [3]
-comp_set_size: 0
 
-ca_dim: [100]
-dim_reducer_name: KME
-dim_reducer_dim: [100]
-
-mod_1_dim: [100]
-mod_2_dim: [100]
-tau: 20
 init: kaiming_unif
 criterion: bce_loss
 
