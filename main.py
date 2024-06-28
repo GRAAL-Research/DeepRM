@@ -1,54 +1,39 @@
-from omegaconf import OmegaConf
-from sklearn.model_selection import ParameterGrid
-
+from config_utils import load_yaml_config_file, create_config_combinations_sorted_by_dataset
 from datasets import *
+from model.simple_meta_net import SimpleMetaNet
 from train import *
 
 
-def main(param_grid: ParameterGrid, dataset: list[str]):
+def main(config_combinations: list[dict]):
     """
     Args:
         dataset (list of str): datasets (choices: 'mnist', 'moons', 'easy', 'both',
                                                   'MTPL2_frequency', 'MTPL2_severity', 'MTPL2_pure');
-        seed (list of int): random seeds;
-        n (list of int): total number of datasets
         m (list of int): number of examples per dataset;
         d (list of int): dimension of each example;
         splits (list of [float, float, float]): train, valid and test proportion of the data;
         meta_pred (list of str): meta_predictor to use (choices: 'simplenet');
         pred_arch (list of list of int): architecture of the predictor (a ReLU network);
-
         comp_set_size (list of int): compression set size;
-        msg_size (list of int): message size;
         ca_dim (list of list of int): custom attention's MLP architecture;
-        kme_dim (list of list of int): KME's MLP architecture;
         mod_1_dim (list of list of int): MLP #1 architecture;
         mod_2_dim (list of list of int): MLP #2 architecture;
-
         tau (list of int): temperature parameter (softmax in custom attention);
         init (list of str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
         criterion (list of str): loss function (choices: 'bce_loss');
-        lr (list of float): initial learning rate;
         pen_msg (list of str): type of message penalty (choices: 'l1', 'l2');
         pen_msg_coef (list of float): message penalty coefficient;
         msg_type (list of str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
         batch_size (list of int): batch size;
-        scheduler (list of str): learning rate decay type (choices: 'plateau');
-        scheduler_patience (list of int): learning rate decay scheduler_patience;
         factor (list of float): factor by which the learning rate is multiplied (one decay step);
-        early_stopping_patience (list of int): early stopping number of epoch;
         optimizer (list of str): meta-neural network optimizer (choices: 'adam', 'rmsprop');
-        n_epoch (list of int): maximum number of epoch for the training phase;
-        device (list of str): device on which to compute (choices: 'cpu', 'gpu');
+        n_epoch (list of int): maximum number of epoch for the training phase;z
     """
-    # Creating a parameter grid for iterating on the different hyperparameters combinations.
-    param_grid = [t for t in param_grid]
-    ordering = {d: i for i, d in enumerate(dataset)}
-    param_grid = sorted(param_grid, key=lambda p: ordering[p['dataset']])
-    n_tasks = len(param_grid)
-    meta_pred, data, opti, scheduler, crit, penalty_msg, task_dict = None, None, None, None, None, None, None
+    n_tasks = len(config_combinations)
+    meta_pred, data, opti, scheduler, crit, penalty_msg = None, None, None, None, None, None
+    is_sending_wandb_last_run_alert = False
 
-    for i, task_dict in enumerate(param_grid):  # Iterating on the different hyperparameters combinations.
+    for i, task_dict in enumerate(config_combinations):
         if task_dict['dataset'] == 'mnist':
             # For non-synthetic data, these are fixed
             task_dict['n_dataset'] = 90
@@ -61,7 +46,9 @@ def main(param_grid: ParameterGrid, dataset: list[str]):
 
         if task_dict['msg_size'] == 0:
             task_dict['msg_type'] = 'none'
+
         print(f"Launching task {i + 1}/{n_tasks} : {task_dict}\n")
+
         if task_dict['msg_type'] == 'dsc' and task_dict['pen_msg_coef'] > 0:  # Passes on incoherent hyp. param. comb.
             print("Doesn't make sens to regularize discrete messages; passing...\n")
         elif task_dict['comp_set_size'] + task_dict['msg_size'] == 0:  # Passes on incoherent hyp. param. comb.
@@ -102,16 +89,17 @@ def main(param_grid: ParameterGrid, dataset: list[str]):
                                                                        threshold=task_dict['scheduler_threshold'],
                                                                        verbose=True)
 
-            hist, best_epoch = train(meta_pred, pred, data, opti, scheduler, crit, penalty_msg, task_dict)
-            write(task_dict["project_name"], task_dict, hist, best_epoch)  # Training details are written in a .txt file
+            if i + 1 == n_tasks:
+                is_sending_wandb_last_run_alert = True
 
+            hist, best_epoch = train(meta_pred, pred, data, opti, scheduler, crit, penalty_msg, task_dict, is_sending_wandb_last_run_alert)
+            write(task_dict["project_name"], task_dict, hist, best_epoch)  # Training details are written in a .txt file
+    
 
 if __name__ == "__main__":
     config_name = "config.yaml"
 
-    omega_config = OmegaConf.load(Path("config") / config_name)
-    config = OmegaConf.to_container(omega_config, resolve=True)
-    param_grid = ParameterGrid([config])
-    dataset = config["dataset"]
+    config = load_yaml_config_file(Path("config") / config_name)
+    config_combinations = create_config_combinations_sorted_by_dataset(config)
 
-    main(param_grid, dataset)
+    main(config_combinations)

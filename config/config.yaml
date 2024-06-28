@@ -1,42 +1,45 @@
-is_using_wandb: [True]
-project_name: [message_module_with_kme]
+is_using_wandb: True
+project_name: test
 run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
 
-dataset: [moons]
-splits: [[0.55, 0.20, 0.25]]
-n_dataset: [4000]
-m: [100]
-d: [2]
+dataset: moons
+splits: [0.55, 0.20, 0.25]
+n_dataset: 4000
+m: 100
+d: 2
 
-seed: [0]
+seed: 0
 
-meta_pred: [simplenet]
-pred_arch: [[3]]
-comp_set_size: [0]
+comp_set_size: 0
+ca_dim: [100]
+tau: 20
 
-ca_dim: [[100], [100, 100]]
-kme_dim: [[100], [100, 100]]
-mod_1_dim: [[100]]
-mod_2_dim: [[100], [100, 50]]
-tau: [20]
-init: [kaiming_unif]
-criterion: [bce_loss]
+data_compressor_name: KME
+data_compressor_dim: [100]
+mod_1_dim: [100]
 
-msg_type: [dsc, cnt]
-msg_size: [3, 5, 7, 10, 15, 20, 30, 50, 100, 250, 500, 1000]
-pen_msg: [l2]
-pen_msg_coef: [0]
-batch_size: [200]
+mod_2_dim: [100]
+meta_pred: simplenet
+pred_arch: [3]
 
-optimizer: [adam]
-lr: [1e-2, 1e-3]
-scheduler: [plateau]
-scheduler_patience: [5]
-factor: [0.5]
-scheduler_threshold: [1e-2]
+init: kaiming_unif
+criterion: bce_loss
 
-early_stopping_patience: [5]
-early_stopping_tolerance: [1e-2]
+msg_type: cnt
+msg_size: 1000
+pen_msg: l2
+pen_msg_coef: 0
 
-n_epoch: [50]
-device: [gpu]
+optimizer: adam
+lr: 1e-3
+scheduler: plateau
+scheduler_patience: 20
+factor: 0.5
+scheduler_threshold: 1e-2
+
+early_stopping_patience: 50
+early_stopping_tolerance: 1e-2
+
+n_epoch: 1000
+batch_size: 200
+device: gpu
