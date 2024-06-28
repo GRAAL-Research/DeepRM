@@ -1,8 +1,9 @@
-is_using_wandb: True
-project_name: test
+is_using_wandb: [False]
+project_name: [test]
 run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
 
 dataset: moons
+balanced: [True]
 splits: [0.55, 0.20, 0.25]
 n_dataset: 4000
 m: 100
@@ -24,6 +25,7 @@ pred_arch: [3]
 
 init: kaiming_unif
 criterion: bce_loss
+loss_power: 1.0
 
 msg_type: cnt
 msg_size: 1000
@@ -42,4 +44,4 @@ early_stopping_tolerance: 1e-2
 
 n_epoch: 1000
 batch_size: 200
-device: gpu
+device: cpu
