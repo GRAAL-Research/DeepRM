@@ -74,6 +74,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         tuple of: information about the model at the best training epoch (dictionary), best training epoch (int).
     """
     # Retrieving information
+    balanced = task_dict['balanced']
     splits = task_dict['splits']
     early_stopping_tolerance = task_dict['early_stopping_tolerance']
     early_stopping_patience = task_dict['early_stopping_patience']
@@ -83,6 +84,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
     msg_type = task_dict['msg_type']
     pen_msg_coef = task_dict['pen_msg_coef']
     device = task_dict['device']
+    loss_power = task_dict['loss_power']
     m = meta_pred.m
 
     torch.autograd.set_detect_anomaly(True)
