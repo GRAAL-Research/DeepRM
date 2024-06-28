@@ -112,14 +112,15 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         meta_pred.train()  # We put the meta predictor in training mode
         with (torch.enable_grad()):
             for inputs in train_loader:  # Iterating over the various batches
+                inputs = inputs.float()[:, m:]
                 targets = (inputs.clone()[:, :, -1] + 1) / 2
                 inputs, targets = inputs.float(), targets.float()
                 if str(device) == 'gpu':
                     inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
                 optimizer.zero_grad()  # Zeroing the gradient everywhere in the meta-learner
-                meta_output = meta_pred(inputs[:, m:])  # Computing the parameters of the predictor.
+                meta_output = meta_pred(inputs)  # Computing the parameters of the predictor.
                 pred.update_weights(meta_output, len(inputs))  # Updating the weights of the predictor
-                output = pred.forward(inputs[:, m:])  # Computing the predictions for the task
+                output = pred.forward(inputs)  # Computing the predictions for the task
                 if balanced:
                     loss = torch.mean(torch.mean(criterion(output, targets), dim=1) ** loss_power)
                 else:
@@ -143,7 +144,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         if task_dict["is_using_wandb"]:
             update_wandb(wandb, hist)  # Upload information to WandB
         epo = '0' * (i + 1 < 100) + '0' * (i + 1 < 10) + str(i + 1)
-        print(f'Epoch {epo} - Train acc: {tr_acc:.2f} - Val acc: {vd_acc:.2f} - Test acc: {te_acc:.2f} - '
+        print(f'Epoch {epo} - Train acc: {tr_acc:.4f} - Val acc: {vd_acc:.4f} - Test acc: {te_acc:.4f} - '
               f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
               f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
         scheduler.step(rolling_val_acc)  # Scheduler step
