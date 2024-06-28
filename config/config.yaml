@@ -1,9 +1,9 @@
-is_using_wandb: [False]
-project_name: [test]
+is_using_wandb: False
+project_name: test
 run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
 
 dataset: moons
-balanced: [True]
+balanced: True
 splits: [0.55, 0.20, 0.25]
 n_dataset: 4000
 m: 100
