@@ -31,6 +31,7 @@ def main(config_combinations: list[dict]):
     """
     n_tasks = len(config_combinations)
     meta_pred, data, opti, scheduler, crit, penalty_msg = None, None, None, None, None, None
+    is_sending_wandb_last_run_alert = False
 
     for i, task_dict in enumerate(config_combinations):
         if task_dict['dataset'] == 'mnist':
@@ -88,13 +89,17 @@ def main(config_combinations: list[dict]):
                                                                        threshold=task_dict['scheduler_threshold'],
                                                                        verbose=True)
 
-            hist, best_epoch = train(meta_pred, pred, data, opti, scheduler, crit, penalty_msg, task_dict)
-            write(task_dict["project_name"], task_dict, hist, best_epoch)  # Training details are written in a .txt file
+            if i + 1 == n_tasks:
+                is_sending_wandb_last_run_alert = True
 
+            hist, best_epoch = train(meta_pred, pred, data, opti, scheduler, crit, penalty_msg, task_dict, is_sending_wandb_last_run_alert)
+            write(task_dict["project_name"], task_dict, hist, best_epoch)  # Training details are written in a .txt file
+    
 
 if __name__ == "__main__":
     config_name = "config.yaml"
 
     config = load_yaml_config_file(Path("config") / config_name)
     config_combinations = create_config_combinations_sorted_by_dataset(config)
+
     main(config_combinations)

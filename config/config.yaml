@@ -33,13 +33,13 @@ pen_msg_coef: 0
 optimizer: adam
 lr: 1e-3
 scheduler: plateau
-scheduler_patience: 5
+scheduler_patience: 20
 factor: 0.5
 scheduler_threshold: 1e-2
 
-early_stopping_patience: 5
+early_stopping_patience: 50
 early_stopping_tolerance: 1e-2
 
-n_epoch: 2
+n_epoch: 1000
 batch_size: 200
 device: gpu

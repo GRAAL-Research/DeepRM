@@ -1,6 +1,8 @@
+project_name: [message_module_with_kme_exp2]
+
 pred_arch: [[3], [10]]
-msg_size: [100]  # Fixer msg_size avec mod_1_dim
+msg_size: ${mod_1_dim[0]}
 lr: [1e-1, 1e-2, 1e-3, 1e-4]
-mod_1_dim: [[50], [100], [500], [1000]]
-mod_2_dim: [[100]]  # Fixer mod_2_dim avec mod_1_dim
-batch_size: [10, 50, 200]  # Nb de dataset par batch
+mod_1_dim:  [[50]]  # [[50], [100], [500], [1000]]
+mod_2_dim:  ${mod_1_dim}
+batch_size: [10, 50, 200]

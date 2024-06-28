@@ -50,7 +50,7 @@ def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
     return train_loader, valid_loader, test_loader
 
 
-def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict):
+def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict, is_sending_wandb_last_run_alert: bool):
     """
     Trains a meta predictor using PyTorch.
 
@@ -148,6 +148,8 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         show_decision_boundaries(meta_pred, task_dict['dataset'], test_loader, pred, wandb, device)
 
     if task_dict["is_using_wandb"]:
+        if is_sending_wandb_last_run_alert:
+            wandb.alert(title="✅ Done", text="The experiment is over.")
         wandb.finish()
 
     return hist, best_epoch
