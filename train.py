@@ -118,7 +118,16 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
                 meta_output = meta_pred(inputs[:, m:])  # Computing the parameters of the predictor.
                 pred.update_weights(meta_output, len(inputs))  # Updating the weights of the predictor
                 output = pred.forward(inputs[:, m:])  # Computing the predictions for the task
-                loss = torch.mean(torch.mean(criterion(output, targets[:, m:]), dim=1) ** 0.5)
+                if balanced:
+                    loss = torch.mean(torch.mean(criterion(output, targets), dim=1) ** loss_power)
+                else:
+                    loss = 0
+                    for batch in range(len(output)):
+                        loss += (torch.mean(criterion(output[batch, targets[batch] == 0],
+                                          targets[batch, targets[batch] == 0])) / 2 +
+                                 torch.mean(criterion(output[batch, targets[batch] == 1],
+                                         targets[batch, targets[batch] == 1])) / 2) ** loss_power
+                    loss /= len(output)
                 loss += pen_msg(meta_pred.msg, pen_msg_coef)  # Regularized loss
                 loss.backward()  # Gradient computation
                 optimizer.step()  # Backprop step
