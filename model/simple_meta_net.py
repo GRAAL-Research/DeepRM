@@ -32,10 +32,10 @@ class SimpleMetaNet(nn.Module):
         self.device = task_dict['device']
         self.comp_set_size, self.msg_size = task_dict['comp_set_size'], task_dict['msg_size']
         self.ca_dim = task_dict['ca_dim']
-        self.mod_1_dim, self.mod_2_dim = task_dict['mod_1_dim'], task_dict['mod_2_dim']
+        self.msg_size = task_dict['msg_size']
+        self.mod_1_dim, self.mod_2_dim = task_dict['mod_1_dim'] + [self.msg_size], task_dict['mod_2_dim']
         self.m, self.msg_type, self.init = int(task_dict['m'] / 2), task_dict['msg_type'], task_dict['init']
         self.msg, self.msk = torch.tensor(0.0), None  # Message and mask (compression selection)
-        self.msg_size = task_dict['msg_size']
         self.d, self.tau, self.batch_size = task_dict['d'], task_dict['tau'], task_dict['batch_size']  # Parameters
         self.input_dim = self.d
         self.output_dim = pred_input_dim
