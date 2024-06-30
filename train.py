@@ -160,7 +160,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         show_decision_boundaries(meta_pred, task_dict['dataset'], test_loader, pred, wandb, device)
 
     if task_dict["is_using_wandb"]:
-        if is_sending_wandb_last_run_alert:
+        if is_sending_wandb_last_run_alert and task_dict["is_wandb_alert_activated"]:
             wandb.alert(title="✅ Done", text="The experiment is over.")
         wandb.finish()
 

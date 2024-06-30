@@ -1,8 +1,12 @@
-project_name: [message_module_with_kme_exp2]
+project_name: [you_can_delete_this_experiment]
 
-pred_arch: [[3], [10]]
-msg_size: ${mod_1_dim[0]}
-lr: [1e-1, 1e-2, 1e-3, 1e-4]
-mod_1_dim:  [[50]]  # [[50], [100], [500], [1000]]
-mod_2_dim:  ${mod_1_dim}
-batch_size: [10, 50, 200]
+dataset: [moon]
+is_wandb_alert_activated: [False]
+is_keeping_moon_identical: [False, True]
+#pred_arch: [[3], [10]]
+#msg_size: ${mod_1_dim[0]}
+#lr: [1e-1, 1e-2, 1e-3, 1e-4]
+#mod_1_dim:  [[50]]  # [[50], [100], [500], [1000]]
+#mod_2_dim:  ${mod_1_dim}
+#batch_size: [10, 50, 200]
+n_epoch: [10]

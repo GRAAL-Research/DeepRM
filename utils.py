@@ -1,9 +1,10 @@
+import random
 from pathlib import Path
 
-from PIL import Image
 import numpy as np
-import random
+from PIL import Image
 from matplotlib import pyplot as plt
+
 plt.switch_backend('agg')
 import torch
 import torch.nn as nn
@@ -32,12 +33,7 @@ def lin_loss(output, targets):
     return tot
 
 
-def set_seed(seed):
-    """
-    Sets the seed to a certain value for several packages
-    Args:
-        seed (int): A seed
-    """
+def set_random_seed(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     random.seed(seed)
@@ -245,7 +241,8 @@ class Predictor(nn.Module):
         """
         out = 0
         if self.pred_type == 'linear_classif':
-            out = torch.sum(torch.transpose(inputs[:, :, :-1], 0, 1)*self.weights[:, :-1], dim=-1) + self.weights[:, -1]
+            out = torch.sum(torch.transpose(inputs[:, :, :-1], 0, 1) * self.weights[:, :-1], dim=-1) + self.weights[:,
+                                                                                                       -1]
             out = torch.transpose(out, 0, 1)
         elif self.pred_type == 'small_nn':
             input_0 = inputs[0, :, :-1]
@@ -423,7 +420,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                     m = int(len(x) / 2)
                     if str(device) == 'gpu':
                         inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
-                    meta_output = meta_pred(inputs[:, :m])[j:j+1]
+                    meta_output = meta_pred(inputs[:, :m])[j:j + 1]
                     if pred.pred_type == 'linear_classif':
                         px = [-20, 20]
                         py = [-(-20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1],
@@ -451,10 +448,10 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                         meta_pred.compute_compression_set(inputs[:, :m])
                         plt.scatter(x[meta_pred.msk[j].cpu(), 0].cpu(),
                                     x[meta_pred.msk[j].cpu(), 1].cpu(), c='black', s=120, marker='*')
-                    if dataset in ['easy', 'hard']:
+                    if dataset == "blob":
                         plt.xlim(-20, 20)
                         plt.ylim(-20, 20)
-                    if dataset == 'moons':
+                    if dataset == 'moon':
                         plt.xlim(torch.mean(x[:, 0].cpu()) - 10, torch.mean(x[:, 0].cpu()) + 10)
                         plt.ylim(torch.mean(x[:, 1].cpu()) - 10, torch.mean(x[:, 1].cpu()) + 10)
 
