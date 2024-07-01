@@ -24,4 +24,4 @@ def create_datasets(config: dict):
     if config["dataset"] in ["MTPL2_frequency", "MTPL2_severity", "MTPL2_pure"]:
         return load_MTPL(config["dataset"][6:], config["n_dataset"], config["m"])
 
-    raise NotImplementedError(f"Dataset {config['dataset']} is not supported.")
+    raise NotImplementedError(f"The dataset '{config['dataset']}' is not supported.")

@@ -3,9 +3,7 @@ import math
 import numpy as np
 from sklearn.datasets import make_moons
 
-from dataset.datasets_utils import create_empty_datasets
-
-Position = tuple[float, float]
+from dataset.datasets_utils import create_empty_datasets, shuffled_x_and_y
 
 
 def generate_moon_datasets(config: dict) -> np.ndarray:
@@ -18,11 +16,11 @@ def generate_moon_datasets(config: dict) -> np.ndarray:
 
 
 def generate_moon_dataset(config: dict) -> np.ndarray:
-    n_samples = config["m"] if config["m"] % 2 == 0 else config["m"] - 1  # TODO: Do we need balanced classes?
-
-    x, y = make_moons(n_samples, shuffle=config["shuffle_each_dataset_samples"], noise=0.08,
-                      random_state=config["seed"])  # TODO WARNING the random state fix completely the dataset
+    x, y = make_moons(config["m"], noise=0.08, random_state=config["seed"])
     y[y == 0] = -1
+
+    if config["shuffle_each_dataset_samples"]:
+        x, y = shuffled_x_and_y(x, y)
 
     if not config["is_keeping_moon_identical"]:
         x = apply_random_transformations(x)
@@ -42,14 +40,14 @@ def apply_random_transformations(x: np.ndarray) -> np.ndarray:
 
 
 def rotate_all_x(x: np.ndarray, radian_angle: float) -> np.ndarray:
-    for i in range(len(x)):  # TODO : Is it right?
-        x[i, 0], x[i, 1] = rotate_counter_clockwise(x[i], radian_angle)
+    for i in range(len(x)):
+        x[i, 0], x[i, 1] = rotate_counterclockwise(x[i], radian_angle)
 
     return x
 
 
-def rotate_counter_clockwise(point_to_rotate: Position, radian_angle: float,
-                             point_around_which_to_rotate: Position = (0, 0)) -> Position:
+def rotate_counterclockwise(point_to_rotate: tuple[float, float], radian_angle: float,
+                            point_around_which_to_rotate: tuple[float, float] = (0, 0)) -> tuple[float, float]:
     x_diff = point_to_rotate[0] - point_around_which_to_rotate[0]
     y_diff = point_to_rotate[1] - point_around_which_to_rotate[1]
     cos_angle = math.cos(radian_angle)

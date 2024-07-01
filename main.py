@@ -7,7 +7,7 @@ from train import *
 def main(config_combinations: list[dict]):
     """
     Args:
-        dataset (list of str): datasets (choices: "mnist", "moon", "blob", "both",
+        dataset (list of str): datasets (choices: "mnist", "moon", "blob", "moon_and_blob",
                                                   "MTPL2_frequency", "MTPL2_severity", "MTPL2_pure");
 
         balanced (list of bool): whether to consider balanced datasets during forward pass losses computation;                                          

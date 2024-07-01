@@ -10,9 +10,9 @@ def generate_moon_and_blob_datasets(config: dict) -> np.ndarray:
 
     nb_of_choice = 1
     choices = ["blob", "moon"]
-    randomly_selected_dataset = np.choose(nb_of_choice, choices)
 
     for dataset_idx in range(len(datasets)):
+        randomly_selected_dataset = np.choose(nb_of_choice, choices)
         if randomly_selected_dataset == "moon":
             datasets[dataset_idx] = generate_moon_dataset(config)
         elif randomly_selected_dataset == "blob":
