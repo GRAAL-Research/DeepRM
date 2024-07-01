@@ -7,8 +7,8 @@ def generate_blob_datasets(config: dict) -> np.ndarray:
     datasets = create_empty_datasets(config)
 
     for dataset_idx in range(len(datasets)):
-        current_seed_value = np.random.get_state()[1][0]
         if config["is_blob_identical"]:
+            current_seed_value = np.random.get_state()[1][0]
             np.random.seed(config["seed"])
 
         datasets[dataset_idx] = generate_random_blob_dataset(config)

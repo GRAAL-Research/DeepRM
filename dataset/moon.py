@@ -10,7 +10,14 @@ def generate_moon_datasets(config: dict) -> np.ndarray:
     datasets = create_empty_datasets(config)
 
     for dataset_idx in range(len(datasets)):
+        if config["is_moon_identical"]:
+            current_seed_value = np.random.get_state()[1][0]
+            np.random.seed(config["seed"])
+
         datasets[dataset_idx] = generate_moon_dataset(config)
+
+        if config["is_moon_identical"]:
+            np.random.seed(current_seed_value)
 
     return datasets
 
@@ -22,8 +29,7 @@ def generate_moon_dataset(config: dict) -> np.ndarray:
     if config["shuffle_each_dataset_samples"]:
         x, y = shuffled_x_and_y(x, y)
 
-    if not config["is_moon_identical"]:
-        x = apply_random_transformations(x)
+    x = apply_random_transformations(x)
 
     return np.hstack((x, y.reshape(-1, 1)))
 
