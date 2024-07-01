@@ -13,13 +13,12 @@ def generate_blob_datasets(config: dict) -> np.ndarray:
 
 
 def generate_random_blob_dataset(config: dict) -> np.ndarray:
-    n_samples = config["m"] if config["m"] % 2 == 0 else config["m"] - 1  # TODO: Do we need balanced classes?
-    nb_of_classes = 2
-    nb_of_instance_per_class = n_samples // nb_of_classes
+    nb_of_samples_of_the_second_class = len(config["m"]) // 2
 
-    x = generate_random_blob_features(config, nb_of_instance_per_class)
-    y = np.ones((n_samples, 1))
-    y[:nb_of_instance_per_class] -= 2
+    x_of_first_class = generate_random_blob_features(config)
+    y_of_first_class = np.ones((config["m"], 1))
+    x, y = modify_first_class_samples_to_add_the_second_class(x_of_first_class, y_of_first_class,
+                                                              nb_of_samples_of_the_second_class)
 
     if config["shuffle_each_dataset_samples"]:
         x, y = shuffled_x_and_y(x, y)
@@ -27,19 +26,17 @@ def generate_random_blob_dataset(config: dict) -> np.ndarray:
     return np.hstack((x, y))
 
 
-def generate_random_blob_features(config: dict, nb_of_instance_per_class: int) -> np.ndarray:
+def generate_random_blob_features(config: dict) -> np.ndarray:
     random_gaussian_blob_center = np.random.rand(config["d"]) * 10 - 5
-    number_of_classes = 2
-
-    x = np.random.multivariate_normal(mean=random_gaussian_blob_center, cov=np.eye(config["d"]),
-                                      size=number_of_classes * nb_of_instance_per_class)
-    x[:nb_of_instance_per_class] = apply_second_class_modifications(x[:nb_of_instance_per_class])
-
-    return x
+    return np.random.multivariate_normal(mean=random_gaussian_blob_center, cov=np.eye(config["d"]),
+                                         size=config["m"])
 
 
-def apply_second_class_modifications(instances_of_second_class: np.ndarray) -> dict:
-    nb_of_features = instances_of_second_class.shape[1]
-    return instances_of_second_class + np.sign(np.random.rand(nb_of_features) - 0.5) * 5
+def modify_first_class_samples_to_add_the_second_class(x: np.ndarray, y: np.ndarray,
+                                                       nb_of_samples_of_the_second_class: int) -> tuple[
+        np.ndarray, np.ndarray]:
+    nb_of_features = x.shape[1]
+    x[: nb_of_samples_of_the_second_class] += np.sign(np.random.rand(nb_of_features) - 0.5) * 5
+    y[: nb_of_samples_of_the_second_class] -= 2
 
-
+    return x, y
