@@ -8,7 +8,7 @@ from sklearn.model_selection import ParameterGrid
 def create_config_combinations_sorted_by_dataset(config: dict) -> list[dict]:
     grid_search_config = load_yaml_config_file(Path("config") / "grid_search_override.yaml")
 
-    datasets = config["dataset"]
+    datasets = [config["dataset"]]
     if "dataset" in grid_search_config:
         datasets = grid_search_config["dataset"]
 
