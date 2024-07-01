@@ -22,8 +22,6 @@ def generate_blob_datasets(config: dict) -> np.ndarray:
 def generate_random_blob_dataset(config: dict) -> np.ndarray:
     nb_of_samples_of_the_second_class = config["m"] // 2
 
-
-
     x_of_first_class = generate_random_blob_features(config)
     y_of_first_class = np.ones((config["m"], 1))
     x, y = modify_first_class_samples_to_add_the_second_class(x_of_first_class, y_of_first_class,
