@@ -4,7 +4,8 @@ project_name: test
 run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
 
 dataset: [moon, blob, moon_and_blob]
-is_keeping_moon_identical: True
+is_moon_identical: True
+is_blob_identical: True
 shuffle_each_dataset_samples: True
 balanced: True
 splits: [0.55, 0.20, 0.25]

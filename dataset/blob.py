@@ -7,13 +7,22 @@ def generate_blob_datasets(config: dict) -> np.ndarray:
     datasets = create_empty_datasets(config)
 
     for dataset_idx in range(len(datasets)):
+        current_seed_value = np.random.get_state()[1][0]
+        if config["is_blob_identical"]:
+            np.random.seed(config["seed"])
+
         datasets[dataset_idx] = generate_random_blob_dataset(config)
+
+        if config["is_blob_identical"]:
+            np.random.seed(current_seed_value)
 
     return datasets
 
 
 def generate_random_blob_dataset(config: dict) -> np.ndarray:
     nb_of_samples_of_the_second_class = config["m"] // 2
+
+
 
     x_of_first_class = generate_random_blob_features(config)
     y_of_first_class = np.ones((config["m"], 1))

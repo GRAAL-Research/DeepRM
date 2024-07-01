@@ -22,7 +22,7 @@ def generate_moon_dataset(config: dict) -> np.ndarray:
     if config["shuffle_each_dataset_samples"]:
         x, y = shuffled_x_and_y(x, y)
 
-    if not config["is_keeping_moon_identical"]:
+    if not config["is_moon_identical"]:
         x = apply_random_transformations(x)
 
     return np.hstack((x, y.reshape(-1, 1)))
