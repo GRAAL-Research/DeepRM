@@ -1,11 +1,15 @@
-is_using_wandb: False
+is_using_wandb: True
+is_wandb_alert_activated: True
 project_name: test
 run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
 
-dataset: moons
+dataset: moon
+is_moon_identical: True
+is_blob_identical: True
+shuffle_each_dataset_samples: True
 balanced: True
 splits: [0.55, 0.20, 0.25]
-n_dataset: 4000
+n_dataset: 1000
 m: 100
 d: 2
 
@@ -44,4 +48,4 @@ early_stopping_tolerance: 1e-2
 
 n_epoch: 1000
 batch_size: 200
-device: cpu
+device: gpu

@@ -1,8 +1,12 @@
-project_name: [message_module_with_kme_exp2]
+project_name: [identical_dataset]
+run_name_content: [[dataset, is_blob_identical, is_moon_identical, mod_1_dim, lr]]
 
+dataset: [blob_and_moon, blob, moon]
+is_blob_identical: [False, True]
+is_moon_identical: [False, True]
 pred_arch: [[3], [10]]
 msg_size: ${mod_1_dim[0]}
-lr: [1e-1, 1e-2, 1e-3, 1e-4]
+lr: [1e-2, 1e-3]
 mod_1_dim:  [[50]]  # [[50], [100], [500], [1000]]
 mod_2_dim:  ${mod_1_dim}
 batch_size: [10, 50, 200]
