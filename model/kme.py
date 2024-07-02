@@ -17,7 +17,7 @@ class KME(nn.Module):
             bn (bool): whether to include batch normalization or not.
         """
         super(KME, self).__init__()
-        self.embedding = MLP(input_dim - 1, hidden_dims, device, init, skip, bn, 'cnt')
+        self.embedding = MLP(input_dim - 1, hidden_dims, device, init, skip, bn, 'none')
 
     def forward(self, x):
         """
