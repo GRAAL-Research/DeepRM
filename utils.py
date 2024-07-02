@@ -160,19 +160,21 @@ def initialize_weights(init_scheme: str, module) -> None:
 
 
 class Predictor(nn.Module):
-    def __init__(self, d, pred_arch, batch_size):
+    def __init__(self, config: dict):
         """
         Generates the predictor, a feed-forward ReLU network (linear classifier, if the number of hidden layers is 0).
-        Args:
-            d (int): Input dimension of each dataset;
-            pred_arch (list of int): architecture of the predictor;
-            batch_size (int): Batch size.
         """
         super(Predictor, self).__init__()
+        self.d = config["d"]
+        self.batch_size = config["batch_size"]
+        self.has_skip_connection = config["has_skip_connection"]
+        self.has_batch_norm = config["has_batch_norm"]
+
+        pred_arch = config["pred_arch"]
         self.pred_type = "linear_classif" if len(pred_arch) == 0 else "small_nn"
-        self.d, self.batch_size, self.weights = d, batch_size, []
+        self.weights = []
         # It is useful to know how many parameters there is; the architecture now contains the input dim and output dim
-        self.num_param, self.pred_arch = self.num_param_arch_init(d, pred_arch)
+        self.num_param, self.pred_arch = self.num_param_arch_init(self.d, pred_arch)
         self.pred = self.pred_init(self.batch_size)
 
     def num_param_arch_init(self, d, pred_arch):
@@ -205,7 +207,9 @@ class Predictor(nn.Module):
         structure = []
         if self.pred_type == "small_nn":
             for i in range(batch_size):
-                structure.append(MLP(self.d, self.pred_arch[1:], "cpu", False, False, "none"))
+                mlp = MLP(self.d, self.pred_arch[1:], "cpu", self.has_skip_connection, self.has_batch_norm, "none")
+                structure.append(mlp)
+
         return structure
 
     def update_weights(self, weights, batch_size):

@@ -62,7 +62,7 @@ def main(config_combinations: list[dict]):
 
             datasets = create_datasets(config)
 
-            pred = Predictor(config["d"], config["pred_arch"], config["batch_size"])
+            pred = Predictor(config)
             if config["meta_pred"] == "simplenet":  # Meta-predictor initialization
                 meta_pred = SimpleMetaNet(pred.num_param, config)
 
