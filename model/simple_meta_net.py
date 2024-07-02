@@ -54,7 +54,7 @@ class SimpleMetaNet(nn.Module):
         self.kme_2 = KME(self.d + 1, task_dict["data_compressor_dim"], self.device, self.init, False, False)
 
         self.mod_2 = MLP(self.mod_2_input, self.mod_2_dim + [self.output_dim], self.device,
-                         self.init, False, False, 'cnt')
+                         self.init, False, False, 'none')
 
     def forward(self, x, n_samples=0):
         """
