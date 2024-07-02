@@ -9,7 +9,7 @@ from sklearn.model_selection import ParameterGrid
 def create_config(config_name: str):
     config = load_yaml_file_content(Path("config") / config_name)
 
-    if config["is_saving_commit_hash"]:
+    if config["is_logging_commit_info"]:
         config = update_config_with_commit_name_and_hash(config)
 
     return config
