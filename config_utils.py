@@ -71,7 +71,7 @@ def update_config_with_commit_name_and_hash(config: dict) -> dict:
         unstaged_files_paths = repo.untracked_files + [diff.a_path for diff in repo.index.diff(None)]
         staged_files_paths = [diff.a_path for diff in repo.index.diff(repo.head.commit)]
 
-        error_message = ("We want deterministic experiments and your working tree isn't clean."
+        error_message = ("Experiments might not be reproducible if your working tree isn't clean."
                          f"Please commit your changes in {unstaged_files_paths + staged_files_paths}")
         raise Exception(error_message)
 
