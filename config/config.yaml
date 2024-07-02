@@ -4,8 +4,8 @@ project_name: test
 run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
 
 dataset: moon
-is_moon_identical: True
-is_blob_identical: True
+is_moon_identical: False
+is_blob_identical: False
 shuffle_each_dataset_samples: True
 balanced: True
 splits: [0.55, 0.20, 0.25]
@@ -25,9 +25,12 @@ mod_1_dim: [100]
 
 mod_2_dim: [100]
 meta_pred: simplenet
-pred_arch: [3]
+pred_arch: [10]
 
-init: kaiming_unif
+has_skip_connection: False
+has_batch_norm: False
+
+init_scheme: kaiming_unif
 criterion: bce_loss
 loss_power: 1.0
 

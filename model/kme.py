@@ -5,19 +5,14 @@ from utils import MLP
 
 
 class KME(nn.Module):
-    def __init__(self, input_dim, hidden_dims, device, init, skip:bool = False, bn : bool = False):
+    def __init__(self, input_dim, hidden_dims, device: str, init_scheme: str, has_skip_connection: bool,
+                 has_batch_norm: bool) -> None:
         """
-        Initialize a custom attention head.
-        Args:
-            input_dim (int): input dimension of the custom attention head;
-            hidden_dims (list of int): architecture of the embedding;
-            device (str): device on which to compute (choices: 'cpu', 'gpu');
-            init (str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
-            skip (bool): whether to include a skip connection or not;
-            bn (bool): whether to include batch normalization or not.
+        hidden_dims (list of int): architecture of the embedding;
         """
         super(KME, self).__init__()
-        self.embedding = MLP(input_dim - 1, hidden_dims, device, init, skip, bn, 'none')
+        self.embedding = MLP(input_dim - 1, hidden_dims, device, has_skip_connection, has_batch_norm, 'none',
+                             init_scheme)
 
     def forward(self, x):
         """

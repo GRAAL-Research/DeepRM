@@ -7,7 +7,8 @@ from utils import MLP
 
 
 class CA(nn.Module):
-    def __init__(self, input_dim, hidden_dims_mlp, hidden_dims_kme, m, device, init, skip, bn, pool, temp):
+    def __init__(self, input_dim, hidden_dims_mlp, hidden_dims_kme, m, device: str, init_scheme: str,
+                 has_skip_connection: bool, has_batch_norm: bool, pooling_type: str, temp) -> None:
         """
         Initialize a custom attention head.
         Args:
@@ -15,26 +16,22 @@ class CA(nn.Module):
             hidden_dims_mlp (list of int): architecture of the MLP;
             hidden_dims_kme (list of int): architecture of the embedding (MLP) in the KME;
             m (int): number of examples per dataset;
-            device (str): device on which to compute (choices: 'cpu', 'gpu');
-            init (str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
-            skip (bool): whether to include a skip connection or not;
-            bn (bool): whether to include batch normalization or not;
-            pool (str): type of pooling to apply for the query computation (choices: 'kme', 'fspool', 'none');
+            pooling_type (str): type of pooling to apply for the query computation
             temp (float): temperature parameter for the softmax computation.
         """
         super(CA, self).__init__()
         self.temp = temp
         #   The Keys are always computed by an MLP...
-        self.k = MLP(input_dim, hidden_dims_mlp, device, init, skip, bn, 'cnt')
+        self.k = MLP(input_dim, hidden_dims_mlp, device, has_skip_connection, has_batch_norm, "cnt", init_scheme)
         #   While the Queries might be the result of a pooling component.
-        if pool == 'kme':
-            self.q = KME(input_dim, hidden_dims_kme, device, init, skip, bn)
-        elif pool == 'fspool':
-            self.q = FSPool(input_dim, hidden_dims_kme, m, device, init, skip, bn)
-        elif pool == 'none':
-            self.q = MLP(input_dim, hidden_dims_kme, device, init, skip, bn, 'cnt')
+        if pooling_type == "kme":
+            self.q = KME(input_dim, hidden_dims_kme, device, init_scheme, has_skip_connection, has_batch_norm)
+        elif pooling_type == "fspool":
+            self.q = FSPool(input_dim, hidden_dims_kme, m, device, init_scheme, has_skip_connection, has_batch_norm)
+        elif pooling_type == "none":
+            self.q = MLP(input_dim, hidden_dims_kme, device, has_skip_connection, has_batch_norm, "cnt", init_scheme)
         else:
-            assert False, 'Wrong pooling choice.'
+            raise NotImplementedError(f"The pooling '{pooling_type}' is not supported.")
 
     def forward(self, x):
         """
