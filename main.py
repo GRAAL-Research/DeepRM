@@ -21,12 +21,10 @@ def main(config_combinations: list[dict]):
         mod_1_dim (list of list of int): MLP #1 architecture;
         mod_2_dim (list of list of int): MLP #2 architecture;
         tau (list of int): temperature parameter (softmax in custom attention);
-        init (list of str): random init. (choices: "kaiming_unif", "kaiming_norm", "xavier_unif", "xavier_norm");
         criterion (list of str): loss function (choices: "bce_loss");
         loss_power (list of floats): power to be applied, by dataset;
         pen_msg (list of str): type of message penalty (choices: "l1", "l2");
         pen_msg_coef (list of float): message penalty coefficient;
-        msg_type (list of str): type of message (choices: "dsc" (discrete), "cnt" (continuous));
         batch_size (list of int): batch size;
         factor (list of float): factor by which the learning rate is multiplied (one decay step);
         optimizer (list of str): meta-neural network optimizer (choices: "adam", "rmsprop");
@@ -64,7 +62,7 @@ def main(config_combinations: list[dict]):
 
             datasets = create_datasets(config)
 
-            pred = Predictor(config["d"], config["pred_arch"], config["batch_size"])  # Predictor init.
+            pred = Predictor(config["d"], config["pred_arch"], config["batch_size"])
             if config["meta_pred"] == "simplenet":  # Meta-predictor initialization
                 meta_pred = SimpleMetaNet(pred.num_param, config)
 

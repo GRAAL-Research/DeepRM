@@ -2,12 +2,12 @@ import random
 from pathlib import Path
 
 import numpy as np
+import torch
+import torch.nn as nn
 from PIL import Image
 from matplotlib import pyplot as plt
 
-plt.switch_backend('agg')
-import torch
-import torch.nn as nn
+plt.switch_backend("agg")
 
 
 def lin_loss(output, targets):
@@ -64,44 +64,41 @@ def l2(x, c):
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dims, device, init, skip, bn, msg_type):
+    def __init__(self, input_dim, hidden_dims, device: str, has_skip_connection: bool, has_batch_norm: bool,
+                 msg_type: str, init_scheme: str = None) -> None:
         """
         Creates a ReLU linear layer, given dimensions.
         Args:
             input_dim (int): input dimension of the custom attention head;
             hidden_dims (list of int): architecture of the MLP;
-            device (str): device on which to compute (choices: 'cpu', 'gpu');
-            init (str): random init. (choices: 'kaiming_unif', 'kaiming_norm', 'xavier_unif', 'xavier_norm');
-            skip (bool): whether to include a skip connection or not;
-            bn (bool): whether to include batch normalization or not;
-            msg_type (str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous)).
-        return:
-            torch.nn.Module
         """
         super(MLP, self).__init__()
         self.dims = [input_dim] + hidden_dims
-        self.skip = skip
+        self.has_skip_connection = has_skip_connection
         self.module = torch.nn.ModuleList()
-        if self.skip and len(self.dims) > 2:
+        if self.has_skip_connection and len(self.dims) > 2:
             self.dims.insert(len(self.dims) - 1, self.dims[0])
         for k in range(len(self.dims) - 1):
-            if bn:
+            if has_batch_norm:
                 self.module.append(nn.LazyBatchNorm1d())
             self.module.append(nn.Linear(self.dims[k], self.dims[k + 1]))
-            if k < len(self.dims) - 2 or msg_type == 'pos':
-                self.module.append(nn.ReLU())
-            elif k == len(self.dims) - 2 and msg_type == 'none':
-                self.module.append(nn.Identity())
-            elif k == len(self.dims) - 2 and msg_type == 'dsc':
-                self.module.append(SignStraightThrough())
-            elif k == len(self.dims) - 2 and msg_type == 'cnt':
-                self.module.append(nn.Tanh())
 
-        self.skip_position = len(self.module) - (1 + 1 * bn)
-        if device == 'gpu':
-            self.module.to('cuda:0')
-        if init is not None:
-            init_weights(init, self.module)
+            if k < len(self.dims) - 2 or msg_type == "pos":
+                self.module.append(nn.ReLU())
+            elif k == len(self.dims) - 2 and msg_type == "none":
+                self.module.append(nn.Identity())
+            elif k == len(self.dims) - 2 and msg_type == "dsc":
+                self.module.append(SignStraightThrough())
+            elif k == len(self.dims) - 2 and msg_type == "cnt":
+                self.module.append(nn.Tanh())
+            else:
+                raise NotImplementedError(f"The message type '{msg_type}' is not supported.")
+
+        self.skip_position = len(self.module) - (1 + 1 * has_batch_norm)
+        if device == "gpu":
+            self.module.to("cuda:0")
+        if init_scheme is not None:
+            initialize_weights(init_scheme, self.module)
 
     def forward(self, x):
         """
@@ -115,7 +112,7 @@ class MLP(nn.Module):
         for layer in self.module:
             lay_cnt += 1
             x_1 = x.clone()
-            if self.skip and lay_cnt == self.skip_position:
+            if self.has_skip_connection and lay_cnt == self.skip_position:
                 x += x_1
             x = layer(x).clone()
         return x
@@ -142,23 +139,24 @@ class SignStraightThrough(nn.Module):
         return out
 
 
-def init_weights(init, module):
+def initialize_weights(init_scheme: str, module) -> None:
     """
-    Initialize the weights of the linear layers of one or many torch.nn.Module.
     Args:
-        init (str): Layer initialization scheme (choices: 'kaiming_unif', '.._norm', 'xavier_unif', '.._norm')
-        module (torch.nn.Module): The module of interest
+        module (torch.nn.Module): The module of interest (linear layers of one or many torch.nn.Module)
     """
     for layer in module:
         if isinstance(layer, nn.Linear):
-            if init == 'kaiming_unif':
-                nn.init.kaiming_uniform_(layer.weight.data, nonlinearity='relu')
-            elif init == 'kaiming_norm':
-                nn.init.kaiming_normal_(layer.weight.data, nonlinearity='relu')
-            elif init == 'xavier_unif':
-                nn.init.xavier_uniform_(layer.weight.data)
-            elif init == 'xavier_norm':
-                nn.init.xavier_normal_(layer.weight.data)
+            weights = layer.weight.data
+            if init_scheme == "kaiming_unif":
+                nn.init.kaiming_uniform_(weights, nonlinearity="relu")
+            elif init_scheme == "kaiming_norm":
+                nn.init.kaiming_normal_(weights, nonlinearity="relu")
+            elif init_scheme == "xavier_unif":
+                nn.init.xavier_uniform_(weights)
+            elif init_scheme == "xavier_norm":
+                nn.init.xavier_normal_(weights)
+            else:
+                raise NotImplementedError(f"The initialization method '{init_scheme}' is not supported.")
 
 
 class Predictor(nn.Module):
@@ -171,7 +169,7 @@ class Predictor(nn.Module):
             batch_size (int): Batch size.
         """
         super(Predictor, self).__init__()
-        self.pred_type = 'linear_classif' if len(pred_arch) == 0 else 'small_nn'
+        self.pred_type = "linear_classif" if len(pred_arch) == 0 else "small_nn"
         self.d, self.batch_size, self.weights = d, batch_size, []
         # It is useful to know how many parameters there is; the architecture now contains the input dim and output dim
         self.num_param, self.pred_arch = self.num_param_arch_init(d, pred_arch)
@@ -188,9 +186,9 @@ class Predictor(nn.Module):
             list, architecture of the predictor.
         """
         num_param, arch = 0, []
-        if self.pred_type == 'linear_classif':
+        if self.pred_type == "linear_classif":
             num_param = d + 1
-        if self.pred_type == 'small_nn':
+        if self.pred_type == "small_nn":
             arch = [self.d] + pred_arch + [1]
             for i in range(1, len(arch)):
                 num_param += (arch[i - 1] + 1) * arch[i]
@@ -198,16 +196,16 @@ class Predictor(nn.Module):
 
     def pred_init(self, batch_size):
         """
-        Initialize the predictors: one predictor per dataset in a batch. Only relevant if pred_type == 'small_nn'.
+        Initialize the predictors: one predictor per dataset in a batch. Only relevant if pred_type == "small_nn".
         Args:
             batch_size (int): Batch size.
         Return:
             list of torch.nn.ModuleList, one predictor per dataset in a batch.
         """
         structure = []
-        if self.pred_type == 'small_nn':
+        if self.pred_type == "small_nn":
             for i in range(batch_size):
-                structure.append(MLP(self.d, self.pred_arch[1:], 'cpu', 'None', False, False, 'None'))
+                structure.append(MLP(self.d, self.pred_arch[1:], "cpu", False, False, "none"))
         return structure
 
     def update_weights(self, weights, batch_size):
@@ -218,7 +216,7 @@ class Predictor(nn.Module):
             batch_size (int): batch size.
         """
         self.weights = weights
-        if self.pred_type == 'small_nn':
+        if self.pred_type == "small_nn":
             for i in range(batch_size):
                 count_1, count_2, j = 0, 0, 0
                 for layer in self.pred[i].module:
@@ -242,11 +240,11 @@ class Predictor(nn.Module):
             torch.Tensor of dims (batch_size, m, output_dims), the predictions.
         """
         out = 0
-        if self.pred_type == 'linear_classif':
+        if self.pred_type == "linear_classif":
             out = torch.sum(torch.transpose(inputs[:, :, :-1], 0, 1) * self.weights[:, :-1], dim=-1) + self.weights[:,
                                                                                                        -1]
             out = torch.transpose(out, 0, 1)
-        elif self.pred_type == 'small_nn':
+        elif self.pred_type == "small_nn":
             input_0 = inputs[0, :, :-1]
             count_1, count_2, j = 0, 0, 0
             for layer in self.pred[0].module:
@@ -291,16 +289,16 @@ def update_hist(hist, values):
         hist (dic): A dictionary that keep track of training metrics.
         values (Tuple): Elements to be added to the dictionary.
     """
-    hist['train_acc'].append(values[0])
-    hist['train_loss'].append(values[1])
-    hist['valid_acc'].append(values[2])
-    hist['valid_loss'].append(values[3])
-    hist['test_acc'].append(values[4])
-    hist['test_loss'].append(values[5])
-    hist['bound_lin'].append(values[6][0])
-    hist['bound_hyp'].append(values[6][1])
-    hist['bound_kl'].append(values[6][2])
-    hist['bound_mrch'].append(values[6][3])
+    hist["train_acc"].append(values[0])
+    hist["train_loss"].append(values[1])
+    hist["valid_acc"].append(values[2])
+    hist["valid_loss"].append(values[3])
+    hist["test_acc"].append(values[4])
+    hist["test_loss"].append(values[5])
+    hist["bound_lin"].append(values[6][0])
+    hist["bound_hyp"].append(values[6][1])
+    hist["bound_kl"].append(values[6][2])
+    hist["bound_mrch"].append(values[6][3])
 
 
 def update_wandb(wandb, hist):
@@ -310,16 +308,16 @@ def update_wandb(wandb, hist):
         wandb (package): the weights and biases package;
         hist (dic): A dictionary that keep track of training metrics.
     """
-    wandb.log({'train_acc': hist['train_acc'][-1],
-               'train_loss': hist['train_loss'][-1],
-               'valid_acc': hist['valid_acc'][-1],
-               'valid_loss': hist['valid_loss'][-1],
-               'test_acc': hist['test_acc'][-1],
-               'test_loss': hist['test_loss'][-1],
-               'bound_lin': hist['bound_lin'][-1],
-               'bound_hyp': hist['bound_hyp'][-1],
-               'bound_kl': hist['bound_kl'][-1],
-               'bound_mrch': hist['bound_mrch'][-1]})
+    wandb.log({"train_acc": hist["train_acc"][-1],
+               "train_loss": hist["train_loss"][-1],
+               "valid_acc": hist["valid_acc"][-1],
+               "valid_loss": hist["valid_loss"][-1],
+               "test_acc": hist["test_acc"][-1],
+               "test_loss": hist["test_loss"][-1],
+               "bound_lin": hist["bound_lin"][-1],
+               "bound_hyp": hist["bound_hyp"][-1],
+               "bound_kl": hist["bound_kl"][-1],
+               "bound_mrch": hist["bound_mrch"][-1]})
 
 
 def write(file_name, task_dict, hist, best_epoch):
@@ -339,13 +337,13 @@ def write(file_name, task_dict, hist, best_epoch):
     file = open("results/" + str(file_name) + ".txt", "a")
     for key in keys:
         file.write(str(task_dict[key]) + "\t")
-    file.write(str(hist['train_acc'][best_epoch].item()) + "\t")
-    file.write(str(hist['valid_acc'][best_epoch].item()) + "\t")
-    file.write(str(hist['test_acc'][best_epoch].item()) + "\t")
-    file.write(str(hist['bound_lin'][best_epoch].item()) + "\t")
-    file.write(str(hist['bound_hyp'][best_epoch].item()) + "\t")
-    file.write(str(hist['bound_kl'][best_epoch]) + "\t")
-    file.write(str(hist['bound_mrch'][best_epoch]) + "\t")
+    file.write(str(hist["train_acc"][best_epoch].item()) + "\t")
+    file.write(str(hist["valid_acc"][best_epoch].item()) + "\t")
+    file.write(str(hist["test_acc"][best_epoch].item()) + "\t")
+    file.write(str(hist["bound_lin"][best_epoch].item()) + "\t")
+    file.write(str(hist["bound_hyp"][best_epoch].item()) + "\t")
+    file.write(str(hist["bound_kl"][best_epoch]) + "\t")
+    file.write(str(hist["bound_mrch"][best_epoch]) + "\t")
     file.write("\n")
     file.close()
 
@@ -368,7 +366,7 @@ def is_job_already_done(project_name, task_dict):
         new.append(str(task_dict[key]))
     try:
         with open("results/" + str(project_name) + ".txt", "r") as tes:
-            tess = [line.strip().split('\t') for line in tes]
+            tess = [line.strip().split("\t") for line in tes]
         tes.close()
         for i in range(len(tess)):
             if tess[i][:len(new)] == new:
@@ -377,15 +375,15 @@ def is_job_already_done(project_name, task_dict):
         file = open("results/" + str(project_name) + ".txt", "a")
         for key in keys:
             file.write(key + "\t")
-        file.write('train_acc' + "\t")
-        file.write('valid_acc' + "\t")
-        file.write('test_acc' + "\t")
-        file.write('bound_lin' + "\t")
-        file.write('bound_hyp' + "\t")
-        file.write('bound_kl' + "\t")
-        file.write('bound_mrch' + "\t")
-        file.write('n_sigma' + "\t")
-        file.write('n_Z' + "\n")
+        file.write("train_acc" + "\t")
+        file.write("valid_acc" + "\t")
+        file.write("test_acc" + "\t")
+        file.write("bound_lin" + "\t")
+        file.write("bound_hyp" + "\t")
+        file.write("bound_kl" + "\t")
+        file.write("bound_mrch" + "\t")
+        file.write("n_sigma" + "\t")
+        file.write("n_Z" + "\n")
         file.close()
     return cnt_nw > 0
 
@@ -399,7 +397,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
         data_loader (DataLoader): A DataLoader to test on;
         pred (Predictor): the predictor;
         wandb (package): the weights and biases package;
-        device (str): 'gpu', or 'cpu'; whether to use the gpu.
+        device (str): "gpu", or "cpu"; whether to use the gpu.
     """
     max_number_vis = 16  # Maximum number of decision boundaries to compute
     meta_pred.eval()
@@ -420,15 +418,15 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                     # ... so that each class can be plotted with different colours
                     x = inputs[j, inds][:, :2]
                     m = int(len(x) / 2)
-                    if str(device) == 'gpu':
+                    if str(device) == "gpu":
                         inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
                     meta_output = meta_pred(inputs[:, :m])[j:j + 1]
-                    if pred.pred_type == 'linear_classif':
+                    if pred.pred_type == "linear_classif":
                         px = [-20, 20]
                         py = [-(-20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1],
                               -(20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1]]
                         plt.plot(px, py)  # With a linea classifier, only a line needs to be drawn
-                    if pred.pred_type == 'small_nn':
+                    if pred.pred_type == "small_nn":
                         # With small nn: we plot the decision boundary by colouring each decision zone by its prediction
                         h = .05  # step size in the mesh
                         x_min, x_max = x[:, 0].cpu().min() - 10, x[:, 0].cpu().max() + 10
@@ -438,22 +436,22 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                         mesh = np.array(np.c_[xx.ravel(), yy.ravel()])
                         mesh = np.hstack((mesh, np.ones((len(mesh), 1))))
                         mesh = torch.from_numpy(np.array([mesh])).float()
-                        if str(device) == 'gpu':
+                        if str(device) == "gpu":
                             mesh = mesh.cuda()
                         pred.update_weights(meta_output, 1)
                         z = pred.forward(mesh)
                         z = torch.round(z.reshape(xx.shape)).cpu()
                         plt.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha=0.6)
-                    plt.scatter(x[m:, 0].cpu(), x[m:, 1].cpu(), c='r')
-                    plt.scatter(x[:m, 0].cpu(), x[:m, 1].cpu(), c='b')
+                    plt.scatter(x[m:, 0].cpu(), x[m:, 1].cpu(), c="r")
+                    plt.scatter(x[:m, 0].cpu(), x[:m, 1].cpu(), c="b")
                     if meta_pred.comp_set_size > 0:
                         meta_pred.compute_compression_set(inputs[:, :m])
                         plt.scatter(x[meta_pred.msk[j].cpu(), 0].cpu(),
-                                    x[meta_pred.msk[j].cpu(), 1].cpu(), c='black', s=120, marker='*')
+                                    x[meta_pred.msk[j].cpu(), 1].cpu(), c="black", s=120, marker="*")
                     if dataset == "blob":
                         plt.xlim(-20, 20)
                         plt.ylim(-20, 20)
-                    if dataset == 'moon':
+                    if dataset == "moon":
                         plt.xlim(torch.mean(x[:, 0].cpu()) - 10, torch.mean(x[:, 0].cpu()) + 10)
                         plt.ylim(torch.mean(x[:, 1].cpu()) - 10, torch.mean(x[:, 1].cpu()) + 10)
 

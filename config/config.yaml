@@ -27,7 +27,10 @@ mod_2_dim: [100]
 meta_pred: simplenet
 pred_arch: [3]
 
-init: kaiming_unif
+has_skip_connection: True
+has_batch_norm: True
+
+init_scheme: kaiming_unif
 criterion: bce_loss
 loss_power: 1.0
 

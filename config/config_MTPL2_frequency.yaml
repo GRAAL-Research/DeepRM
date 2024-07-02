@@ -20,7 +20,11 @@ kme_dim: [[200, 200, 200]]
 mod_1_dim: [[1000]]
 mod_2_dim: [[1000]]
 tau: [20]
-init: [kaiming_unif]
+
+has_skip_connection: True
+has_batch_norm: True
+
+init_scheme: [kaiming_unif]
 criterion: [bce_loss]
 loss_power: [1]
 
