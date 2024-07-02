@@ -88,8 +88,10 @@ class MLP(nn.Module):
             if bn:
                 self.module.append(nn.LazyBatchNorm1d())
             self.module.append(nn.Linear(self.dims[k], self.dims[k + 1]))
-            if k < len(self.dims) - 2:
+            if k < len(self.dims) - 2 or msg_type == 'pos':
                 self.module.append(nn.ReLU())
+            elif k == len(self.dims) - 2 and msg_type == 'none':
+                self.module.append(nn.Identity())
             elif k == len(self.dims) - 2 and msg_type == 'dsc':
                 self.module.append(SignStraightThrough())
             elif k == len(self.dims) - 2 and msg_type == 'cnt':
