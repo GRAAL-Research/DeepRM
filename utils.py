@@ -117,7 +117,7 @@ class MLP(nn.Module):
             x_1 = x.clone()
             if self.skip and lay_cnt == self.skip_position:
                 x += x_1
-            x = layer(x)
+            x = layer(x).clone()
         return x
 
 
