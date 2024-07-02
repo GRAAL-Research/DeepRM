@@ -1,12 +1,12 @@
-project_name: [identical_dataset]
-run_name_content: [[dataset, is_blob_identical, is_moon_identical, mod_1_dim, lr]]
+project_name: [Skip_connection_and_batch_norm]
+run_name_content: [[has_skip_connection, has_batch_norm, lr]]
 
-dataset: [blob_and_moon, blob, moon]
-is_blob_identical: [False, True]
-is_moon_identical: [False, True]
-pred_arch: [[3], [10]]
+dataset: [blob_and_moon]
 msg_size: ${mod_1_dim[0]}
 lr: [1e-2, 1e-3]
+has_skip_connection: [False, True]
+has_batch_norm: [False, True]
 mod_1_dim:  [[50]]  # [[50], [100], [500], [1000]]
 mod_2_dim:  ${mod_1_dim}
-batch_size: [10, 50, 200]
+batch_size: [50]
+n_epoch: [10]
