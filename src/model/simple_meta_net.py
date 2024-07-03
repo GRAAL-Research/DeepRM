@@ -15,7 +15,7 @@ class SimpleMetaNet(nn.Module):
             pred_input_dim (int): Input dimension of the predictor;
             config (dictionary) containing the following:
                 m (int): Number of examples per dataset;
-                d (int): Input dimension of each dataset;
+                n_features (int): Input dimension of each dataset;
                 comp_set_size (int): compression set size;
                 ca_dim (list of int): custom attention's MLP architecture;
                 mod_1_dim (list of int): MLP #1 architecture;
@@ -36,10 +36,10 @@ class SimpleMetaNet(nn.Module):
         self.init_scheme = config["init_scheme"]
         self.msg = torch.tensor(0.0)  # Message (compression selection)
         self.msk = None  # Mask (compression selection)
-        self.d = config["d"]
+        self.n_features = config["n_features"]
         self.tau = config["tau"]
         self.batch_size = config["batch_size"]
-        self.input_dim = self.d
+        self.input_dim = self.n_features
         self.output_dim = pred_input_dim
         self.mod_2_input = config["data_compressor_dim"][-1] * (self.comp_set_size > 0) + self.mod_1_dim[-1] * (
                 self.msg_size > 0)
@@ -51,10 +51,10 @@ class SimpleMetaNet(nn.Module):
 
         self.cas = nn.ModuleList([])
         for i in range(self.comp_set_size):
-            self.cas.append(CA(self.d + 1, self.ca_dim, self.ca_dim, self.m, self.device,
+            self.cas.append(CA(self.n_features + 1, self.ca_dim, self.ca_dim, self.m, self.device,
                                self.init_scheme, config["has_skip_connection"], config["has_batch_norm"], "fspool",
                                self.tau))
-        self.kme_2 = KME(self.d + 1, config["data_compressor_dim"], self.device, self.init_scheme,
+        self.kme_2 = KME(self.n_features + 1, config["data_compressor_dim"], self.device, self.init_scheme,
                          config["has_skip_connection"], config["has_batch_norm"])
 
         self.mod_2 = MLP(self.mod_2_input, self.mod_2_dim + [self.output_dim], self.device,

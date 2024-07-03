@@ -34,8 +34,8 @@ def generate_random_blob_dataset(config: dict) -> np.ndarray:
 
 
 def generate_random_blob_features(config: dict) -> np.ndarray:
-    random_gaussian_blob_center = np.random.rand(config["d"]) * 10 - 5
-    return np.random.multivariate_normal(mean=random_gaussian_blob_center, cov=np.eye(config["d"]),
+    random_gaussian_blob_center = np.random.rand(config["n_features"]) * 10 - 5
+    return np.random.multivariate_normal(mean=random_gaussian_blob_center, cov=np.eye(config["n_features"]),
                                          size=config["m"])
 
 

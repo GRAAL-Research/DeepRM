@@ -5,15 +5,16 @@ import torch
 from PIL import Image
 from matplotlib import pyplot as plt
 
+from src.model.predictor import Predictor
 
-def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, device):
+
+def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, wandb, device):
     """
     Builds a visual depiction of the decision boundary of the predictor for tackling a given problem.
     Args:
         meta_pred (nn.Module): A meta predictor (neural network) to train;
         dataset (str): name of the current dataset;
         data_loader (DataLoader): A DataLoader to test on;
-        pred (model.predictor.Predictor): the predictor;
         wandb (package): the weights and biases package;
         device (str): "gpu", or "cpu"; whether to use the gpu.
     """
@@ -56,7 +57,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred, wandb, devic
                         mesh = torch.from_numpy(np.array([mesh])).float()
                         if str(device) == "gpu":
                             mesh = mesh.cuda()
-                        pred.update_weights(meta_output, 1)
+                        pred.set_weights(meta_output, 1)
                         z = pred.forward(mesh)
                         z = torch.round(z.reshape(xx.shape)).cpu()
                         plt.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha=0.6)

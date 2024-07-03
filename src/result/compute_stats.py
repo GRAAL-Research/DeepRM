@@ -4,15 +4,15 @@ import numpy as np
 import torch
 
 from src.bound.compute_bound import compute_bound
+from src.model.predictor import Predictor
 from src.model.utils.loss import lin_loss
 
 
-def stats(meta_pred, pred, criterion, data_loader, msg_type, device):
+def stats(meta_pred, pred: Predictor, criterion, data_loader, msg_type, device):
     """
     Computes the overall accuracy, loss and bounds of a predictor on given task and dataset.
     Args:
         meta_pred (nn.Module): A meta predictor (neural network) to train.
-        pred (model.predictor.Predictor): A predictor whose parameters are computed by the meta predictor.
         criterion (torch.nn, function): Loss function
         data_loader (DataLoader): A DataLoader to test on.
         msg_type (str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
@@ -35,7 +35,7 @@ def stats(meta_pred, pred, criterion, data_loader, msg_type, device):
             if str(device) == 'gpu':
                 inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
             meta_output = meta_pred(inputs[:, :m])  # Computing the parameters of the predictor
-            pred.update_weights(meta_output, len(inputs))  # Updating the weights of the predictor
+            pred.set_weights(meta_output, len(inputs))  # Updating the weights of the predictor
             output = pred.forward(inputs[:, m:], True)  # Computing the predictions for the task
             loss = criterion(output[0], targets[:, m:])  # Loss computation
             tot_loss.append(torch.sum(loss).cpu())

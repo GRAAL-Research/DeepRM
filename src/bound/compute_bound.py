@@ -4,17 +4,17 @@ import numpy as np
 import torch
 
 from src.bound.utils import zeta, kl_inv, log_binomial_coefficient, sup_bin
+from src.model.predictor import Predictor
 from src.model.utils.loss import lin_loss
 
 
-def compute_bound(bnds_type, meta_pred, pred, m, r, delta, a, b, inputs, targets):
+def compute_bound(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inputs, targets):
     """
     Generates the DeepRM meta-predictor.
         Args:
             bnds_type (list of str): all the bounds to be computed (choices: 'kl', 'linear', 'hyperparam', 'marchand',
                                                                                                      'marchand_approx');
             meta_pred (nn.Module): the meta predictor (for the computation of PAC-Bayes bounds);
-            pred (nn.Module): the predictor (for the computation of PAC-Bayes bounds);
             m (int): total number of examples;
             r (int): number of error made one the m examples, excluding those made on the compression set;
             delta (float): confidence rate;
@@ -35,7 +35,7 @@ def compute_bound(bnds_type, meta_pred, pred, m, r, delta, a, b, inputs, targets
             meta_output = meta_pred(inputs, n_samples=n_sample)
             for sample in range(n_sample):
                 outp = meta_output[[sample]]
-                pred.update_weights(outp, 1)
+                pred.set_weights(outp, 1)
                 output = pred.forward(inputs, return_sign=True)
                 tot_acc += m * lin_loss(output[1], targets * 2 - 1)
             tot_acc /= n_sample  # An average accuracy is computed...

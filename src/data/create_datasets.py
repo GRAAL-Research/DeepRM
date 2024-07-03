@@ -7,15 +7,15 @@ from src.data.dataset.mtpl import load_MTPL
 
 def create_datasets(config: dict):
     if config["dataset"] == "moon":
-        assert config["d"] == 2
+        assert config["n_features"] == 2
         return generate_moon_datasets(config)
 
     if config["dataset"] == "blob":
-        assert config["d"] == 2
+        assert config["n_features"] == 2
         return generate_blob_datasets(config)
 
     if config["dataset"] in ["moon_and_blob", "blob_and_moon"]:
-        assert config["d"] == 2
+        assert config["n_features"] == 2
         return generate_moon_and_blob_datasets(config)
 
     if config["dataset"] == "mnist":

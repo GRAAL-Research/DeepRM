@@ -13,7 +13,7 @@ def load_MTPL(task, n, m):
         n (int): Number of linearly separable datasets to create;
         m (int): Number of examples per dataset.
     return:
-        Numpy array of dims n x m x d
+        Numpy array of dims n x m x n_features
     """
     # freMTPL2freq dataset from https://www.openml.org/d/41214
     df_freq = fetch_openml(data_id=41214, as_frame=True).data
