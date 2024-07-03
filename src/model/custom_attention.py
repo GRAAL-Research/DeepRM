@@ -1,9 +1,9 @@
 import torch
 from torch import nn as nn
 
-from model.fspool import FSPool
-from model.kme import KME
-from utils import MLP
+from src.model.data_compressor.fspool import FSPool
+from src.model.data_compressor.kme import KME
+from src.model.mlp import MLP
 
 
 class CA(nn.Module):

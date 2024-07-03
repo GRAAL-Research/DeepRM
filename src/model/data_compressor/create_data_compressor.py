@@ -1,4 +1,4 @@
-from model.kme import KME
+from src.model.data_compressor.kme import KME
 
 
 def create_data_compressor_1(config: dict):

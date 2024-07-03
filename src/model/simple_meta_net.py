@@ -1,10 +1,10 @@
 import torch
 from torch import nn as nn
 
-from model.custom_attention import CA
-from model.data_compressor import create_data_compressor_1
-from model.kme import KME
-from utils import MLP
+from src.model.custom_attention import CA
+from src.model.data_compressor.create_data_compressor import create_data_compressor_1
+from src.model.data_compressor.kme import KME
+from src.model.mlp import MLP
 
 
 class SimpleMetaNet(nn.Module):

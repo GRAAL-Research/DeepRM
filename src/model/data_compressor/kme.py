@@ -1,7 +1,7 @@
 import torch
 from torch import nn as nn
 
-from utils import MLP
+from src.model.mlp import MLP
 
 
 class KME(nn.Module):
