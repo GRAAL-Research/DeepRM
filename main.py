@@ -1,10 +1,10 @@
-from config_utils import load_yaml_config_file, create_config_combinations_sorted_by_dataset
+from config_utils import create_config_combinations_sorted_by_dataset, create_config
 from dataset.create_datasets import create_datasets
 from model.simple_meta_net import SimpleMetaNet
 from train import *
 
 
-def main(config_combinations: list[dict]):
+def main(config_combinations: list[dict]) -> None:
     """
     Args:
         dataset (list of str): datasets (choices: "mnist", "moon", "blob", "moon_and_blob",
@@ -97,7 +97,7 @@ def main(config_combinations: list[dict]):
 if __name__ == "__main__":
     config_name = "config.yaml"
 
-    loaded_config = load_yaml_config_file(Path("config") / config_name)
-    config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
+    loaded_config = create_config(config_name)
 
+    config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
     main(config_combinations)

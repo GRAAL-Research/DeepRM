@@ -2,6 +2,7 @@ is_using_wandb: True
 is_wandb_alert_activated: True
 project_name: test
 run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
+is_logging_commit_info: True
 
 dataset: moon
 is_moon_identical: False

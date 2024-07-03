@@ -1,4 +1,4 @@
-project_name: [Skip_connection_and_batch_norm]
+project_name: [you_can_delete_this_project]
 run_name_content: [[has_skip_connection, has_batch_norm, lr]]
 
 dataset: [blob_and_moon]
