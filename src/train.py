@@ -7,20 +7,20 @@ import wandb
 from loguru import logger
 
 from src.data.loaders import train_valid_loaders
+from src.model.predictor import Predictor
 from src.result.compute_stats import stats
 from src.result.decision_boundaries import show_decision_boundaries
 from src.result.history import update_hist, update_wandb
 from src.utils import create_run_name
 
 
-def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict,
+def train(meta_pred, pred: Predictor, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict,
           is_sending_wandb_last_run_alert: bool):
     """
     Trains a meta predictor using PyTorch.
 
     Args:
         meta_pred (nn.Module): A meta predictor (neural network) to train.
-        pred (model.predictor.Predictor): A predictor whose parameters are computed by the meta predictor.
         data (Dataset): A dataset.
         optimizer (torch.optim): meta-neural network optimizer;
         scheduler (torch.optim.lr_scheduler): learning rate decay scheduler;
@@ -83,7 +83,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
                     inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
                 optimizer.zero_grad()  # Zeroing the gradient everywhere in the meta-learner
                 meta_output = meta_pred(inputs)  # Computing the parameters of the predictor.
-                pred.update_weights(meta_output, len(inputs))  # Updating the weights of the predictor
+                pred.set_weights(meta_output, len(inputs))  # Updating the weights of the predictor
                 output = pred.forward(inputs)  # Computing the predictions for the task
                 if balanced:
                     loss = torch.mean(torch.mean(criterion(output, targets), dim=1) ** loss_power)
@@ -120,7 +120,7 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
             logger.info("The early stopping stopped the training.")
             break  # Early stopping is made
 
-    if task_dict['d'] == 2 and task_dict["is_using_wandb"]:
+    if task_dict['n_features'] == 2 and task_dict["is_using_wandb"]:
         show_decision_boundaries(meta_pred, task_dict['dataset'], test_loader, pred, wandb, device)
 
     if task_dict["is_using_wandb"]:

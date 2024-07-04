@@ -10,54 +10,54 @@ class Predictor(nn.Module):
         Generates the predictor, a feed-forward ReLU network (linear classifier, if the number of hidden layers is 0).
         """
         super(Predictor, self).__init__()
-        self.d = config["d"]
-        self.batch_size = config["batch_size"]
-        self.has_skip_connection = config["has_skip_connection"]
-        self.has_batch_norm = config["has_batch_norm"]
-
-        pred_arch = config["pred_arch"]
-        self.pred_type = "linear_classif" if len(pred_arch) == 0 else "small_nn"
+        self.pred_type = "linear_classif" if len(config["pred_hidden_sizes"]) == 0 else "small_nn"
         self.weights = []
         # It is useful to know how many parameters there is; the architecture now contains the input dim and output dim
-        self.num_param, self.pred_arch = self.num_param_arch_init(self.d, pred_arch)
-        self.pred = self.pred_init(self.batch_size)
+        self.n_param, self.pred_arch = self.compute_n_params_and_arch_sizes(config["n_features"],
+                                                                            config["pred_hidden_sizes"])
+        self.pred = self.create_predictor(config)
 
-    def num_param_arch_init(self, d, pred_arch):
+    def compute_n_params_and_arch_sizes(self, n_features: int, pred_hidden_sizes: list[int]) -> tuple[int, list[int]]:
         """
-        Computes the total number of parameters defining the predictor, and the architecture (with input and output dim)
-        Args:
-            d (int): Input dimension of each dataset;
-            pred_arch (list of int): architecture of the predictor.
-        Return:
-            int, number of parameters defining the predictor;
-            list, architecture of the predictor.
+        Computes the total number of parameters defining the predictor, and complete arch (with input and output dim)
+
+        n_features (int): Input dimension of each dataset;
         """
-        num_param, arch = 0, []
         if self.pred_type == "linear_classif":
-            num_param = d + 1
-        if self.pred_type == "small_nn":
-            arch = [self.d] + pred_arch + [1]
-            for i in range(1, len(arch)):
-                num_param += (arch[i - 1] + 1) * arch[i]
-        return num_param, arch
+            n_params = n_features + 1
+            architecture_sizes = []
+            return n_params, architecture_sizes
 
-    def pred_init(self, batch_size):
+        elif self.pred_type == "small_nn":
+            n_params = 0
+            input_layer_size = n_features
+            output_layer_size = 1
+            architecture_sizes = [input_layer_size] + pred_hidden_sizes + [output_layer_size]
+
+            for i in range(len(architecture_sizes) - 1):
+                nb_of_bias = 1
+                current_layer_nb_of_neurons_and_bias = architecture_sizes[i] + nb_of_bias
+                n_params += current_layer_nb_of_neurons_and_bias * architecture_sizes[i + 1]
+
+            return n_params, architecture_sizes
+
+        raise NotImplementedError(f"The predictor type '{self.pred_type}' is not supported.")
+
+    def create_predictor(self, config: dict) -> list[MLP]:
         """
         Initialize the predictors: one predictor per dataset in a batch. Only relevant if pred_type == "small_nn".
-        Args:
-            batch_size (int): Batch size.
-        Return:
-            list of torch.nn.ModuleList, one predictor per dataset in a batch.
         """
-        structure = []
+        mlps = []
         if self.pred_type == "small_nn":
-            for i in range(batch_size):
-                mlp = MLP(self.d, self.pred_arch[1:], "cpu", self.has_skip_connection, self.has_batch_norm, "none")
-                structure.append(mlp)
+            for _ in range(config["batch_size"]):
+                mlp = MLP(config["n_features"], self.pred_arch[1:], config["device"], config["has_skip_connection"],
+                          config["has_batch_norm"],
+                          "none")
+                mlps.append(mlp)
 
-        return structure
+        return mlps
 
-    def update_weights(self, weights, batch_size):
+    def set_weights(self, weights, batch_size):
         """
         Fixes the weights of the various predictors.
         Args:
@@ -66,18 +66,23 @@ class Predictor(nn.Module):
         """
         self.weights = weights
         if self.pred_type == "small_nn":
-            for i in range(batch_size):
-                count_1, count_2, j = 0, 0, 0
-                for layer in self.pred[i].module:
-                    if isinstance(layer, nn.Linear):
-                        count_2 += self.pred_arch[j] * self.pred_arch[j + 1]
-                        layer.weight.data = torch.reshape(self.weights[i, count_1:count_2],
-                                                          (self.pred_arch[j + 1], self.pred_arch[j]))
-                        count_1 += self.pred_arch[j] * self.pred_arch[j + 1]
-                        count_2 += self.pred_arch[j + 1]
-                        layer.bias.data = torch.reshape(self.weights[i, count_1:count_2], (self.pred_arch[j + 1],))
-                        count_1 += self.pred_arch[j + 1]
-                        j += 1
+            for batch_idx in range(batch_size):
+                count_1 = 0
+                count_2 = 0
+                linear_layer_idx = 0
+                for layer in self.pred[batch_idx].module:
+                    if not isinstance(layer, nn.Linear):
+                        continue
+                    count_2 += self.pred_arch[linear_layer_idx] * self.pred_arch[linear_layer_idx + 1]
+                    layer.weight.data = torch.reshape(self.weights[batch_idx, count_1:count_2],
+                                                      (self.pred_arch[linear_layer_idx + 1],
+                                                       self.pred_arch[linear_layer_idx]))
+                    count_1 += self.pred_arch[linear_layer_idx] * self.pred_arch[linear_layer_idx + 1]
+                    count_2 += self.pred_arch[linear_layer_idx + 1]
+                    layer.bias.data = torch.reshape(self.weights[batch_idx, count_1:count_2],
+                                                    (self.pred_arch[linear_layer_idx + 1],))
+                    count_1 += self.pred_arch[linear_layer_idx + 1]
+                    linear_layer_idx += 1
 
     def forward(self, inputs, return_sign=False):
         """
@@ -90,8 +95,8 @@ class Predictor(nn.Module):
         """
         out = 0
         if self.pred_type == "linear_classif":
-            out = torch.sum(torch.transpose(inputs[:, :, :-1], 0, 1) * self.weights[:, :-1], dim=-1) + self.weights[:,
-                                                                                                       -1]
+            out = (torch.sum(torch.transpose(inputs[:, :, :-1], 0, 1) * self.weights[:, :-1], dim=-1)
+                   + self.weights[:, -1])
             out = torch.transpose(out, 0, 1)
         elif self.pred_type == "small_nn":
             input_0 = inputs[0, :, :-1]

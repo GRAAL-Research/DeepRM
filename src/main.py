@@ -4,7 +4,7 @@ from src.data.create_datasets import create_datasets
 from src.model.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import l1, l2
-from src.result.prevent_running_completed_job import is_job_already_done, write
+from src.result.prevent_running_completed_job import is_run_already_done, save_run_in_a_text_file
 from src.train import *
 from src.utils import set_random_seed
 
@@ -17,7 +17,7 @@ def main(config_combinations: list[dict]) -> None:
 
         balanced (list of bool): whether to consider balanced datasets during forward pass losses computation;                                          
         m (list of int): number of examples per dataset;
-        d (list of int): dimension of each example;
+        n_features (list of int): dimension of each example;
         splits (list of [float, float, float]): train, valid and test proportion of the data;
         meta_pred (list of str): meta_predictor to use (choices: "simplenet");
         pred_arch (list of list of int): architecture of the predictor (a ReLU network);
@@ -44,10 +44,10 @@ def main(config_combinations: list[dict]) -> None:
             # For non-synthetic data, these are fixed
             config["n_dataset"] = 90
             config["m"] = 6313 * 2
-            config["d"] = 784
+            config["n_features"] = 784
         elif config["dataset"] in ["MTPL2_frequency", "MTPL2_severity", "MTPL2_pure"]:
             # For non-synthetic data, these are fixed
-            config["d"] = 76
+            config["n_features"] = 76
             config["batch_size"] = 50
 
         if config["msg_size"] == 0:
@@ -59,8 +59,7 @@ def main(config_combinations: list[dict]) -> None:
             print("Doesn't make sens to regularize discrete messages; passing...\n")
         elif config["comp_set_size"] + config["msg_size"] == 0:  # Passes on incoherent hyp. param. comb.
             print("Opaque network; passing...\n")
-        elif is_job_already_done(config["project_name"],
-                                 config):  # Verify if the hyp. param. comb. has already been tested
+        elif is_run_already_done(config):
             print("Already done; passing...\n")
         else:  # The current hyp. param. comb. will be tested
             set_random_seed(config["seed"])  # Sets the random seed for numpy, torch and random packages
@@ -69,7 +68,7 @@ def main(config_combinations: list[dict]) -> None:
 
             pred = Predictor(config)
             if config["meta_pred"] == "simplenet":  # Meta-predictor initialization
-                meta_pred = SimpleMetaNet(pred.num_param, config)
+                meta_pred = SimpleMetaNet(pred.n_param, config)
 
             if config["criterion"] == "bce_loss":  # Criterion initialization
                 crit = nn.BCELoss(reduction="none")
@@ -96,7 +95,8 @@ def main(config_combinations: list[dict]) -> None:
 
             hist, best_epoch = train(meta_pred, pred, datasets, opti, scheduler, crit, penalty_msg, config,
                                      is_sending_wandb_last_run_alert)
-            write(config["project_name"], config, hist, best_epoch)  # Training details are written in a .txt file
+            if config["is_saving_completed_runs_locally"]:
+                save_run_in_a_text_file(config, hist, best_epoch)
 
 
 if __name__ == "__main__":

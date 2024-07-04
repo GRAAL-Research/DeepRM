@@ -1,8 +1,10 @@
-is_using_wandb: True
-is_wandb_alert_activated: True
+is_using_wandb: False
+is_wandb_alert_activated: False
 project_name: test
 run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
-is_logging_commit_info: True
+is_logging_commit_info: False
+
+is_saving_completed_runs_locally: False
 
 dataset: moon
 is_moon_identical: False
@@ -12,7 +14,7 @@ balanced: True
 splits: [0.55, 0.20, 0.25]
 n_dataset: 1000
 m: 100
-d: 2
+n_features: 2
 
 seed: 0
 
@@ -26,7 +28,7 @@ mod_1_dim: [100]
 
 mod_2_dim: [100]
 meta_pred: simplenet
-pred_arch: [10]
+pred_hidden_sizes: [10]
 
 has_skip_connection: False
 has_batch_norm: False

@@ -8,7 +8,7 @@ def load_mnist():
     """
     Generates a set of 90 MNIST binary sub-problems
     return:
-        Numpy array of dims n x m x d
+        Numpy array of dims n x m x n_features
     """
     # Loading the initial dataset
     transform = transforms.Compose([transforms.ToTensor()])
