@@ -1,6 +1,6 @@
 import numpy as np
 
-from dataset.datasets_utils import create_empty_datasets, shuffled_x_and_y
+from src.data.utils import create_empty_datasets, shuffled_x_and_y
 
 
 def generate_blob_datasets(config: dict) -> np.ndarray:

@@ -1,62 +1,26 @@
-import math
-from utils import *
+from copy import copy
+from time import time
+
 import torch
 import torch.nn as nn
-from torch.utils.data import Subset, DataLoader
-from copy import copy
-from bound import compute_bound
-from time import time
 import wandb
 from loguru import logger
 
-from wandb_utils import create_run_name
+from src.data.loaders import train_valid_loaders
+from src.result.compute_stats import stats
+from src.result.decision_boundaries import show_decision_boundaries
+from src.result.history import update_hist, update_wandb
+from src.utils import create_run_name
 
 
-def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
-    """
-    Divides a dataset into a training set and a validation set, both in a Pytorch DataLoader form.
-    Args:
-        dataset (torch.utils.data.Dataset): Dataset
-        batch_size (int): Desired batch-size for the DataLoader
-        splits (list of float): Desired proportion of training, validation and test example must sum to 1).
-        shuffle (bool): Whether the examples are shuffled before train/validation split.
-        seed (int): A random seed.
-    Returns:
-        Tuple (training DataLoader, validation DataLoader).
-    """
-    assert sum(splits) == 1, 'The sum of splits must be 1.'
-    num_data = len(dataset)
-    indices = np.arange(num_data)
-    if shuffle:
-        np.random.seed(seed)
-        np.random.shuffle(indices)
-
-    if len(dataset) > 3:
-        split_1 = math.floor(splits[0] * num_data)
-        split_2 = math.floor(splits[1] * num_data) + split_1
-        train_idx, valid_idx, test_idx = indices[:split_1], indices[split_1:split_2], indices[split_2:]
-    else:
-        split_1 = math.floor(splits[0] / (1 - splits[2]) * num_data)
-        train_idx, valid_idx, test_idx = indices[:split_1], indices[split_1:], np.arange(len(dataset[1]))
-
-    train_dataset = Subset(dataset, train_idx)
-    valid_dataset = Subset(dataset, valid_idx)
-    test_dataset = Subset(dataset, test_idx)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-    return train_loader, valid_loader, test_loader
-
-
-def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict, is_sending_wandb_last_run_alert: bool):
+def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict,
+          is_sending_wandb_last_run_alert: bool):
     """
     Trains a meta predictor using PyTorch.
 
     Args:
         meta_pred (nn.Module): A meta predictor (neural network) to train.
-        pred (Predictor): A predictor whose parameters are computed by the meta predictor.
+        pred (model.predictor.Predictor): A predictor whose parameters are computed by the meta predictor.
         data (Dataset): A dataset.
         optimizer (torch.optim): meta-neural network optimizer;
         scheduler (torch.optim.lr_scheduler): learning rate decay scheduler;
@@ -127,9 +91,9 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
                     loss = 0
                     for batch in range(len(output)):
                         loss += (torch.mean(criterion(output[batch, targets[batch] == 0],
-                                          targets[batch, targets[batch] == 0])) / 2 +
+                                                      targets[batch, targets[batch] == 0])) / 2 +
                                  torch.mean(criterion(output[batch, targets[batch] == 1],
-                                         targets[batch, targets[batch] == 1])) / 2) ** loss_power
+                                                      targets[batch, targets[batch] == 1])) / 2) ** loss_power
                     loss /= len(output)
                 loss += pen_msg(meta_pred.msg, pen_msg_coef)  # Regularized loss
                 loss.backward()  # Gradient computation
@@ -165,52 +129,3 @@ def train(meta_pred, pred, data, optimizer, scheduler, criterion, pen_msg, task_
         wandb.finish()
 
     return hist, best_epoch
-
-
-def stats(meta_pred, pred, criterion, data_loader, msg_type, device):
-    """
-    Computes the overall accuracy, loss and bounds of a predictor on given task and dataset.
-    Args:
-        meta_pred (nn.Module): A meta predictor (neural network) to train.
-        pred (Predictor): A predictor whose parameters are computed by the meta predictor.
-        criterion (torch.nn, function): Loss function
-        data_loader (DataLoader): A DataLoader to test on.
-        msg_type (str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
-        device (str): 'cuda', or 'cpu'; whether to use the gpu
-    Returns:
-        Tuple (float, float): the 0-1 accuracy and loss.
-    """
-    bnd_lin, bnd_hyp, bnd_kl, bnd_mrch = [], [], [], []  # The various bounds to compute
-    meta_pred.eval()  # We put the meta predictor in evaluation mode
-    m = meta_pred.m
-    with torch.no_grad():
-        i, k = 0, 0  # Number of batches / examples we have been through
-        tot_loss, tot_acc = [], []
-        for inputs in data_loader:
-            targets = (inputs.clone()[:, :, -1] + 1) / 2
-            n = copy(len(targets) * len(targets[0]))
-            i += n
-            k += 1
-            inputs, targets = inputs.float(), targets.float()
-            if str(device) == 'gpu':
-                inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
-            meta_output = meta_pred(inputs[:, :m])  # Computing the parameters of the predictor
-            pred.update_weights(meta_output, len(inputs))  # Updating the weights of the predictor
-            output = pred.forward(inputs[:, m:], True)  # Computing the predictions for the task
-            loss = criterion(output[0], targets[:, m:])  # Loss computation
-            tot_loss.append(torch.sum(loss).cpu())
-            acc = m * lin_loss(output[1], targets[:, m:] * 2 - 1)  # Accuracy computation
-            tot_acc.append(torch.mean(acc / m).cpu())
-            if msg_type is not None:
-                for b in range(len(inputs)):  # For all datasets, we compute the bounds
-                    bnds = compute_bound(['linear', 'hyperparam', 'kl', 'marchand'], meta_pred, pred, m,
-                                         m - acc.item(), 0.05, 0, 1, inputs[[b], m:], targets[[b], m:])
-                    bnd_lin.append(bnds[0])
-                    bnd_hyp.append(bnds[1])
-                    bnd_kl.append(bnds[2])
-                    bnd_mrch.append(bnds[3])
-        if msg_type is None:
-            return np.mean(tot_acc), np.mean(tot_loss), []
-        # We only return the mean bound obtained on the various datasets
-        return np.mean(tot_acc), np.mean(tot_loss), [np.mean(bnd_lin), np.mean(bnd_hyp), np.mean(bnd_kl),
-                                                     np.mean(bnd_mrch)]

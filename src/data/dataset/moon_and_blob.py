@@ -1,8 +1,8 @@
 import numpy as np
 
-from dataset.blob import generate_random_blob_dataset
-from dataset.datasets_utils import create_empty_datasets
-from dataset.moon import generate_moon_dataset
+from src.data.dataset.blob import generate_random_blob_dataset
+from src.data.utils import create_empty_datasets
+from src.data.dataset.moon import generate_moon_dataset
 
 
 def generate_moon_and_blob_datasets(config: dict) -> np.ndarray:

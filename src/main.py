@@ -1,7 +1,12 @@
-from config_utils import create_config_combinations_sorted_by_dataset, create_config
-from dataset.create_datasets import create_datasets
-from model.simple_meta_net import SimpleMetaNet
-from train import *
+from src.config.config import create_config
+from src.config.grid_search_config import create_config_combinations_sorted_by_dataset
+from src.data.create_datasets import create_datasets
+from src.model.predictor import Predictor
+from src.model.simple_meta_net import SimpleMetaNet
+from src.model.utils.loss import l1, l2
+from src.result.prevent_running_completed_job import is_job_already_done, write
+from src.train import *
+from src.utils import set_random_seed
 
 
 def main(config_combinations: list[dict]) -> None:

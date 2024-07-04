@@ -3,7 +3,7 @@ import math
 import numpy as np
 from sklearn.datasets import make_moons
 
-from dataset.datasets_utils import create_empty_datasets, shuffled_x_and_y
+from src.data.utils import create_empty_datasets, shuffled_x_and_y
 
 
 def generate_moon_datasets(config: dict) -> np.ndarray:
