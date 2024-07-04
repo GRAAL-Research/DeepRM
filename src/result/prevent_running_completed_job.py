@@ -31,23 +31,21 @@ def is_run_already_done(config: dict) -> bool:
     return cnt_nw > 0
 
 
-def save_run_in_a_text_file(file_name, task_dict, hist, best_epoch):
+def save_run_in_a_text_file(config: dict, hist, best_epoch):
     """
     Writes in a .txt file the hyperparameters and results of a training of the BGN algorithm
         on a given dataset.
     Args:
-        file_name (str): The name of the .txt file to write into;
-        task_dict (dictionary): the dictionary containing the current hyperparameters combination;
         hist (dictionary): A dictionary that keep track of training metrics.
         best_epoch (int): best epoch.
     """
     keys = []
-    for key in task_dict:
+    for key in config:
         keys.append(key)
     keys.sort()
-    file = open("results/" + str(file_name) + ".txt", "a")
+    file = open("results/" + config["project_name"] + ".txt", "a")
     for key in keys:
-        file.write(str(task_dict[key]) + "\t")
+        file.write(str(config[key]) + "\t")
     file.write(str(hist["train_acc"][best_epoch].item()) + "\t")
     file.write(str(hist["valid_acc"][best_epoch].item()) + "\t")
     file.write(str(hist["test_acc"][best_epoch].item()) + "\t")

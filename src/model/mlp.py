@@ -13,7 +13,9 @@ class MLP(nn.Module):
 
         input_and_hidden_dims = MLP.compute_input_and_hidden_dims(input_dim, hidden_dims, has_skip_connection)
         self.module = MLP.create_mlp(has_batch_norm, msg_type, input_and_hidden_dims)
-        self.skip_position = len(self.module) - (1 + 1 * has_batch_norm)
+
+        last_layer_idx = len(self.module) - 1
+        self.skip_position = last_layer_idx - has_batch_norm
 
         if device == "gpu":
             self.module.to("cuda:0")
@@ -58,9 +60,9 @@ class MLP(nn.Module):
         raise NotImplementedError(f"The message type '{msg_type}' is not supported.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        for idx, layer in enumerate(self.module, start=1):
+        for layer_idx, layer in enumerate(self.module, start=1):
             x_1 = x.clone()
-            if self.has_skip_connection and idx == self.skip_position:
+            if self.has_skip_connection and layer_idx == self.skip_position:
                 x += x_1
             x = layer(x).clone()
 

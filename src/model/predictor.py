@@ -36,8 +36,8 @@ class Predictor(nn.Module):
 
             for i in range(len(architecture_sizes) - 1):
                 nb_of_bias = 1
-                current_layer_nb_of_params = architecture_sizes[i] + nb_of_bias
-                n_params += current_layer_nb_of_params * architecture_sizes[i + 1]
+                current_layer_nb_of_neurons_and_bias = architecture_sizes[i] + nb_of_bias
+                n_params += current_layer_nb_of_neurons_and_bias * architecture_sizes[i + 1]
 
             return n_params, architecture_sizes
 

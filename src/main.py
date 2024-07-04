@@ -96,7 +96,7 @@ def main(config_combinations: list[dict]) -> None:
             hist, best_epoch = train(meta_pred, pred, datasets, opti, scheduler, crit, penalty_msg, config,
                                      is_sending_wandb_last_run_alert)
             if config["is_saving_completed_runs_locally"]:
-                save_run_in_a_text_file(config["project_name"], config, hist, best_epoch)
+                save_run_in_a_text_file(config, hist, best_epoch)
 
 
 if __name__ == "__main__":
