@@ -5,6 +5,6 @@ msg_size: ${mod_1_dim[0]}
 pred_hidden_sizes: [[3], [10]]
 lr: [1e-2, 1e-3]
 has_batch_norm: [False, True]
-mod_1_dim:  [[500]]  # [[50], [100], [500], [1000]]
+mod_1_dim:  [[1000]]  # [[50], [100], [500], [1000]]
 mod_2_dim:  ${mod_1_dim}
 batch_size: [10, 50, 200]
