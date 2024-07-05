@@ -24,5 +24,4 @@ class KME(nn.Module):
         """
         x_1 = x[:, :, :-1].clone()
         out = self.embedding.forward(x_1)
-        x_1 = torch.mean(out * torch.reshape(x[:, :, -1], (len(x), -1, 1)), dim=1)  # ... A compression is done
-        return torch.reshape(x_1, (x_1.shape[0], 1, -1))
+        return torch.mean(out * torch.reshape(x[:, :, -1], (len(x), -1, 1)), dim=1)

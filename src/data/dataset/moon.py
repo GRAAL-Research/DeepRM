@@ -23,7 +23,7 @@ def generate_moon_datasets(config: dict) -> np.ndarray:
 
 
 def generate_moon_dataset(config: dict) -> np.ndarray:
-    x, y = make_moons(config["m"], noise=0.08, random_state=config["seed"])
+    x, y = make_moons(config["n_instances_per_dataset"], noise=0.08, random_state=config["seed"])
     y[y == 0] = -1
 
     if config["shuffle_each_dataset_samples"]:
