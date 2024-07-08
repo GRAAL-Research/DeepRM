@@ -5,18 +5,17 @@ from src.model.mlp import MLP
 
 
 class FSPool(nn.Module):
-    def __init__(self, input_dim, hidden_dims, m, device: str, init_scheme: str, has_skip_connection: bool,
+    def __init__(self, input_dim, hidden_dims, n_instances_per_class_per_dataset, device: str, init_scheme: str, has_skip_connection: bool,
                  has_batch_norm: bool) -> None:
         """
         Initialize .
         Args:
             input_dim (int): input dimension of the custom attention head;
             hidden_dims (list of int): architecture of the embedding;
-            m (int): number of examples per dataset;
         """
         super(FSPool, self).__init__()
         self.mlp = MLP(input_dim - 1, hidden_dims, device, has_skip_connection, has_batch_norm, 'cnt', init_scheme)
-        self.mat = torch.rand((m, hidden_dims[-1]))
+        self.mat = torch.rand((n_instances_per_class_per_dataset, hidden_dims[-1]))
         if device == 'gpu':
             self.mat = self.mat.to('cuda:0')
 

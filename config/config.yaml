@@ -14,6 +14,7 @@ balanced: True
 splits: [0.55, 0.20, 0.25]
 n_dataset: 500
 m: 100
+n_instances_per_dataset: 100
 n_features: 2
 
 seed: 0

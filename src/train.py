@@ -8,19 +8,19 @@ from loguru import logger
 
 from src.data.loaders import train_valid_loaders
 from src.model.predictor import Predictor
+from src.model.simple_meta_net import SimpleMetaNet
 from src.result.compute_stats import stats
 from src.result.decision_boundaries import show_decision_boundaries
 from src.result.history import update_hist, update_wandb
 from src.utils import create_run_name
 
 
-def train(meta_pred, pred: Predictor, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict,
+def train(meta_pred: SimpleMetaNet, pred: Predictor, data, optimizer, scheduler, criterion, pen_msg, task_dict: dict,
           is_sending_wandb_last_run_alert: bool):
     """
     Trains a meta predictor using PyTorch.
 
     Args:
-        meta_pred (nn.Module): A meta predictor (neural network) to train.
         data (Dataset): A dataset.
         optimizer (torch.optim): meta-neural network optimizer;
         scheduler (torch.optim.lr_scheduler): learning rate decay scheduler;
@@ -33,7 +33,6 @@ def train(meta_pred, pred: Predictor, data, optimizer, scheduler, criterion, pen
             n_epoch (int): The maximum number of epochs.
             batch_size (int): Batch size.
             pen_msg_coef (float): Message regularization factor.
-            device (str): whether to use the gpu (choices: 'gpu', 'cpu');
     Returns:
         tuple of: information about the model at the best training epoch (dictionary), best training epoch (int).
     """
@@ -49,7 +48,7 @@ def train(meta_pred, pred: Predictor, data, optimizer, scheduler, criterion, pen
     pen_msg_coef = task_dict['pen_msg_coef']
     device = task_dict['device']
     loss_power = task_dict['loss_power']
-    m = meta_pred.m
+    n_instances_per_class_per_dataset = task_dict["n_instances_per_dataset"] // 2
 
     torch.autograd.set_detect_anomaly(True)
     train_loader, valid_loader, test_loader = train_valid_loaders(data, batch_size, splits)
@@ -76,7 +75,7 @@ def train(meta_pred, pred: Predictor, data, optimizer, scheduler, criterion, pen
         meta_pred.train()  # We put the meta predictor in training mode
         with (torch.enable_grad()):
             for inputs in train_loader:  # Iterating over the various batches
-                inputs = inputs.float()[:, m:]
+                inputs = inputs.float()[:, n_instances_per_class_per_dataset:]
                 targets = (inputs.clone()[:, :, -1] + 1) / 2
                 inputs, targets = inputs.float(), targets.float()
                 if str(device) == 'gpu':
