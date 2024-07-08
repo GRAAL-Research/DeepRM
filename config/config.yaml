@@ -1,10 +1,10 @@
-is_using_wandb: False
-is_wandb_alert_activated: False
-project_name: test
-run_name_content: [msg_size, msg_type, n_dataset, pred_arch]
-is_logging_commit_info: False
+is_using_wandb: True
+is_wandb_alert_activated: True
+project_name: you-can-delete-me
+run_name_content: [msg_size, msg_type]
+is_logging_commit_info: True
 
-is_saving_completed_runs_locally: False
+is_saving_completed_runs_locally: True
 
 dataset: moon
 is_moon_identical: False
@@ -13,6 +13,7 @@ shuffle_each_dataset_samples: True
 balanced: True
 splits: [0.55, 0.20, 0.25]
 n_dataset: 500
+m: 100
 n_instances_per_dataset: 100
 n_features: 2
 
@@ -45,11 +46,11 @@ pen_msg_coef: 0
 optimizer: adam
 lr: 1e-3
 scheduler: plateau
-scheduler_patience: 20
-factor: 0.5
+scheduler_patience: 8
+factor: 0.2
 scheduler_threshold: 1e-2
 
-early_stopping_patience: 50
+early_stopping_patience: 15
 early_stopping_tolerance: 1e-2
 
 n_epoch: 1000
