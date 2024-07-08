@@ -5,15 +5,14 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler, KBinsDiscretizer, OneHotEncoder
 
 
-def load_MTPL(task, n, m):
+def load_MTPL(task, n, n_instances_per_dataset):
     """
     Fetch the French Motor Third-Party Liability Claims dataset.
     Args:
         task (str): the task to perform on the MTPL2 dataset (choices: "frequency", "severity", "pure").
         n (int): Number of linearly separable datasets to create;
-        m (int): Number of examples per dataset.
     return:
-        Numpy array of dims n x m x n_features
+        Numpy array of dims n x n_instances_per_dataset x n_features
     """
     # freMTPL2freq dataset from https://www.openml.org/d/41214
     df_freq = fetch_openml(data_id=41214, as_frame=True).data
@@ -81,13 +80,13 @@ def load_MTPL(task, n, m):
         y = df["PurePremium"].to_numpy().reshape((-1, 1))
         weight = df["Exposure"].to_numpy().reshape((-1, 1))
     data = np.hstack((np.array(x), weight, y * 2 - 1)).astype(float, copy=False)
-    new_data, k = np.zeros((n, m, 77)), 0
+    new_data, k = np.zeros((n, n_instances_per_dataset, 77)), 0
     for i in range(len(df["Region"].cat.categories)):
         if k == n:
             break
         inds = df["Region"] == df["Region"].cat.categories[i]
-        for j in range(len(x[inds]) // m):
-            new_data[k] = data[inds][int(j * m): int((j + 1) * m)]
+        for j in range(len(x[inds]) // n_instances_per_dataset):
+            new_data[k] = data[inds][int(j * n_instances_per_dataset): int((j + 1) * n_instances_per_dataset)]
             k += 1
             if k == n:
                 break

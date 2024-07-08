@@ -7,15 +7,14 @@ from src.model.mlp import MLP
 
 
 class CA(nn.Module):
-    def __init__(self, input_dim, hidden_dims_mlp, hidden_dims_kme, m, device: str, init_scheme: str,
-                 has_skip_connection: bool, has_batch_norm: bool, pooling_type: str, temp) -> None:
+    def __init__(self, input_dim, hidden_dims_mlp, hidden_dims_kme, n_instances_per_class_per_dataset: int, device: str,
+                 init_scheme: str, has_skip_connection: bool, has_batch_norm: bool, pooling_type: str, temp) -> None:
         """
         Initialize a custom attention head.
         Args:
             input_dim (int): input dimension of the custom attention head;
             hidden_dims_mlp (list of int): architecture of the MLP;
             hidden_dims_kme (list of int): architecture of the embedding (MLP) in the KME;
-            m (int): number of examples per dataset;
             pooling_type (str): type of pooling to apply for the query computation
             temp (float): temperature parameter for the softmax computation.
         """
@@ -27,7 +26,8 @@ class CA(nn.Module):
         if pooling_type == "kme":
             self.q = KME(input_dim, hidden_dims_kme, device, init_scheme, has_skip_connection, has_batch_norm)
         elif pooling_type == "fspool":
-            self.q = FSPool(input_dim, hidden_dims_kme, m, device, init_scheme, has_skip_connection, has_batch_norm)
+            self.q = FSPool(input_dim, hidden_dims_kme, n_instances_per_class_per_dataset, device, init_scheme,
+                            has_skip_connection, has_batch_norm)
         elif pooling_type == "none":
             self.q = MLP(input_dim, hidden_dims_kme, device, has_skip_connection, has_batch_norm, "cnt", init_scheme)
         else:

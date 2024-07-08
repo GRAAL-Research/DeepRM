@@ -91,7 +91,7 @@ class Predictor(nn.Module):
             inputs (): ;
             return_sign (bool): whether to round the predictions or not.
         Return:
-            torch.Tensor of dims (batch_size, m, output_dims), the predictions.
+            torch.Tensor of dims (batch_size, n_instances_per_dataset, output_dims), the predictions.
         """
         out = 0
         if self.pred_type == "linear_classif":
