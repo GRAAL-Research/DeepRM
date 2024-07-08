@@ -16,7 +16,6 @@ def main(config_combinations: list[dict]) -> None:
                                                   "MTPL2_frequency", "MTPL2_severity", "MTPL2_pure");
 
         balanced (list of bool): whether to consider balanced datasets during forward pass losses computation;                                          
-        m (list of int): number of examples per dataset;
         n_features (list of int): dimension of each example;
         splits (list of [float, float, float]): train, valid and test proportion of the data;
         meta_pred (list of str): meta_predictor to use (choices: "simplenet");
@@ -43,7 +42,7 @@ def main(config_combinations: list[dict]) -> None:
         if config["dataset"] == "mnist":
             # For non-synthetic data, these are fixed
             config["n_dataset"] = 90
-            config["m"] = 6313 * 2
+            config["n_instances_per_dataset"] = 6313 * 2
             config["n_features"] = 784
         elif config["dataset"] in ["MTPL2_frequency", "MTPL2_severity", "MTPL2_pure"]:
             # For non-synthetic data, these are fixed
