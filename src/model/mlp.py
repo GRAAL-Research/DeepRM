@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from torch import nn as nn
 
 from src.model.utils.initialize_weights import initialize_weights
@@ -26,9 +27,6 @@ class MLP(nn.Module):
     @staticmethod
     def compute_input_and_hidden_dims(input_dim: int, hidden_dims: list[int], has_skip_connection: bool) -> list[int]:
         input_and_hidden_dims = [input_dim] + hidden_dims
-        # TODO fix the skip connection
-        # if has_skip_connection and len(input_and_hidden_dims) > 2:
-        #     input_and_hidden_dims.insert(len(input_and_hidden_dims) - 1, input_and_hidden_dims[0])
 
         return input_and_hidden_dims
 
@@ -40,30 +38,32 @@ class MLP(nn.Module):
                 modules.append(nn.LazyBatchNorm1d())
             modules.append(nn.Linear(input_and_hidden_dims[dim_idx], input_and_hidden_dims[dim_idx + 1]))
 
-            if dim_idx == len(input_and_hidden_dims) - 2 or msg_type == "pos":
-                activation_function = MLP.create_activation_function(msg_type)
-                modules.append(activation_function)
+            is_last_layer = dim_idx == len(input_and_hidden_dims) - 2
+            activation_function = MLP.create_activation_function(is_last_layer, msg_type)
+            modules.append(activation_function)
 
         return modules
 
     @staticmethod
-    def create_activation_function(msg_type: str) -> nn.Module:
-        if msg_type == "pos":
+    def create_activation_function(is_last_layer: bool, msg_type: str) -> nn.Module:
+        if not is_last_layer:
             return nn.ReLU()
-        if msg_type == "none":
+        elif msg_type == "none":
             return nn.Identity()
-        if msg_type == "dsc":
+        elif msg_type == "dsc":
             return SignStraightThrough()
-        if msg_type == "cnt":
+        elif msg_type == "cnt":
             return nn.Tanh()
 
         raise NotImplementedError(f"The message type '{msg_type}' is not supported.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        initial_input = x.clone()
         for layer_idx, layer in enumerate(self.module, start=1):
-            x_1 = x.clone()
             if self.has_skip_connection and layer_idx == self.skip_position:
-                x += x_1
+                padding_size = x.shape[-1] - initial_input.shape[-1]
+                pad = F.pad(input=initial_input, pad=(0, padding_size, 0, 0), mode='constant', value=0)
+                x += pad
             x = layer(x).clone()
 
         return x

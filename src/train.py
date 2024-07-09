@@ -33,6 +33,7 @@ def train(meta_pred: SimpleMetaNet, pred: Predictor, data, optimizer, scheduler,
             n_epoch (int): The maximum number of epochs.
             batch_size (int): Batch size.
             pen_msg_coef (float): Message regularization factor.
+            bound_computation (bool): whether to compute the bounds.
     Returns:
         tuple of: information about the model at the best training epoch (dictionary), best training epoch (int).
     """
@@ -48,6 +49,7 @@ def train(meta_pred: SimpleMetaNet, pred: Predictor, data, optimizer, scheduler,
     pen_msg_coef = task_dict['pen_msg_coef']
     device = task_dict['device']
     loss_power = task_dict['loss_power']
+    bound_computation = task_dict['bound_computation']
     n_instances_per_class_per_dataset = task_dict["n_instances_per_dataset"] // 2
 
     torch.autograd.set_detect_anomaly(True)
@@ -98,9 +100,9 @@ def train(meta_pred: SimpleMetaNet, pred: Predictor, data, optimizer, scheduler,
                 loss.backward()  # Gradient computation
                 optimizer.step()  # Backprop step
         # Computation of statistics about the current training epoch
-        tr_acc, tr_loss, _ = stats(meta_pred, pred, criterion, train_loader, msg_type, device)
-        vd_acc, vd_loss, _ = stats(meta_pred, pred, criterion, valid_loader, msg_type, device)
-        te_acc, te_loss, bound = stats(meta_pred, pred, criterion, test_loader, msg_type, device)
+        tr_acc, tr_loss, _ = stats(meta_pred, pred, criterion, train_loader, msg_type, bound_computation, device)
+        vd_acc, vd_loss, _ = stats(meta_pred, pred, criterion, valid_loader, msg_type, bound_computation, device)
+        te_acc, te_loss, bound = stats(meta_pred, pred, criterion, test_loader, msg_type, bound_computation, device)
         update_hist(hist, (tr_acc, tr_loss, vd_acc, vd_loss, te_acc, te_loss, bound, msg_size,
                            meta_pred.comp_set_size, i))  # Tracking results
         rolling_val_acc = torch.mean(torch.tensor(hist['valid_acc'][-min(100, i + 1):]))
