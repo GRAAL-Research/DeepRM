@@ -1,7 +1,5 @@
 from pathlib import Path
-
 from git import Repo
-
 from src.config.load import load_yaml_file_content
 
 

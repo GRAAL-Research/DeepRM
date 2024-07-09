@@ -1,12 +1,11 @@
 from src.config.config import create_config
 from src.config.grid_search_config import create_config_combinations_sorted_by_dataset
 from src.data.create_datasets import create_datasets
-from src.model.predictor import Predictor
-from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import l1, l2
 from src.result.prevent_running_completed_job import is_run_already_done, save_run_in_a_text_file
 from src.train import *
 from src.utils import set_random_seed
+import torch.nn as nn
 
 
 def main(config_combinations: list[dict]) -> None:
