@@ -14,7 +14,7 @@ def is_run_already_done(config: dict) -> bool:
             if tess[i][:len(new)] == new:
                 cnt_nw += 1
     except FileNotFoundError:
-        file = open(config["project_name"] + ".txt", "a")
+        file = open("results/" + config["project_name"] + ".txt", "a")
         for key in keys:
             file.write(key + "\t")
         file.write("train_acc" + "\t")
