@@ -7,7 +7,7 @@ def create_data_compressor_1(config: dict):
 
     if data_compressor_name == "KME":
         return KME(config["n_features"] + 1, config["data_compressor_dim"], config["device"], config["init_scheme"],
-                   False, config["has_batch_norm"])
+                   config["has_skip_connection"], config["has_batch_norm"])
 
     if data_compressor_name == "concatenator":
         return Concatenator(config)
