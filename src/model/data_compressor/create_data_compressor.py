@@ -9,7 +9,7 @@ def create_data_compressor_1(config: dict) -> DataEncoder:
 
     if data_compressor_name.lower() == "kme":
         return KME(config["n_features"] + 1, config["data_compressor_dim"], config["device"], config["init_scheme"],
-                   config["has_skip_connection"], config["has_batch_norm"])
+                   config["has_skip_connection"], config["has_batch_norm"], config["task"])
 
     if data_compressor_name.lower() == "concatenator":
         n_instances_per_dataset_fed_to_deep_rm = config["n_instances_per_dataset"] // 2

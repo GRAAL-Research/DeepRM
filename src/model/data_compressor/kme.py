@@ -8,7 +8,7 @@ from src.model.mlp import MLP
 class KME(nn.Module, DataEncoder):
 
     def __init__(self, input_dim, hidden_dims, device: str, init_scheme: str, has_skip_connection: bool,
-                 has_batch_norm: bool) -> None:
+                 has_batch_norm: bool, task: str) -> None:
         """
         hidden_dims (list of int): architecture of the embedding;
         """
@@ -17,6 +17,7 @@ class KME(nn.Module, DataEncoder):
 
         self.embedding = MLP(input_dim - 1, hidden_dims, device, has_skip_connection, has_batch_norm, 'none',
                              init_scheme)
+        self.task = task
 
     def forward(self, x):
         """
@@ -26,7 +27,7 @@ class KME(nn.Module, DataEncoder):
         return:
             torch.Tensor: output of the custom attention heads layer.
         """
-        x_1 = x[:, :, :-1].clone()
+        x_1 = x.clone()
         out = self.embedding.forward(x_1)
         return torch.mean(out * torch.reshape(x[:, :, -1], (len(x), -1, 1)), dim=1)
 

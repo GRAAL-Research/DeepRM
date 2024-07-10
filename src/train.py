@@ -40,6 +40,7 @@ def train(meta_pred: SimpleMetaNet, pred: Predictor, data, optimizer, scheduler,
     # Retrieving information
     balanced = task_dict['balanced']
     splits = task_dict['splits']
+    seed = task_dict['seed']
     early_stopping_tolerance = task_dict['early_stopping_tolerance']
     early_stopping_patience = task_dict['early_stopping_patience']
     n_epoch = task_dict['n_epoch']
@@ -50,10 +51,12 @@ def train(meta_pred: SimpleMetaNet, pred: Predictor, data, optimizer, scheduler,
     device = task_dict['device']
     loss_power = task_dict['loss_power']
     bound_computation = task_dict['bound_computation']
+    task = task_dict['task']
+    valid_metric = "valid_acc" if task_dict['task'] == "classification" else "valid_loss"
     n_instances_per_class_per_dataset = task_dict["n_instances_per_dataset"] // 2
 
     torch.autograd.set_detect_anomaly(True)
-    train_loader, valid_loader, test_loader = train_valid_loaders(data, batch_size, splits)
+    train_loader, valid_loader, test_loader, tr_var, vd_var, te_var = train_valid_loaders(data, batch_size, splits, seed=seed)
     best_rolling_val_acc, best_epoch = 0, 0
     # The following information will be recorded at each epoch
     hist = {'epoch': [],
@@ -85,8 +88,8 @@ def train(meta_pred: SimpleMetaNet, pred: Predictor, data, optimizer, scheduler,
                 optimizer.zero_grad()  # Zeroing the gradient everywhere in the meta-learner
                 meta_output = meta_pred(inputs)  # Computing the parameters of the predictor.
                 pred.set_weights(meta_output, len(inputs))  # Updating the weights of the predictor
-                output = pred.forward(inputs)  # Computing the predictions for the task
-                if balanced:
+                output, _ = pred.forward(inputs)  # Computing the predictions for the task
+                if balanced or task == "regression":
                     loss = torch.mean(torch.mean(criterion(output, targets), dim=1) ** loss_power)
                 else:
                     loss = 0
@@ -100,22 +103,28 @@ def train(meta_pred: SimpleMetaNet, pred: Predictor, data, optimizer, scheduler,
                 loss.backward()  # Gradient computation
                 optimizer.step()  # Backprop step
         # Computation of statistics about the current training epoch
-        tr_acc, tr_loss, _ = stats(meta_pred, pred, criterion, train_loader, msg_type, bound_computation, device)
-        vd_acc, vd_loss, _ = stats(meta_pred, pred, criterion, valid_loader, msg_type, bound_computation, device)
-        te_acc, te_loss, bound = stats(meta_pred, pred, criterion, test_loader, msg_type, bound_computation, device)
+        tr_acc, tr_loss, _ = stats(task, meta_pred, pred, criterion, train_loader, msg_type, bound_computation, device)
+        vd_acc, vd_loss, _ = stats(task, meta_pred, pred, criterion, valid_loader, msg_type, bound_computation, device)
+        te_acc, te_loss, bound = stats(task, meta_pred, pred, criterion, test_loader, msg_type,bound_computation,device)
         update_hist(hist, (tr_acc, tr_loss, vd_acc, vd_loss, te_acc, te_loss, bound, msg_size,
                            meta_pred.comp_set_size, i))  # Tracking results
-        rolling_val_acc = torch.mean(torch.tensor(hist['valid_acc'][-min(100, i + 1):]))
+        rolling_val_perf = torch.mean(torch.tensor(hist[valid_metric][-min(100, i + 1):]))
         if task_dict["is_using_wandb"]:
             update_wandb(wandb, hist)  # Upload information to WandB
         epo = '0' * (i + 1 < 100) + '0' * (i + 1 < 10) + str(i + 1)
-        print(f'Epoch {epo} - Train acc: {tr_acc:.4f} - Val acc: {vd_acc:.4f} - Test acc: {te_acc:.4f} - '
-              f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
-              f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
-        scheduler.step(rolling_val_acc)  # Scheduler step
-        if i == 1 or rolling_val_acc > best_rolling_val_acc + early_stopping_tolerance:  # If an improvement has been done in validation...
+        if task == "classification":
+            print(f'Epoch {epo} - Train acc: {tr_acc:.4f} - Val acc: {vd_acc:.4f} - Test acc: {te_acc:.4f} - '
+                  f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
+                  f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
+        elif task == "regression":
+            print(f'Epoch {epo} - Train R2: {1 - tr_loss / tr_var:.4f} - Val R2: {1 - vd_loss / vd_var:.4f} - '
+                  f'Test R2: {1 - te_loss / te_var:.4f} - '
+                  f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
+                  f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
+        scheduler.step(rolling_val_perf)  # Scheduler step
+        if i == 1 or rolling_val_perf > best_rolling_val_acc + early_stopping_tolerance:  # If an improvement has been done in validation...
             best_epoch = copy(i)  # ...We keep track of it
-            best_rolling_val_acc = copy(rolling_val_acc)
+            best_rolling_val_acc = copy(rolling_val_perf)
         if ((tr_acc < 0.525 and i > 50) or  # If no learning has been made...
                 i - best_epoch > early_stopping_patience):  # ... or no improvements for a while ...
             logger.info("The early stopping stopped the training.")

@@ -45,7 +45,7 @@ class SimpleMetaNet(nn.Module):
                    "fspool", config["tau"]))
 
         self.kme_2 = KME(config["n_features"] + 1, config["data_compressor_dim"], config["device"],
-                         config["init_scheme"], config["has_skip_connection"], config["has_batch_norm"])
+                         config["init_scheme"], config["has_skip_connection"], config["has_batch_norm"], config["task"])
 
         self.mod_2 = MLP(self.compute_mod_2_input_dim(), config["mod_2_dim"] + [self.output_dim], config["device"],
                          config["has_skip_connection"], config["has_batch_norm"], "none", config["init_scheme"])
