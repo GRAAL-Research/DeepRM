@@ -16,6 +16,7 @@ class Predictor(nn.Module):
         self.n_param, self.pred_arch = self.compute_n_params_and_arch_sizes(config["n_features"],
                                                                             config["pred_hidden_sizes"])
         self.pred = self.create_predictor(config)
+        self.task = config["task"]
 
     def compute_n_params_and_arch_sizes(self, n_features: int, pred_hidden_sizes: list[int]) -> tuple[int, list[int]]:
         """
@@ -84,15 +85,7 @@ class Predictor(nn.Module):
                     count_1 += self.pred_arch[linear_layer_idx + 1]
                     linear_layer_idx += 1
 
-    def forward(self, inputs, return_sign=False):
-        """
-        Computes a forward pass of the various predictor (one per dataset in a given batch).
-        Args:
-            inputs (): ;
-            return_sign (bool): whether to round the predictions or not.
-        Return:
-            torch.Tensor of dims (batch_size, n_instances_per_dataset, output_dims), the predictions.
-        """
+    def forward(self, inputs):
         out = 0
         if self.pred_type == "linear_classif":
             out = (torch.sum(torch.transpose(inputs[:, :, :-1], 0, 1) * self.weights[:, :-1], dim=-1)
@@ -131,6 +124,7 @@ class Predictor(nn.Module):
                         input_i = layer(input_i)
                 out = torch.hstack((out, input_i))
             out = torch.transpose(out, 0, 1)
-        if not return_sign:
-            return torch.sigmoid(out)
-        return torch.sigmoid(out), torch.sign(out)
+        if self.task == "classification":
+            return torch.sigmoid(out), torch.sign(out)
+        elif self.task == "regression":
+            return torch.relu(out), out

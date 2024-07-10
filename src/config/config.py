@@ -1,13 +1,15 @@
 from pathlib import Path
 from git import Repo
+import git
+git.Repo(search_parent_directories=True)
 from src.config.load import load_yaml_file_content
 
 
 def create_config(config_name: str):
     config = load_yaml_file_content(Path("config") / config_name)
 
-    if config["is_logging_commit_info"]:
-        config = update_config_with_commit_name_and_hash(config)
+    #if config["is_logging_commit_info"]:
+    #    config = update_config_with_commit_name_and_hash(config)
 
     return config
 
