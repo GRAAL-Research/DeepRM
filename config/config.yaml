@@ -14,8 +14,8 @@ is_blob_identical: False
 shuffle_each_dataset_samples: True
 balanced: True
 splits: [0.55, 0.20, 0.25]
-n_dataset: 4000
-n_instances_per_dataset: 120
+n_dataset: 800
+n_instances_per_dataset: 100
 n_features: 2
 
 seed: 0
@@ -25,10 +25,10 @@ ca_dim: [0]
 tau: 20
 
 data_compressor_name: KME
-data_compressor_dim: [1000, 50]
-mod_1_dim: [1000, 1000]
+data_compressor_dim: [100]
+mod_1_dim: [100]
 
-mod_2_dim: [1000, 1000]
+mod_2_dim: [100]
 meta_pred: simplenet
 pred_hidden_sizes: [3]
 
@@ -56,4 +56,4 @@ early_stopping_tolerance: 1e-2
 
 n_epoch: 1000
 batch_size: 200
-device: cpu
+device: gpu
