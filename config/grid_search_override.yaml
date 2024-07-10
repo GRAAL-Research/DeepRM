@@ -1,13 +1,13 @@
-project_name: [ message-module-with-kme-exp4 ]
-run_name_content: [ [ msg_size, lr, batch_size, pred_hidden_sizes, is_moon_identical ] ]
+project_name: [message-module-with-kme-exp4]
+run_name_content: [[msg_size, lr, batch_size, pred_hidden_sizes, is_moon_identical]]
 
-dataset: [ moon ]
-is_moon_identical: [ True, False ]
-batch_size: [ 10, 50, 200 ]
-lr: [ 1e-1, 1e-2, 1e-3, 1e-4 ]
-data_compressor_name: [ KME ]
+dataset: [moon]
+is_moon_identical: [True, False]
+batch_size: [10, 50, 200]
+lr: [1e-1, 1e-2, 1e-3, 1e-4]
+data_compressor_name: [KME]
 
-mod_1_dim: [ [ 50 ] ]  # [[50], [100], [500], [1000]]
+mod_1_dim: [[50]]  # [[50], [100], [500], [1000]]
 msg_size: ${mod_1_dim[0]}
 mod_2_dim: ${mod_1_dim}
-pred_hidden_sizes: [ [ 3 ], [ 10 ] ]
+pred_hidden_sizes: [[3], [10]]
