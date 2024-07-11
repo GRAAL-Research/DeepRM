@@ -67,14 +67,16 @@ def load_MTPL(task, n, n_instances_per_dataset):
     x, y, weight = column_trans.fit_transform(df).toarray(), [], []
     if task == "frequency":
         df["Frequency"] = df["ClaimNb"] / df["Exposure"]
-        y = np.array(df["Frequency"].to_numpy() > 0, dtype=int).reshape((-1, 1))
+        #y = np.array(df["Frequency"].to_numpy() > 0, dtype=int).reshape((-1, 1))
+        y = np.array(df["Frequency"].to_numpy(), dtype=int).reshape((-1, 1))
         weight = df["Exposure"].to_numpy().reshape((-1, 1))
     elif task == "severity":
         df["AvgClaimAmount"] = df["ClaimAmount"] / np.fmax(df["ClaimNb"], 1)
         mask = df["ClaimAmount"] > 0
+        df = df[mask.values]
         x = x[mask.values]
-        y = df["AvgClaimAmount"][mask.values].to_numpy().reshape((-1, 1))
-        weight = df["ClaimNb"][mask.values].to_numpy().reshape((-1, 1))
+        y = df["AvgClaimAmount"].to_numpy().reshape((-1, 1))
+        weight = df["ClaimNb"].to_numpy().reshape((-1, 1))
     elif task == "pure":
         df["PurePremium"] = df["ClaimAmount"] / df["Exposure"]
         y = df["PurePremium"].to_numpy().reshape((-1, 1))

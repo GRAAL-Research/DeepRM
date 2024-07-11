@@ -1,12 +1,10 @@
 is_using_wandb: True
 is_wandb_alert_activated: True
-project_name: test
+project_name: you-can-delete-me
 run_name_content: [msg_size, msg_type]
 is_logging_commit_info: True
 
 is_saving_completed_runs_locally: True
-
-bound_computation: False
 
 dataset: moon
 is_moon_identical: False
@@ -14,45 +12,45 @@ is_blob_identical: False
 shuffle_each_dataset_samples: True
 balanced: True
 splits: [0.55, 0.20, 0.25]
-n_dataset: 2000
+n_dataset: 500
+m: 100
 n_instances_per_dataset: 100
 n_features: 2
 
 seed: 0
 
 comp_set_size: 0
-ca_dim: [0]
+ca_dim: [100]
 tau: 20
 
 data_compressor_name: KME
-n_filters: 1
 data_compressor_dim: [100]
 mod_1_dim: [100]
 
 mod_2_dim: [100]
 meta_pred: simplenet
-pred_hidden_sizes: [3]
+pred_hidden_sizes: [10]
 
-has_skip_connection: True
-has_batch_norm: True
+has_skip_connection: False
+has_batch_norm: False
 
 init_scheme: kaiming_unif
 criterion: bce_loss
 loss_power: 1.0
 
 msg_type: cnt
-msg_size: 10
-pen_msg: l1
+msg_size: 1000
+pen_msg: l2
 pen_msg_coef: 0
 
 optimizer: adam
-lr: 1e-2
+lr: 1e-3
 scheduler: plateau
-scheduler_patience: 25
-factor: 0.5
+scheduler_patience: 8
+factor: 0.2
 scheduler_threshold: 1e-2
 
-early_stopping_patience: 75
+early_stopping_patience: 15
 early_stopping_tolerance: 1e-2
 
 n_epoch: 1000

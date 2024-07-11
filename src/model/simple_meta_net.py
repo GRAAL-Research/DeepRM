@@ -30,12 +30,10 @@ class SimpleMetaNet(nn.Module):
         self.msk = None  # Mask (compression selection)
         self.input_dim = config["n_features"]
         self.output_dim = pred_input_dim
-        self.mod_2_input = config["data_compressor_dim"][-1] * (self.comp_set_size > 0) + self.mod_1_dim[-1] * (
-                self.msg_size > 0)
 
         # Generating the many components (custom attention (CA) multi-heads, KME #1-2, MLP #1-2) of the meta-learner
         self.data_compressor_1 = create_data_compressor_1(config)
-        self.mod_1 = MLP(config["data_compressor_dim"][-1], self.mod_1_dim, config["device"],
+        self.mod_1 = MLP(self.data_compressor_1.get_output_dimension(), self.mod_1_dim, config["device"],
                          config["has_skip_connection"],
                          config["has_batch_norm"], config["msg_type"], config["init_scheme"])
 
@@ -45,11 +43,23 @@ class SimpleMetaNet(nn.Module):
                 CA(config["n_features"] + 1, config["ca_dim"], config["ca_dim"], config["n_instances_per_dataset"] // 2,
                    config["device"], config["init_scheme"], config["has_skip_connection"], config["has_batch_norm"],
                    "fspool", config["tau"]))
-        self.kme_2 = KME(config["n_features"] + 1, config["data_compressor_dim"], config["device"],
-                         config["init_scheme"], config["has_skip_connection"], config["has_batch_norm"])
 
-        self.mod_2 = MLP(self.mod_2_input, config["mod_2_dim"] + [self.output_dim], config["device"],
+        self.kme_2 = KME(config["n_features"] + 1, config["data_compressor_dim"], config["device"],
+                         config["init_scheme"], config["has_skip_connection"], config["has_batch_norm"], config["task"])
+
+        self.mod_2 = MLP(self.compute_mod_2_input_dim(), config["mod_2_dim"] + [self.output_dim], config["device"],
                          config["has_skip_connection"], config["has_batch_norm"], "none", config["init_scheme"])
+
+    def compute_mod_2_input_dim(self) -> int:
+        mod_2_input_dim = 0
+        
+        if self.comp_set_size > 0:
+            mod_2_input_dim += self.data_compressor_1.get_output_dimension()
+
+        if self.msg_size > 0:
+            mod_2_input_dim += self.mod_1_dim[-1]
+
+        return mod_2_input_dim
 
     def forward(self, x, n_samples=0):
         """
