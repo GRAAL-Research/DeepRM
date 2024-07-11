@@ -7,7 +7,7 @@ is_logging_commit_info: False
 is_saving_completed_runs_locally: False
 bound_computation: False
 
-dataset: moon
+dataset: MTPL2_frequency
 is_moon_identical: False
 is_blob_identical: False
 shuffle_each_dataset_samples: True
