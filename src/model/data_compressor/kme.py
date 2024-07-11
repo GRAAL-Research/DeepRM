@@ -27,7 +27,7 @@ class KME(nn.Module, DataEncoder):
         return:
             torch.Tensor: output of the custom attention heads layer.
         """
-        x_1 = x.clone()
+        x_1 = x[:, :, :-1].clone()
         out = self.embedding.forward(x_1)
         return torch.mean(out * torch.reshape(x[:, :, -1], (len(x), -1, 1)), dim=1)
 
