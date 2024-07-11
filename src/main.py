@@ -108,7 +108,7 @@ def main(config_combinations: list[dict]) -> None:
 
 
 if __name__ == "__main__":
-    config_name = "config_MTPL2_frequency.yaml"
+    config_name = "config.yaml"
 
     loaded_config = create_config(config_name)
 
