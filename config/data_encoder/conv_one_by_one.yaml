@@ -1,0 +1,2 @@
+data_compressor_name: conv_one_by_one
+n_filters: 1

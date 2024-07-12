@@ -1,6 +1,7 @@
 __pycache__
-venv
-.idea
-wandb
-figures
-results
+/venv/
+/.idea/
+/wandb/
+/figures/
+/results/
+/dataset/

@@ -1,17 +1,39 @@
-from pathlib import Path
 from git import Repo
-import git
-git.Repo(search_parent_directories=True)
-from src.config.load import load_yaml_file_content
+
+from src.config.utils import load_yaml_file_content, CONFIG_BASE_PATH, get_sub_config_paths_keys, CONFIG_PATH, \
+    get_sub_config_paths_values
 
 
-def create_config(config_name: str):
-    config = load_yaml_file_content(Path("config") / config_name)
-
-    #if config["is_logging_commit_info"]:
-    #    config = update_config_with_commit_name_and_hash(config)
+def create_config():
+    config = load_yaml_file_content(CONFIG_PATH)
+    add_sub_config_parameters(config)
+    if config["is_logging_commit_info"]:
+        config = update_config_with_commit_name_and_hash(config)
 
     return config
+
+
+def add_sub_config_parameters(config: dict) -> dict:
+    for config_file_key in get_sub_config_paths_keys(config):
+        sub_config_file_path = CONFIG_BASE_PATH / config[config_file_key]
+        sub_config = load_yaml_file_content(sub_config_file_path)
+        validate_keys_are_not_duplicated_across_config_files(config, sub_config)
+
+        config |= sub_config
+
+    return config
+
+
+def validate_keys_are_not_duplicated_across_config_files(config: dict, sub_config: dict) -> None:
+    keys_intersection = compute_keys_intersection(sub_config, config)
+    possible_config_with_duplicated_keys = [CONFIG_PATH.name] + get_sub_config_paths_values(config)
+    assert not keys_intersection, (f"{keys_intersection} are duplicated keys across config files: "
+                                   f"{possible_config_with_duplicated_keys}.")
+
+
+def compute_keys_intersection(a: dict, b: dict) -> list[str]:
+    intersection = set(a) & set(b)
+    return list(intersection)
 
 
 def update_config_with_commit_name_and_hash(config: dict) -> dict:

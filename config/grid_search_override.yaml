@@ -1,7 +1,6 @@
 project_name: [message-module-with-kme-exp4]
 run_name_content: [[msg_size, batch_size, pred_hidden_sizes, lr]]
 
-dataset: [moon]
 batch_size: [50]
 lr: [1e-2, 1e-3]
 data_compressor_name: [KME]  # conv_one_by_one, KME, concatenator

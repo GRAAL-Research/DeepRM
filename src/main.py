@@ -38,25 +38,6 @@ def main(config_combinations: list[dict]) -> None:
     is_sending_wandb_last_run_alert = False
 
     for i, config in enumerate(config_combinations):
-        if config["dataset"] == "mnist":
-            # For non-synthetic data, these are fixed
-            config["criterion"] = "bce_loss"
-            config["n_dataset"] = 90
-            config["n_instances_per_dataset"] = 6313 * 2
-            config["n_features"] = 784
-            config["balanced"] = True
-            config["task"] = "classification"
-        elif config["dataset"] in ["MTPL2_frequency", "MTPL2_severity", "MTPL2_pure"]:
-            # For non-synthetic data, these are fixed
-            config["criterion"] = "mse_loss"
-            config["n_features"] = 76
-            config["batch_size"] = 50
-            config["balanced"] = False
-            config["task"] = "regression"
-        elif config["dataset"] == "moon":
-            config["criterion"] = "bce_loss"
-            config["balanced"] = True
-            config["task"] = "classification"
 
         if config["msg_size"] == 0:
             config["msg_type"] = "none"
@@ -108,9 +89,7 @@ def main(config_combinations: list[dict]) -> None:
 
 
 if __name__ == "__main__":
-    config_name = "config_MTPL2_frequency.yaml"
-
-    loaded_config = create_config(config_name)
+    loaded_config = create_config()
 
     config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
     main(config_combinations)

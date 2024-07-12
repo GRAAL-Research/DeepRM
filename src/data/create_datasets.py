@@ -19,7 +19,7 @@ def create_datasets(config: dict):
         return generate_moon_and_blob_datasets(config)
 
     if config["dataset"] == "mnist":
-        return load_mnist()
+        return load_mnist(config)
 
     if config["dataset"] in ["MTPL2_frequency", "MTPL2_severity", "MTPL2_pure"]:
         return load_MTPL(config["dataset"][6:], config["n_dataset"], config["n_instances_per_dataset"])
