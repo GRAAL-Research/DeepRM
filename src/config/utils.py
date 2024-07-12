@@ -13,15 +13,6 @@ def load_yaml_file_content(file_path: Path) -> dict:
     return OmegaConf.to_container(omega_config, resolve=True)
 
 
-def validate_parameter_name(parameter_name: str) -> None:
-    yaml_files_paths = get_yaml_files_paths()
-    yaml_files_paths.remove(GRID_SEARCH_FILE_PATH)
-
-    if parameter_name not in get_yaml_files_merged_content(yaml_files_paths):
-        error_message = f"You cannot use the parameter '{parameter_name}' because it's not in any config."
-        raise KeyError(error_message)
-
-
 def get_yaml_files_merged_content(yaml_files_paths: list[Path]) -> dict:
     merged_configs = {}
     for path in yaml_files_paths:

@@ -14,8 +14,8 @@ def create_config():
 
 
 def add_sub_config_parameters(config: dict) -> dict:
-    for config_file_key in get_sub_config_paths_keys(config):
-        sub_config_file_path = CONFIG_BASE_PATH / config[config_file_key]
+    for sub_config_paths_key in get_sub_config_paths_keys(config):
+        sub_config_file_path = CONFIG_BASE_PATH / config[sub_config_paths_key]
         sub_config = load_yaml_file_content(sub_config_file_path)
         validate_keys_are_not_duplicated_across_config_files(config, sub_config)
 
@@ -27,8 +27,10 @@ def add_sub_config_parameters(config: dict) -> dict:
 def validate_keys_are_not_duplicated_across_config_files(config: dict, sub_config: dict) -> None:
     keys_intersection = compute_keys_intersection(sub_config, config)
     possible_config_with_duplicated_keys = [CONFIG_PATH.name] + get_sub_config_paths_values(config)
-    assert not keys_intersection, (f"{keys_intersection} are duplicated keys across config files: "
-                                   f"{possible_config_with_duplicated_keys}.")
+
+    assertion_message = (f"{keys_intersection} are duplicated keys across config files: "
+                         f"{possible_config_with_duplicated_keys}.")
+    assert not keys_intersection, assertion_message
 
 
 def compute_keys_intersection(a: dict, b: dict) -> list[str]:

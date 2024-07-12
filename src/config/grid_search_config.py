@@ -2,8 +2,8 @@ import copy
 
 from sklearn.model_selection import ParameterGrid
 
-from src.config.utils import load_yaml_file_content, validate_parameter_name, GRID_SEARCH_FILE_PATH, \
-    get_sub_config_paths_keys
+from src.config.utils import load_yaml_file_content, GRID_SEARCH_FILE_PATH, \
+    get_sub_config_paths_keys, get_yaml_files_paths, get_yaml_files_merged_content
 
 
 def create_config_combinations_sorted_by_dataset(config: dict) -> list[dict]:
@@ -53,3 +53,12 @@ def overrode_config_with_grid_search_config(config: dict, grid_search_config: di
 def create_parameter_grid(config: dict, grid_search_config: dict) -> ParameterGrid:
     config = {key: [value] if key not in grid_search_config else value for key, value in config.items()}
     return ParameterGrid([config])
+
+
+def validate_parameter_name(parameter_name: str) -> None:
+    yaml_files_paths = get_yaml_files_paths()
+    yaml_files_paths.remove(GRID_SEARCH_FILE_PATH)
+
+    if parameter_name not in get_yaml_files_merged_content(yaml_files_paths):
+        error_message = f"You cannot use the parameter '{parameter_name}' because it's not in any config."
+        raise KeyError(error_message)
