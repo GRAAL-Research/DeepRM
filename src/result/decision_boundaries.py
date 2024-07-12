@@ -1,11 +1,12 @@
 from pathlib import Path
-
+import torch.nn as nn
 import numpy as np
 import torch
 from PIL import Image
 from matplotlib import pyplot as plt
 
 from src.model.predictor import Predictor
+from src.model.utils.loss import lin_loss
 
 
 def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, wandb, device):
@@ -25,7 +26,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
         examples = []
         for inputs in data_loader:
             for j in range(len(inputs)):
-                if i < max_number_vis:
+                if  i < max_number_vis:
                     plt.figure().clear()
                     plt.close()
                     plt.cla()
@@ -33,10 +34,10 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                     i += 1
                     targets = (inputs.clone()[:, :, -1] + 1) / 2
                     inputs, targets = inputs.float(), targets.float()
-                    inds = inputs[j, :, -1].sort().indices.tolist()  # Sorts the examples by their labels
                     # ... so that each class can be plotted with different colours
-                    x = inputs[j, inds][:, :2]
-                    m = int(len(x) / 2)
+
+                    x = inputs[j:j+1]
+                    m = int(len(x[0]) / 2)
                     if str(device) == "gpu":
                         inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
                     meta_output = meta_pred(inputs[:, :m])[j:j + 1]
@@ -48,8 +49,8 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                     if pred.pred_type == "small_nn":
                         # With small nn: we plot the decision boundary by colouring each decision zone by its prediction
                         h = .05  # step size in the mesh
-                        x_min, x_max = x[:, 0].cpu().min() - 10, x[:, 0].cpu().max() + 10
-                        y_min, y_max = x[:, 1].cpu().min() - 10, x[:, 1].cpu().max() + 10
+                        x_min, x_max = x[0, :, 0].cpu().min() - 10, x[0, :, 0].cpu().max() + 10
+                        y_min, y_max = x[0, :, 1].cpu().min() - 10, x[0, :, 1].cpu().max() + 10
                         xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
                                              np.arange(y_min, y_max, h))
                         mesh = np.array(np.c_[xx.ravel(), yy.ravel()])
@@ -58,11 +59,20 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                         if str(device) == "gpu":
                             mesh = mesh.cuda()
                         pred.set_weights(meta_output, 1)
-                        z = pred.forward(mesh)
-                        z = torch.round(z.reshape(xx.shape)).cpu()
+
+                        _, z = pred.forward(x)
+                        acc = lin_loss(z[0], x[0, :, -1])
+                        plt.scatter(x[0, x[0, :, 2] == 1, 0].cpu(), x[0, x[0, :, 2] == 1, 1].cpu(), c="r")
+                        plt.scatter(x[0, x[0, :, 2] == -1, 0].cpu(), x[0, x[0, :, 2] == -1, 1].cpu(), c="b")
+                        plt.text(torch.mean(x[0, :, 0].cpu()) - 9.5,
+                                 torch.mean(x[0, :, 1].cpu()) - 9.2,
+                                 f"Accuracy: {round(acc.item() * 100, 2)}%",
+                                 bbox=dict(fill=True, color='white', edgecolor='black', linewidth=2))
+
+                        _, z = pred.forward(mesh, use_last_values=True)
+                        z = z.reshape(xx.shape).cpu()
                         plt.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha=0.6)
-                    plt.scatter(x[m:, 0].cpu(), x[m:, 1].cpu(), c="r")
-                    plt.scatter(x[:m, 0].cpu(), x[:m, 1].cpu(), c="b")
+
                     if meta_pred.comp_set_size > 0:
                         meta_pred.compute_compression_set(inputs[:, :m])
                         plt.scatter(x[meta_pred.msk[j].cpu(), 0].cpu(),
@@ -71,8 +81,8 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                         plt.xlim(-20, 20)
                         plt.ylim(-20, 20)
                     if dataset == "moon":
-                        plt.xlim(torch.mean(x[:, 0].cpu()) - 10, torch.mean(x[:, 0].cpu()) + 10)
-                        plt.ylim(torch.mean(x[:, 1].cpu()) - 10, torch.mean(x[:, 1].cpu()) + 10)
+                        plt.xlim(torch.mean(x[0, :, 0].cpu()) - 10, torch.mean(x[0, :, 0].cpu()) + 10)
+                        plt.ylim(torch.mean(x[0, :, 1].cpu()) - 10, torch.mean(x[0, :, 1].cpu()) + 10)
 
                     figure_folder_path = Path("figures")
                     if not figure_folder_path.exists():
