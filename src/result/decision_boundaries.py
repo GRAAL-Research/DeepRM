@@ -73,7 +73,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                         z = z.reshape(xx.shape).cpu()
                         plt.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha=0.6)
 
-                    if meta_pred.comp_set_size > 0:
+                    if meta_pred.compression_set_size > 0:
                         meta_pred.compute_compression_set(inputs[:, :m])
                         plt.scatter(x[meta_pred.msk[j].cpu(), 0].cpu(),
                                     x[meta_pred.msk[j].cpu(), 1].cpu(), c="black", s=120, marker="*")

@@ -1,91 +1,58 @@
+from loguru import logger
+
 from src.config.config import create_config
 from src.config.grid_search_config import create_config_combinations_sorted_by_dataset
 from src.data.create_datasets import create_datasets
-from src.model.utils.loss import l1, l2
+from src.model.predictor import Predictor
 from src.result.prevent_running_completed_job import is_run_already_done, save_run_in_a_text_file
-from src.train import *
+from src.training.criterion import create_criterion
+from src.training.message_penalty import create_message_penalty_function
+from src.training.meta_predictor import create_meta_predictor
+from src.training.optimizer import create_optimizer
+from src.training.scheduler import create_scheduler
+from src.training.train import train_meta_predictor
 from src.utils import set_random_seed
-import torch.nn as nn
 
 
 def main(config_combinations: list[dict]) -> None:
-    """
-    Args:
-        dataset (list of str): datasets (choices: "mnist", "moon", "blob", "moon_and_blob",
-                                                  "MTPL2_frequency", "MTPL2_severity", "MTPL2_pure");
-
-        balanced (list of bool): whether to consider balanced datasets during forward pass losses computation;                                          
-        n_features (list of int): dimension of each example;
-        splits (list of [float, float, float]): train, valid and test proportion of the data;
-        meta_pred (list of str): meta_predictor to use (choices: "simplenet");
-        pred_arch (list of list of int): architecture of the predictor (a ReLU network);
-        comp_set_size (list of int): compression set size;
-        ca_dim (list of list of int): custom attention"s MLP architecture;
-        mod_1_dim (list of list of int): MLP #1 architecture;
-        mod_2_dim (list of list of int): MLP #2 architecture;
-        tau (list of int): temperature parameter (softmax in custom attention);
-        criterion (list of str): loss function (choices: "bce_loss");
-        loss_power (list of floats): power to be applied, by dataset;
-        pen_msg (list of str): type of message penalty (choices: "l1", "l2");
-        pen_msg_coef (list of float): message penalty coefficient;
-        batch_size (list of int): batch size;
-        factor (list of float): factor by which the learning rate is multiplied (one decay step);
-        optimizer (list of str): meta-neural network optimizer (choices: "adam", "rmsprop");
-        n_epoch (list of int): maximum number of epoch for the training phase;z
-    """
-    n_tasks = len(config_combinations)
-    meta_pred, datasets, opti, scheduler, crit, penalty_msg = None, None, None, None, None, None
+    n_runs = len(config_combinations)
     is_sending_wandb_last_run_alert = False
 
-    for i, config in enumerate(config_combinations):
-
+    for run_idx, config in enumerate(config_combinations):
         if config["msg_size"] == 0:
             config["msg_type"] = "none"
+            logger.info("Changing the message type to 'none' because the message size is 0.")
 
-        print(f"Launching task {i + 1}/{n_tasks} : {config}\n")
+        logger.info(f"Launching run {run_idx + 1}/{n_runs} : {config}\n")
 
-        if config["msg_type"] == "dsc" and config["pen_msg_coef"] > 0:  # Passes on incoherent hyp. param. comb.
-            print("Doesn't make sens to regularize discrete messages; passing...\n")
-        elif is_run_already_done(config):
-            print("Already done; passing...\n")
-        else:  # The current hyp. param. comb. will be tested
-            set_random_seed(config["seed"])  # Sets the random seed for numpy, torch and random packages
+        if config["msg_type"] == "dsc" and config["msg_penalty_coef"] > 0:
+            logger.info("Skipping the run... It doesn't make sens to regularize discrete messages.")
+            continue
+        if is_run_already_done(config):
+            logger.info("Skipping the run... It is already done.")
+            continue
 
-            datasets = create_datasets(config)
+        set_random_seed(config["seed"])
 
-            pred = Predictor(config)
-            if config["meta_pred"] == "simplenet":  # Meta-predictor initialization
-                meta_pred = SimpleMetaNet(pred.n_param, config)
+        datasets = create_datasets(config)
+        pred = Predictor(config)
+        meta_pred = create_meta_predictor(config, pred)
+        criterion = create_criterion(config)
+        message_penalty_function = create_message_penalty_function(config)
+        optimizer = create_optimizer(config, meta_pred)
+        scheduler = create_scheduler(config, optimizer)
 
-            if config["criterion"] == "bce_loss":  # Criterion initialization
-                crit = nn.BCELoss(reduction="none")
-            if config["criterion"] == "mse_loss":
-                crit = nn.MSELoss(reduction="none")
+        is_the_last_run = run_idx + 1 == n_runs
+        if is_the_last_run:
+            is_sending_wandb_last_run_alert = True
 
-            if config["pen_msg"] == "l1":  # Message penalty initialization
-                penalty_msg = l1
-            elif config["pen_msg"] == "l2":
-                penalty_msg = l2
+        hist, best_epoch = train_meta_predictor(meta_pred, pred, datasets, optimizer, scheduler, criterion,
+                                                message_penalty_function,
+                                                config,
+                                                is_sending_wandb_last_run_alert)
 
-            if config["optimizer"] == "adam":  # Optimizer initialization
-                opti = torch.optim.Adam(meta_pred.parameters(), lr=copy(config["lr"]))
-            elif config["optimizer"] == "rmsprop":
-                opti = torch.optim.RMSprop(meta_pred.parameters(), lr=copy(config["lr"]))
-
-            if config["scheduler"] == "plateau":
-                scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opti, mode="max",
-                                                                       factor=config["factor"],
-                                                                       patience=config["scheduler_patience"],
-                                                                       threshold=config["scheduler_threshold"],
-                                                                       verbose=True)
-
-            if i + 1 == n_tasks:
-                is_sending_wandb_last_run_alert = True
-
-            hist, best_epoch = train(meta_pred, pred, datasets, opti, scheduler, crit, penalty_msg, config,
-                                     is_sending_wandb_last_run_alert)
-            if config["is_saving_completed_runs_locally"]:
-                save_run_in_a_text_file(config, hist, best_epoch)
+        if config["is_saving_completed_runs_locally"]:
+            save_run_in_a_text_file(config, hist, best_epoch)
 
 
 if __name__ == "__main__":

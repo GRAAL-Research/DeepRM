@@ -13,11 +13,9 @@ def stats(task, meta_pred: SimpleMetaNet, pred: Predictor, criterion, data_loade
     """
     Computes the overall accuracy, loss and bounds of a predictor on given task and dataset.
     Args:
-        criterion (torch.nn, function): Loss function
         data_loader (DataLoader): A DataLoader to test on.
         msg_type (str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
         bound_computation (bool): whether to compute the bounds;
-        device (str): 'cuda', or 'cpu'; whether to use the gpu
     Returns:
         Tuple (float, float): the 0-1 accuracy and loss.
     """

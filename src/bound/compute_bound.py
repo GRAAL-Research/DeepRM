@@ -25,7 +25,7 @@ def compute_bound(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inpu
         Return:
             list of floats, the bound values.
     """
-    n_z = meta_pred.comp_set_size
+    n_z = meta_pred.compression_set_size
     n_sigma = meta_pred.msg_size
     msg_type = meta_pred.msg_type
     n_sample, best_bnd, n_grid, best_bnds = 2, 0, 11, []
