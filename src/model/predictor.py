@@ -85,7 +85,9 @@ class Predictor(nn.Module):
                     count_1 += self.pred_arch[linear_layer_idx + 1]
                     linear_layer_idx += 1
 
-    def forward(self, inputs):
+    def forward(self, inputs, use_last_values=False):
+        if not use_last_values:
+            self.batch_norm_params = []
         out = 0
         if self.pred_type == "linear_classif":
             out = (torch.sum(torch.transpose(inputs[:, :, :-1], 0, 1) * self.weights[:, :-1], dim=-1)
@@ -93,7 +95,7 @@ class Predictor(nn.Module):
             out = torch.transpose(out, 0, 1)
         elif self.pred_type == "small_nn":
             input_0 = inputs[0, :, :-1]
-            count_1, count_2, j = 0, 0, 0
+            count_1, count_2, n_batch_norm, j = 0, 0, 0, 0
             for layer in self.pred[0].module:
                 if isinstance(layer, nn.Linear):
                     count_2 += self.pred_arch[j] * self.pred_arch[j + 1]
@@ -104,6 +106,21 @@ class Predictor(nn.Module):
                     count_1 += self.pred_arch[j + 1]
                     j += 1
                     input_0 = torch.matmul(input_0, w.T) + b
+                elif isinstance(layer, nn.BatchNorm1d) or \
+                        isinstance(layer, nn.BatchNorm2d) or \
+                        isinstance(layer, nn.BatchNorm3d):
+                    if use_last_values:
+                        curr_params = self.batch_norm_params[n_batch_norm]
+                        input_0 = (input_0 - curr_params['mean']) / torch.sqrt(curr_params['var'] + 1e-5) * \
+                                  curr_params['gamma'] + curr_params['beta']
+                    else:
+                        dico = {'mean': torch.mean(input_0, dim=0).clone(),
+                                'var': torch.var(input_0, dim=0).clone()}
+                        input_0 = layer(input_0)
+                        dico['gamma'] = layer.weight.clone()
+                        dico['beta'] = layer.bias.clone()
+                        self.batch_norm_params.append(dico)
+                    n_batch_norm += 1
                 else:
                     input_0 = layer(input_0)
             out = input_0
@@ -120,6 +137,21 @@ class Predictor(nn.Module):
                         count_1 += self.pred_arch[j + 1]
                         j += 1
                         input_i = torch.matmul(input_i, w.T) + b
+                    elif isinstance(layer, nn.BatchNorm1d) or \
+                            isinstance(layer, nn.BatchNorm2d) or \
+                            isinstance(layer, nn.BatchNorm3d):
+                        if use_last_values:
+                            curr_params = self.batch_norm_params[n_batch_norm]
+                            input_i = (input_i - curr_params['mean']) / torch.sqrt(curr_params['var'] + 1e-5) * \
+                                      curr_params['gamma'] + curr_params['beta']
+                        else:
+                            dico = {'mean': torch.mean(input_i, dim=0).clone(),
+                                    'var': torch.var(input_i, dim=0).clone()}
+                            input_i = layer(input_i)
+                            dico['gamma'] = layer.weight.clone()
+                            dico['beta'] = layer.bias.clone()
+                            self.batch_norm_params.append(dico)
+                        n_batch_norm += 1
                     else:
                         input_i = layer(input_i)
                 out = torch.hstack((out, input_i))
