@@ -10,6 +10,7 @@ from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
 
 MNIST_DATASET_PATH = Path("dataset")
+MNIST_DEFAULT_IMG_SIZE = (28, 28)
 
 
 def load_mnist(config: dict) -> np.ndarray:
@@ -95,8 +96,12 @@ def apply_transforms_to_dataset(config: dict, dataset: MNIST) -> MNIST:
     is_a_perfect_square = 0 <= config["n_features"] == int(square_root_of_n_features) ** 2
     assert is_a_perfect_square, "The number of features must be a perfect square."
 
-    new_mnist_img_size = (int(square_root_of_n_features), int(square_root_of_n_features))
-    transform = transforms.Compose([to_pil_image, transforms.Resize(new_mnist_img_size), ToTensor()])
+    new_img_size = (int(square_root_of_n_features), int(square_root_of_n_features))
+
+    if new_img_size == MNIST_DEFAULT_IMG_SIZE:
+        return dataset
+
+    transform = transforms.Compose([to_pil_image, transforms.Resize(new_img_size), ToTensor()])
 
     transformed_data = []
     for img in tqdm(dataset.data, desc="Applying transforms"):
