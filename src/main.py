@@ -11,7 +11,8 @@ from src.training.meta_predictor import create_meta_predictor
 from src.training.optimizer import create_optimizer
 from src.training.scheduler import create_scheduler
 from src.training.train import train_meta_predictor
-from src.utils import set_random_seed
+from src.utils.default_logger import DefaultLogger
+from src.utils.utils import set_random_seed
 
 
 def main(config_combinations: list[dict]) -> None:
@@ -23,7 +24,7 @@ def main(config_combinations: list[dict]) -> None:
             config["msg_type"] = "none"
             logger.info("Changing the message type to 'none' because the message size is 0.")
 
-        logger.info(f"Launching run {run_idx + 1}/{n_runs} : {config}\n")
+        logger.info(f"Launching run {run_idx + 1}/{n_runs} : {config}")
 
         if config["msg_type"] == "dsc" and config["msg_penalty_coef"] > 0:
             logger.info("Skipping the run... It doesn't make sens to regularize discrete messages.")
@@ -56,6 +57,7 @@ def main(config_combinations: list[dict]) -> None:
 
 
 if __name__ == "__main__":
+    DefaultLogger.apply_format()
     loaded_config = create_config()
 
     config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)

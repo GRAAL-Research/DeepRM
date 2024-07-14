@@ -13,7 +13,8 @@ from src.model.predictor import Predictor
 from src.result.compute_stats import stats
 from src.result.decision_boundaries import show_decision_boundaries
 from src.result.history import update_hist, update_wandb
-from src.utils import create_run_name
+from src.utils.epoch_logger import EpochLogger
+from src.utils.utils import create_run_name
 
 
 def train_meta_predictor(meta_pred: nn.Module, pred: Predictor, datasets: np.ndarray, optimizer: torch.optim.Optimizer,
@@ -22,7 +23,6 @@ def train_meta_predictor(meta_pred: nn.Module, pred: Predictor, datasets: np.nda
                          is_sending_wandb_last_run_alert: bool):
     """
         config (dictionary) containing the following:
-            batch_size (int): Batch size.
             bound_computation (bool): whether to compute the bounds.
     Returns:
         tuple of: information about the model at the best training epoch (dictionary), best training epoch (int).
@@ -104,14 +104,16 @@ def train_meta_predictor(meta_pred: nn.Module, pred: Predictor, datasets: np.nda
             update_wandb(wandb, hist)  # Upload information to WandB
         epo = '0' * (i + 1 < 100) + '0' * (i + 1 < 10) + str(i + 1)
         if task == "classification":
-            print(f'Epoch {epo} - Train acc: {tr_acc:.4f} - Val acc: {vd_acc:.4f} - Test acc: {te_acc:.4f} - '
-                  f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
-                  f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
+            EpochLogger.log(
+                f'Epoch {epo} - Train acc: {tr_acc:.4f} - Val acc: {vd_acc:.4f} - Test acc: {te_acc:.4f} - '
+                f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
+                f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')
         elif task == "regression":
-            print(f'Epoch {epo} - Train R2: {1 - tr_loss / tr_var:.4f} - Val R2: {1 - vd_loss / vd_var:.4f} - '
-                  f'Test R2: {1 - te_loss / te_var:.4f} - '
-                  f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
-                  f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')  # Print information in console
+            EpochLogger.log(
+                f'Epoch {epo} - Train R2: {1 - tr_loss / tr_var:.4f} - Val R2: {1 - vd_loss / vd_var:.4f} - '
+                f'Test R2: {1 - te_loss / te_var:.4f} - '
+                f'Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), '
+                f'(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - begin)}')
         scheduler.step(rolling_val_perf)  # Scheduler step
         if i == 1 or rolling_val_perf > best_rolling_val_acc + early_stopping_tolerance:  # If an improvement has been done in validation...
             best_epoch = copy(i)  # ...We keep track of it
