@@ -27,13 +27,12 @@ class SimpleMetaNet(nn.Module):
         # Generating the many components (custom attention (CA) multi-heads, KME #1-2, MLP #1-2) of the meta-learner
         self.data_compressor_1 = create_data_compressor_1(config)
         self.mod_1 = MLP(self.data_compressor_1.get_output_dimension(), self.mlp_1_dim, config["device"],
-                         config["has_skip_connection"],
-                         config["has_batch_norm"], config["msg_type"], config["init_scheme"])
+                         config["has_skip_connection"], config["has_batch_norm"], config["msg_type"],
+                         config["init_scheme"])
 
         self.cas = nn.ModuleList([])
         for i in range(self.compression_set_size):
-            self.cas.append(
-                Attention(config, "fspool"))
+            self.cas.append(Attention(config))
 
         self.kme_2 = KME(config, hidden_dims=config["kme_dim"])
 

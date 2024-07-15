@@ -1,35 +1,32 @@
 import torch
 from torch import nn as nn
 
+from src.model.data_compressor.DataEncoder import DataEncoder
 from src.model.mlp import MLP
 
 
-class FSPool(nn.Module):
-    def __init__(self, input_dim, hidden_dims, n_instances_per_class_per_dataset, device: str, init_scheme: str, has_skip_connection: bool,
-                 has_batch_norm: bool) -> None:
-        """
-        Initialize .
-        Args:
-            input_dim (int): input dimension of the custom attention head;
-            hidden_dims (list of int): architecture of the embedding;
-        """
+class FSPool(nn.Module, DataEncoder):
+
+    def __init__(self, config: dict, mlp_hidden_dims: list[int]) -> None:
+        n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
         super(FSPool, self).__init__()
-        self.mlp = MLP(input_dim - 1, hidden_dims, device, has_skip_connection, has_batch_norm, 'cnt', init_scheme)
-        self.mat = torch.rand((n_instances_per_class_per_dataset, hidden_dims[-1]))
-        if device == 'gpu':
-            self.mat = self.mat.to('cuda:0')
+        self.output_dimension = mlp_hidden_dims[-1]
 
-    def forward(self, x):
-        """
-        Computes FSPool output, given an input.
-        Args:
-            x (torch.tensor of floats): input;
-        return:
-            torch.Tensor: output of the custom attention heads layer.
-        """
-        x_1 = x[:, :, :-1].clone()
-        out = self.mlp.forward(x_1)
-        out = torch.sort(out, dim=2)[0]
+        self.mlp = MLP(config["n_features"], mlp_hidden_dims, config["device"], config["has_skip_connection"],
+                       config["has_batch_norm"], "cnt", config["init_scheme"])
 
-        x_1 = torch.mean(out * self.mat * torch.reshape(x[:, :, -1], (len(x), -1, 1)), dim=1)
-        return torch.reshape(x_1, (x_1.shape[0], 1, -1))
+        self.mat = torch.rand((n_instances_per_class_per_dataset, self.output_dimension))
+        if config["device"] == "gpu":
+            self.mat = self.mat.to("cuda:0")
+
+    def forward(self, instances: torch.Tensor) -> torch.Tensor:
+        features = instances[:, :, :-1].clone()
+        outputs = self.mlp.forward(features)
+        outputs = torch.sort(outputs, dim=2)[0]
+        targets = instances[:, :, -1].reshape((len(instances), -1, 1))
+
+        outputs = torch.mean(outputs * self.mat * targets, dim=1)
+        return outputs.reshape((len(outputs), -1))
+
+    def get_output_dimension(self) -> int:
+        return self.output_dimension
