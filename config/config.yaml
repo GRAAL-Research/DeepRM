@@ -9,7 +9,7 @@ msg_size: 100
 msg_penalty: l1
 msg_penalty_coef: 0
 
-data_compressor_name: kme  # conv_one_by_one, kme, concatenator, fs_pool
+data_encoder_name: kme  # conv_one_by_one, kme, concatenator, fs_pool
 kme_dim: [100]
 fs_pool_dim: [1000]
 conv_one_by_one_n_filters: 3

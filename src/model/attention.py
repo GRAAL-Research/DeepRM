@@ -1,8 +1,8 @@
 import torch
 from torch import nn as nn
 
-from src.model.data_compressor.fspool import FSPool
-from src.model.data_compressor.kme import KME
+from src.model.data_encoder.fspool import FSPool
+from src.model.data_encoder.kme import KME
 from src.model.mlp import MLP
 
 
