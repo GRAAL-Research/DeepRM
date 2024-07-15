@@ -1,6 +1,6 @@
 import torch
 
-from src.model.data_compressor.DataEncoder import DataEncoder
+from src.model.data_encoder.data_encoder import DataEncoder
 
 
 class Concatenator(DataEncoder):

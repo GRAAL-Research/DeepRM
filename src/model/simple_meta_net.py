@@ -2,8 +2,8 @@ import torch
 from torch import nn as nn
 
 from src.model.attention import Attention
-from src.model.data_compressor.create_data_compressor import create_data_compressor_1
-from src.model.data_compressor.kme import KME
+from src.model.data_encoder.create_data_encoder import create_data_compressor_1
+from src.model.data_encoder.kme import KME
 from src.model.mlp import MLP
 
 
