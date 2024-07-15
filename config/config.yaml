@@ -1,22 +1,27 @@
-data_encoder_config_path: data_encoder/kme.yaml
-dataset_config_path: dataset/mnist.yaml
+dataset_config_path: dataset/moon.yaml
 log_config_path: log/off.yaml
 training_config_path: training/gpu.yaml
 
-bound_computation: False
+is_bound_computed: False
 
 msg_type: cnt
-msg_size: 10
-pen_msg: l1
-pen_msg_coef: 0
+msg_size: 100
+msg_penalty: l1
+msg_penalty_coef: 0
 
-comp_set_size: 0
-ca_dim: [0]
-tau: 20
+data_encoder_name: kme  # conv_one_by_one, kme, concatenator, fs_pool
+kme_dim: [100]
+fs_pool_dim: [1000]
+conv_one_by_one_n_filters: 3
 
-mod_1_dim: [100]
-mod_2_dim: [100]
-meta_pred: simplenet
+compression_set_size: 0
+attention_dim: [0]
+attention_temperature: 20
+attention_pooling_type: fs_pool
+
+mlp_1_dim: [100]
+mlp_2_dim: [100]
+meta_pred: simple_net
 pred_hidden_sizes: [3]
 
 has_skip_connection: True
@@ -29,8 +34,8 @@ early_stopping_tolerance: 1e-2
 
 scheduler: plateau
 scheduler_patience: 25
-factor: 0.5
+scheduler_factor: 0.5
 scheduler_threshold: 1e-2
 
 init_scheme: kaiming_unif
-loss_power: 1.0
+loss_exponent: 1.0

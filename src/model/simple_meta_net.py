@@ -1,31 +1,24 @@
 import torch
 from torch import nn as nn
 
-from src.model.custom_attention import CA
-from src.model.data_compressor.create_data_compressor import create_data_compressor_1
-from src.model.data_compressor.kme import KME
+from src.model.attention import Attention
+from src.model.data_encoder.create_data_encoder import create_data_compressor_1
+from src.model.data_encoder.kme import KME
 from src.model.mlp import MLP
 
 
 class SimpleMetaNet(nn.Module):
-    def __init__(self, pred_input_dim, config: dict) -> None:
+    def __init__(self, config: dict, pred_input_dim: int) -> None:
         """
         Generates the DeepRM meta-predictor.
-        Args:
-            pred_input_dim (int): Input dimension of the predictor;
-            config (dictionary) containing the following:
-                comp_set_size (int): compression set size;
-                ca_dim (list of int): custom attention's MLP architecture;
-                mod_1_dim (list of int): MLP #1 architecture;
-                mod_2_dim (list of int): MLP #2 architecture;
-                tau (int): temperature parameter (softmax in custom attention);
+        pred_input_dim (int): Input dimension of the predictor;
         """
         super(SimpleMetaNet, self).__init__()
-        self.comp_set_size = config["comp_set_size"]
+        self.compression_set_size = config["compression_set_size"]
         self.msg_size = config["msg_size"]
         self.msg_type = config["msg_type"]
         self.n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
-        self.mod_1_dim = config["mod_1_dim"] + [self.msg_size]
+        self.mlp_1_dim = config["mlp_1_dim"] + [self.msg_size]
         self.msg = torch.tensor(0.0)  # Message (compression selection)
         self.msk = None  # Mask (compression selection)
         self.input_dim = config["n_features"]
@@ -33,31 +26,27 @@ class SimpleMetaNet(nn.Module):
 
         # Generating the many components (custom attention (CA) multi-heads, KME #1-2, MLP #1-2) of the meta-learner
         self.data_compressor_1 = create_data_compressor_1(config)
-        self.mod_1 = MLP(self.data_compressor_1.get_output_dimension(), self.mod_1_dim, config["device"],
-                         config["has_skip_connection"],
-                         config["has_batch_norm"], config["msg_type"], config["init_scheme"])
+        self.mod_1 = MLP(self.data_compressor_1.get_output_dimension(), self.mlp_1_dim, config["device"],
+                         config["has_skip_connection"], config["has_batch_norm"], config["msg_type"],
+                         config["init_scheme"])
 
         self.cas = nn.ModuleList([])
-        for i in range(self.comp_set_size):
-            self.cas.append(
-                CA(config["n_features"] + 1, config["ca_dim"], config["ca_dim"], config["n_instances_per_dataset"] // 2,
-                   config["device"], config["init_scheme"], config["has_skip_connection"], config["has_batch_norm"],
-                   "fspool", config["tau"]))
+        for i in range(self.compression_set_size):
+            self.cas.append(Attention(config))
 
-        self.kme_2 = KME(config["n_features"] + 1, config["data_compressor_dim"], config["device"],
-                         config["init_scheme"], config["has_skip_connection"], config["has_batch_norm"], config["task"])
+        self.kme_2 = KME(config, hidden_dims=config["kme_dim"])
 
-        self.mod_2 = MLP(self.compute_mod_2_input_dim(), config["mod_2_dim"] + [self.output_dim], config["device"],
+        self.mod_2 = MLP(self.compute_mod_2_input_dim(), config["mlp_2_dim"] + [self.output_dim], config["device"],
                          config["has_skip_connection"], config["has_batch_norm"], "none", config["init_scheme"])
 
     def compute_mod_2_input_dim(self) -> int:
         mod_2_input_dim = 0
-        
-        if self.comp_set_size > 0:
+
+        if self.compression_set_size > 0:
             mod_2_input_dim += self.data_compressor_1.get_output_dimension()
 
         if self.msg_size > 0:
-            mod_2_input_dim += self.mod_1_dim[-1]
+            mod_2_input_dim += self.mlp_1_dim[-1]
 
         return mod_2_input_dim
 
@@ -91,7 +80,7 @@ class SimpleMetaNet(nn.Module):
                 x = self.msg
 
         # Mask computation
-        if self.comp_set_size > 0:
+        if self.compression_set_size > 0:
             mask = self.cas[0].forward(x_ori.clone())
             for j in range(1, len(self.cas)):
                 out = self.cas[j].forward(x_ori.clone())
@@ -125,7 +114,7 @@ class SimpleMetaNet(nn.Module):
             x (torch.tensor of floats): input.
         """
         # Mask computation #
-        if self.comp_set_size > 0:
+        if self.compression_set_size > 0:
             mask = self.cas[0].forward(x.clone())
             for j in range(1, len(self.cas)):
                 out = self.cas[j].forward(x.clone())

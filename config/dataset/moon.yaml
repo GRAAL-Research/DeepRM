@@ -2,7 +2,7 @@ dataset: moon
 
 task: classification
 criterion: bce_loss
-balanced: True
+is_dataset_balanced: True
 splits: [0.55, 0.20, 0.25]
 shuffle_each_dataset_samples: True
 
