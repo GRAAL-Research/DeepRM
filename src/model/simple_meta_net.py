@@ -2,13 +2,13 @@ import torch
 from torch import nn as nn
 
 from src.model.attention import Attention
-from src.model.data_compressor.create_data_compressor import create_data_compressor_1
-from src.model.data_compressor.kme import KME
+from src.model.data_encoder.create_data_encoder import create_data_compressor_1
+from src.model.data_encoder.kme import KME
 from src.model.mlp import MLP
 
 
 class SimpleMetaNet(nn.Module):
-    def __init__(self, pred_input_dim, config: dict) -> None:
+    def __init__(self, config: dict, pred_input_dim: int) -> None:
         """
         Generates the DeepRM meta-predictor.
         pred_input_dim (int): Input dimension of the predictor;
@@ -27,20 +27,14 @@ class SimpleMetaNet(nn.Module):
         # Generating the many components (custom attention (CA) multi-heads, KME #1-2, MLP #1-2) of the meta-learner
         self.data_compressor_1 = create_data_compressor_1(config)
         self.mod_1 = MLP(self.data_compressor_1.get_output_dimension(), self.mlp_1_dim, config["device"],
-                         config["has_skip_connection"],
-                         config["has_batch_norm"], config["msg_type"], config["init_scheme"])
+                         config["has_skip_connection"], config["has_batch_norm"], config["msg_type"],
+                         config["init_scheme"])
 
         self.cas = nn.ModuleList([])
         for i in range(self.compression_set_size):
-            self.cas.append(
-                Attention(config["n_features"] + 1, config["attention_dim"], config["attention_dim"],
-                          config["n_instances_per_dataset"] // 2,
-                          config["device"], config["init_scheme"], config["has_skip_connection"],
-                          config["has_batch_norm"],
-                          "fspool", config["attention_temperature"]))
+            self.cas.append(Attention(config))
 
-        self.kme_2 = KME(config["n_features"] + 1, config["kme_dim"], config["device"],
-                         config["init_scheme"], config["has_skip_connection"], config["has_batch_norm"], config["task"])
+        self.kme_2 = KME(config, hidden_dims=config["kme_dim"])
 
         self.mod_2 = MLP(self.compute_mod_2_input_dim(), config["mlp_2_dim"] + [self.output_dim], config["device"],
                          config["has_skip_connection"], config["has_batch_norm"], "none", config["init_scheme"])

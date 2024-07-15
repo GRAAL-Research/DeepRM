@@ -2,20 +2,22 @@ dataset_config_path: dataset/moon.yaml
 log_config_path: log/off.yaml
 training_config_path: training/gpu.yaml
 
-bound_computation: False
+is_bound_computed: False
 
 msg_type: cnt
 msg_size: 100
 msg_penalty: l1
 msg_penalty_coef: 0
 
-data_compressor_name: kme
+data_encoder_name: kme  # conv_one_by_one, kme, concatenator, fs_pool
 kme_dim: [100]
+fs_pool_dim: [1000]
 conv_one_by_one_n_filters: 3
 
 compression_set_size: 0
 attention_dim: [0]
 attention_temperature: 20
+attention_pooling_type: fs_pool
 
 mlp_1_dim: [100]
 mlp_2_dim: [100]

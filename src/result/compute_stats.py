@@ -9,13 +9,12 @@ from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import lin_loss
 
 
-def stats(task, meta_pred: SimpleMetaNet, pred: Predictor, criterion, data_loader, msg_type, bound_computation, device):
+def stats(task, meta_pred: SimpleMetaNet, pred: Predictor, criterion, data_loader, msg_type, is_bound_computed, device):
     """
     Computes the overall accuracy, loss and bounds of a predictor on given task and dataset.
     Args:
         data_loader (DataLoader): A DataLoader to test on.
         msg_type (str): type of message (choices: 'dsc' (discrete), 'cnt' (continuous));
-        bound_computation (bool): whether to compute the bounds;
     Returns:
         Tuple (float, float): the 0-1 accuracy and loss.
     """
@@ -43,7 +42,7 @@ def stats(task, meta_pred: SimpleMetaNet, pred: Predictor, criterion, data_loade
                 acc = n_instances_per_class_per_dataset * lin_loss(output[1],
                                                                    targets[:, n_instances_per_class_per_dataset:] * 2 - 1)
                 tot_acc.append(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
-                if bound_computation:
+                if is_bound_computed:
                     for b in range(len(inputs)):  # For all datasets, we compute the bounds
                         bnds = compute_bound(['linear', 'hyperparam', 'kl', 'marchand'], meta_pred, pred,
                                              n_instances_per_class_per_dataset,
@@ -55,14 +54,14 @@ def stats(task, meta_pred: SimpleMetaNet, pred: Predictor, criterion, data_loade
                         bnd_kl.append(bnds[2])
                         bnd_mrch.append(bnds[3])
         if task == "classification":
-            if bound_computation:
+            if is_bound_computed:
                 # We only return the mean bound obtained on the various datasets
                 return np.mean(tot_acc), np.sum(tot_loss) / i, \
                        [np.mean(bnd_lin), np.mean(bnd_hyp), np.mean(bnd_kl), np.mean(bnd_mrch)]
             else:
                 return np.mean(tot_acc), np.sum(tot_loss) / i, [np.array(0.0), np.array(0.0), np.array(0.0), np.array(0.0)]
         if task == "regression":
-            if bound_computation:
+            if is_bound_computed:
                 # We only return the mean bound obtained on the various datasets
                 return np.array(0.0), np.sum(tot_loss) / i, \
                        [np.mean(bnd_lin), np.mean(bnd_hyp), np.mean(bnd_kl), np.mean(bnd_mrch)]
