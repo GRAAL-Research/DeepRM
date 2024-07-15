@@ -1,38 +1,30 @@
 import torch
 from torch import nn as nn
 
-from src.model.data_compressor.fspool import FSPool
-from src.model.data_compressor.kme import KME
+from src.model.data_encoder.fspool import FSPool
+from src.model.data_encoder.kme import KME
 from src.model.mlp import MLP
 
 
 class Attention(nn.Module):
-    def __init__(self, config, pooling_type: str) -> None:
-        """
-        Args:
-            pooling_type (str): type of pooling to apply for the query computation
-        """
+    def __init__(self, config: dict) -> None:
         super(Attention, self).__init__()
         self.temperature = config["attention_temperature"]
 
         #   The Keys are always computed by an MLP...
         self.keys = MLP(config["n_features"] + 1, config["attention_dim"], config["device"],
-                        config["has_skip_connection"], config["has_batch_norm"], "cnt",
-                        config["init_scheme"])
+                        config["has_skip_connection"], config["has_batch_norm"], "cnt", config["init_scheme"])
         #   While the Queries might be the result of a pooling component.
-        if pooling_type == "kme":
+
+        if config["attention_pooling_type"].lower() == "kme":
             self.queries = KME(config, hidden_dims=config["attention_dim"])
-        elif pooling_type == "fspool":
-            self.queries = FSPool(config["n_features"] + 1, config["attention_dim"],
-                                  config["n_instances_per_dataset"] // 2, config["device"],
-                                  config["init_scheme"],
-                                  config["has_skip_connection"], config["has_batch_norm"])
-        elif pooling_type == "none":
+        elif config["attention_pooling_type"].lower() == "fspool":
+            self.queries = FSPool(config, config["attention_dim"])
+        elif config["attention_pooling_type"].lower() == "none":
             self.queries = MLP(config["n_features"] + 1, config["attention_dim"], config["device"],
-                               config["has_skip_connection"], config["has_batch_norm"],
-                               "cnt", config["init_scheme"])
+                               config["has_skip_connection"], config["has_batch_norm"], "cnt", config["init_scheme"])
         else:
-            raise NotImplementedError(f"The pooling '{pooling_type}' is not supported.")
+            raise NotImplementedError(f"The pooling '{config['attention_pooling_type']}' is not supported.")
 
     def forward(self, x):
         """
