@@ -1,23 +1,21 @@
 import torch
 from torch import nn as nn
 
-from src.model.data_compressor.DataEncoder import DataEncoder
+from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.mlp import MLP
 
 
 class KME(nn.Module, DataEncoder):
 
-    def __init__(self, input_dim, hidden_dims, device: str, init_scheme: str, has_skip_connection: bool,
-                 has_batch_norm: bool, task: str) -> None:
+    def __init__(self, config: dict, hidden_dims: list[int]) -> None:
         """
         hidden_dims (list of int): architecture of the embedding;
         """
         super(KME, self).__init__()
         self.output_dim = hidden_dims[-1]
-
-        self.embedding = MLP(input_dim - 1, hidden_dims, device, has_skip_connection, has_batch_norm, 'none',
-                             init_scheme)
-        self.task = task
+        self.embedding = MLP(config["n_features"], hidden_dims, config["device"], config["has_skip_connection"],
+                             config["has_batch_norm"], 'none', config["init_scheme"])
+        self.task = config["task"]
 
     def forward(self, x):
         """

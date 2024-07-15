@@ -3,9 +3,9 @@ run_name_content: [[msg_size, batch_size, pred_hidden_sizes, lr]]
 
 batch_size: [50]
 lr: [1e-2, 1e-3]
-data_compressor_name: [KME]  # conv_one_by_one, KME, concatenator
+data_encoder_name: [KME]
 
-mod_1_dim: [[50]]  # [[50], [100], [500], [1000]]
-msg_size: ${mod_1_dim[0]}
-mod_2_dim: ${mod_1_dim}
+mlp_1_dim: [[50]]  # [[50], [100], [500], [1000]]
+#msg_size: ${mlp_1_dim[0]}
+mlp_2_dim: ${mlp_1_dim}
 pred_hidden_sizes: [[10]]
