@@ -38,7 +38,7 @@ def overrode_config_with_grid_search_config(config: dict, grid_search_config: di
         if param_name in overrode_config:
             overrode_config[param_name] = grid_search_config[param_name]
         else:
-            error_message = (f"You cannot override the parameter '{param_name}'"
+            error_message = (f"You cannot override the parameter '{param_name}' "
                              "during grid search because it's not in the config.")
             raise KeyError(error_message)
 

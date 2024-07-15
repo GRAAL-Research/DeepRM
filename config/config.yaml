@@ -1,10 +1,11 @@
-is_using_wandb: False
-is_wandb_alert_activated: False
-project_name: you-can-delete-me
+is_using_wandb: True
+is_wandb_alert_activated: True
+project_name: test
 run_name_content: [msg_size, msg_type]
-is_logging_commit_info: False
+is_logging_commit_info: True
 
-is_saving_completed_runs_locally: False
+is_saving_completed_runs_locally: True
+
 bound_computation: False
 
 dataset: moon
@@ -13,7 +14,7 @@ is_blob_identical: False
 shuffle_each_dataset_samples: True
 balanced: True
 splits: [0.55, 0.20, 0.25]
-n_dataset: 1000
+n_dataset: 2000
 n_instances_per_dataset: 100
 n_features: 2
 
@@ -56,4 +57,4 @@ early_stopping_tolerance: 1e-2
 
 n_epoch: 1000
 batch_size: 200
-device: cpu
+device: gpu
