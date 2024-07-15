@@ -8,7 +8,7 @@ from src.model.mlp import MLP
 
 
 class SimpleMetaNet(nn.Module):
-    def __init__(self, pred_input_dim, config: dict) -> None:
+    def __init__(self, config: dict, pred_input_dim: int) -> None:
         """
         Generates the DeepRM meta-predictor.
         pred_input_dim (int): Input dimension of the predictor;
@@ -33,14 +33,9 @@ class SimpleMetaNet(nn.Module):
         self.cas = nn.ModuleList([])
         for i in range(self.compression_set_size):
             self.cas.append(
-                Attention(config["n_features"] + 1, config["attention_dim"], config["attention_dim"],
-                          config["n_instances_per_dataset"] // 2,
-                          config["device"], config["init_scheme"], config["has_skip_connection"],
-                          config["has_batch_norm"],
-                          "fspool", config["attention_temperature"]))
+                Attention(config, "fspool"))
 
-        self.kme_2 = KME(config["n_features"] + 1, config["kme_dim"], config["device"],
-                         config["init_scheme"], config["has_skip_connection"], config["has_batch_norm"], config["task"])
+        self.kme_2 = KME(config, hidden_dims=config["kme_dim"])
 
         self.mod_2 = MLP(self.compute_mod_2_input_dim(), config["mlp_2_dim"] + [self.output_dim], config["device"],
                          config["has_skip_connection"], config["has_batch_norm"], "none", config["init_scheme"])
