@@ -1,0 +1,8 @@
+is_using_wandb: True
+is_wandb_alert_activated: True
+is_logging_commit_info: True
+
+project_name: you-can-delete-me
+run_name_content: [msg_size, msg_type]
+
+is_saving_completed_runs_locally: True

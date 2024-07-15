@@ -1,35 +1,113 @@
+from pathlib import Path
+
 import numpy as np
 import torch
 import torchvision
 from torchvision import transforms as transforms
+from torchvision.datasets.mnist import MNIST
+from torchvision.transforms import ToTensor
+from torchvision.transforms.functional import to_pil_image
+from tqdm import tqdm
+
+MNIST_DATASET_PATH = Path("dataset")
+MNIST_DEFAULT_IMG_SIZE = (28, 28)
 
 
-def load_mnist():
-    """
-    Generates a set of 90 MNIST binary sub-problems
-    return:
-        Numpy array of dims n x n_instances_per_dataset x n_features
-    """
-    # Loading the initial dataset
-    transform = transforms.Compose([transforms.ToTensor()])
-    trainset = torchvision.datasets.MNIST(root="./datasets", train=True, download=True, transform=transform)
-    testset = torchvision.datasets.MNIST(root="./datasets", train=False, download=True, transform=transform)
-    trainset = torch.hstack((trainset.data.reshape((60000, 28 * 28)), trainset.targets.reshape(60000, -1)))
-    testset = torch.hstack((testset.data.reshape((10000, 28 * 28)), testset.targets.reshape(10000, -1)))
-    dataset = torch.vstack((trainset, testset))
+def load_mnist(config: dict) -> np.ndarray:
+    dataset = obtain_mnist_dataset(config)
+    return create_mnist_binary_datasets(config, dataset)
 
-    # Creating 90 MNIST binary sub-problems
-    data, k = np.zeros((90, 6313 * 2, 28 * 28)), 0
-    indx = np.arange(2 * 6313)  # Randomize the position of the points in the dataset
-    for i in range(10):
-        for j in range(10):
-            if i != j:
-                x_1 = dataset[dataset[:, -1] == i, :-1]
-                x_2 = dataset[dataset[:, -1] == j, :-1]
-                x = torch.vstack((x_1[:6313], x_2[:6313]))
-                y = torch.ones((6313 * 2, 1))
-                y[:6313] -= 1
-                np.random.shuffle(indx)
-                data[k] = torch.hstack((x, y * 2 - 1))[indx]
-                k += 1
-    return data
+
+def create_mnist_binary_datasets(config, dataset):
+    n_digits = 10
+    maximum_of_datasets = n_digits * (n_digits - 1)
+    assertion_msg = f"Given {n_digits} digits, we can't create more than {maximum_of_datasets} MNIST binary datasets."
+    assert config["n_dataset"] <= maximum_of_datasets, assertion_msg
+    assert config["n_instances_per_dataset"] % 2 == 0, "The number of instances per dataset must be even."
+
+    target_dim = 1
+    binary_datasets = np.zeros(
+        (config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] + target_dim))
+
+    n_instance_per_class_per_dataset = config["n_instances_per_dataset"] // 2
+    binary_dataset_idx = 0
+    target_idx = -1
+
+    for first_class in range(n_digits):
+        for second_class in range(n_digits):
+            if binary_dataset_idx == config["n_dataset"]:
+                break
+            if first_class == second_class:
+                continue
+
+            first_class_filter = dataset[:, target_idx] == first_class
+            first_class_x = dataset[first_class_filter, :target_idx]
+
+            second_class_filter = dataset[:, target_idx] == second_class
+            second_class_x = dataset[second_class_filter, :target_idx]
+
+            x = torch.vstack((first_class_x[:n_instance_per_class_per_dataset],
+                              second_class_x[:n_instance_per_class_per_dataset]))
+            y = torch.ones((config["n_instances_per_dataset"], 1))
+            y[:n_instance_per_class_per_dataset] -= 2
+
+            binary_dataset = torch.hstack((x, y))
+            if config["shuffle_each_dataset_samples"]:
+                random_indices = torch.randperm(config["n_instances_per_dataset"])
+                binary_dataset = binary_dataset[random_indices]
+
+            binary_datasets[binary_dataset_idx] = binary_dataset
+            binary_dataset_idx += 1
+
+        if binary_dataset_idx == config["n_dataset"]:
+            break
+
+    return binary_datasets
+
+
+def obtain_mnist_dataset(config: dict) -> torch.Tensor:
+    train_set = create_train_set(config)
+    test_set = create_test_set(config)
+
+    return torch.vstack((train_set, test_set))
+
+
+def create_train_set(config: dict) -> torch.Tensor:
+    train_set = torchvision.datasets.MNIST(root=str(MNIST_DATASET_PATH), train=True, download=True)
+    train_set = apply_transforms_to_dataset(config, train_set)
+    n_instances_in_mnist_train_set = train_set.data.shape[0]
+    data = train_set.data.reshape((n_instances_in_mnist_train_set, config["n_features"]))
+    target = train_set.targets.reshape(n_instances_in_mnist_train_set, -1)
+
+    return torch.hstack((data, target))
+
+
+def create_test_set(config: dict) -> torch.Tensor:
+    test_set = torchvision.datasets.MNIST(root=str(MNIST_DATASET_PATH), train=False, download=True)
+    test_set = apply_transforms_to_dataset(config, test_set)
+    n_instances_in_mnist_test_set = test_set.data.shape[0]
+
+    return torch.hstack((test_set.data.reshape((n_instances_in_mnist_test_set, config["n_features"])),
+                         test_set.targets.reshape(n_instances_in_mnist_test_set, -1)))
+
+
+def apply_transforms_to_dataset(config: dict, dataset: MNIST) -> MNIST:
+    square_root_of_n_features = np.sqrt(config["n_features"])
+    is_a_perfect_square = 0 <= config["n_features"] == int(square_root_of_n_features) ** 2
+    assert is_a_perfect_square, "The number of features must be a perfect square."
+
+    new_img_size = (int(square_root_of_n_features), int(square_root_of_n_features))
+
+    if new_img_size == MNIST_DEFAULT_IMG_SIZE:
+        return dataset
+
+    transform = transforms.Compose([to_pil_image, transforms.Resize(new_img_size), ToTensor()])
+
+    transformed_data = []
+    for img in tqdm(dataset.data, desc="Applying transforms"):
+        img = transform(img)
+        transformed_data.append(img)
+
+    dataset.data = torch.stack(transformed_data).squeeze(1)
+
+    return dataset

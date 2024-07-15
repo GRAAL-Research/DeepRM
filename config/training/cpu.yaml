@@ -1,0 +1,4 @@
+device: cpu
+max_epoch: 1000
+batch_size: 50
+seed: 0

@@ -52,8 +52,7 @@ class Predictor(nn.Module):
         if self.pred_type == "small_nn":
             for _ in range(config["batch_size"]):
                 mlp = MLP(config["n_features"], self.pred_arch[1:], config["device"], config["has_skip_connection"],
-                          config["has_batch_norm"],
-                          "none")
+                          config["has_batch_norm"], "none")
                 mlps.append(mlp)
 
         return mlps

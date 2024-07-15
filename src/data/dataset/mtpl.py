@@ -5,7 +5,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler, KBinsDiscretizer, OneHotEncoder
 
 
-def load_MTPL(task, n, n_instances_per_dataset):
+def load_MTPL(task, n, n_instances_per_dataset) -> np.ndarray:
     """
     Fetch the French Motor Third-Party Liability Claims dataset.
     Args:
@@ -67,7 +67,7 @@ def load_MTPL(task, n, n_instances_per_dataset):
     x, y, weight = column_trans.fit_transform(df).toarray(), [], []
     if task == "frequency":
         df["Frequency"] = df["ClaimNb"] / df["Exposure"]
-        #y = np.array(df["Frequency"].to_numpy() > 0, dtype=int).reshape((-1, 1))
+        # y = np.array(df["Frequency"].to_numpy() > 0, dtype=int).reshape((-1, 1))
         y = np.array(df["Frequency"].to_numpy(), dtype=int).reshape((-1, 1))
         weight = df["Exposure"].to_numpy().reshape((-1, 1))
     elif task == "severity":
