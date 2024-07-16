@@ -53,10 +53,13 @@ def train(meta_pred: SimpleMetaNet, pred: Predictor, data, optimizer, scheduler,
     bound_computation = task_dict['bound_computation']
     task = task_dict['task']
     valid_metric = "valid_acc" if task_dict['task'] == "classification" else "valid_loss"
+    has_batch_norm = task_dict['has_batch_norm']
     n_instances_per_class_per_dataset = task_dict["n_instances_per_dataset"] // 2
 
     torch.autograd.set_detect_anomaly(True)
-    train_loader, valid_loader, test_loader, tr_var, vd_var, te_var = train_valid_loaders(data, batch_size, splits, seed=seed)
+    train_loader, valid_loader, test_loader, tr_var, vd_var, te_var = train_valid_loaders(data, batch_size,
+                                                                                          drop_last=has_batch_norm,
+                                                                                          splits=splits, seed=seed)
     best_rolling_val_acc, best_epoch = 0, 0
     # The following information will be recorded at each epoch
     hist = {'epoch': [],

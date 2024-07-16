@@ -19,7 +19,7 @@ def load_mnist():
     dataset = torch.vstack((trainset, testset))
 
     # Creating 90 MNIST binary sub-problems
-    data, k = np.zeros((90, 6313 * 2, 28 * 28)), 0
+    data, k = np.zeros((90, 6313 * 2, 28 * 28 + 1)), 0
     indx = np.arange(2 * 6313)  # Randomize the position of the points in the dataset
     for i in range(10):
         for j in range(10):
