@@ -1,4 +1,4 @@
-project_name: [message-module-with-kme-exp5]
+project_name: [message-module-with-kme-exp5-moon]
 run_name_content: [[msg_size, lr, batch_size, pred_hidden_sizes, data_encoder_name]]
 
 batch_size: [10, 50, 200]
