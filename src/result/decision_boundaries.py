@@ -1,7 +1,8 @@
 from pathlib import Path
-import torch.nn as nn
+
 import numpy as np
 import torch
+import torch.nn as nn
 from PIL import Image
 from matplotlib import pyplot as plt
 
@@ -26,7 +27,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
         examples = []
         for inputs in data_loader:
             for j in range(len(inputs)):
-                if  i < max_number_vis:
+                if i < max_number_vis:
                     plt.figure().clear()
                     plt.close()
                     plt.cla()
@@ -36,7 +37,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                     inputs, targets = inputs.float(), targets.float()
                     # ... so that each class can be plotted with different colours
 
-                    x = inputs[j:j+1]
+                    x = inputs[j:j + 1]
                     m = int(len(x[0]) / 2)
                     if str(device) == "gpu":
                         inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
@@ -56,11 +57,14 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                         mesh = np.array(np.c_[xx.ravel(), yy.ravel()])
                         mesh = np.hstack((mesh, np.ones((len(mesh), 1))))
                         mesh = torch.from_numpy(np.array([mesh])).float()
-                        if str(device) == "gpu":
+                        if device == "gpu":
                             mesh = mesh.cuda()
                         pred.set_weights(meta_output, 1)
 
+                        if device == "gpu":
+                            x = x.cuda()
                         _, z = pred.forward(x)
+
                         acc = lin_loss(z[0], x[0, :, -1])
                         plt.scatter(x[0, x[0, :, 2] == 1, 0].cpu(), x[0, x[0, :, 2] == 1, 1].cpu(), c="r")
                         plt.scatter(x[0, x[0, :, 2] == -1, 0].cpu(), x[0, x[0, :, 2] == -1, 1].cpu(), c="b")
