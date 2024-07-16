@@ -9,16 +9,48 @@ from torchvision.transforms import ToTensor
 from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
 
-MNIST_DATASET_PATH = Path("dataset")
+from src.config.utils import load_yaml_file_content, CONFIG_BASE_PATH
+
+DATA_BASE_PATH = Path("dataset")
+MNIST_BASE_PATH = DATA_BASE_PATH / "MNIST"
 MNIST_DEFAULT_IMG_SIZE = (28, 28)
+MNIST_CACHE_BASE_PATH = MNIST_BASE_PATH / "cache"
+NUMPY_FILE_EXTENSION = ".npy"
 
 
 def load_mnist(config: dict) -> np.ndarray:
+    expected_datasets_cache_path = create_datasets_cache_path(config)
+
+    if expected_datasets_cache_path.exists():
+        return np.load(expected_datasets_cache_path)
+
+    return create_and_store_mnist_datasets(config)
+
+
+def create_datasets_cache_path(config: dict) -> Path:
+    dataset_config_not_overrode_by_grid_search_config = load_yaml_file_content(
+        CONFIG_BASE_PATH / config["dataset_config_path"])
+    file_name = []
+    for key in dataset_config_not_overrode_by_grid_search_config.keys():
+        file_name.append(f"{key}={config[key]}")
+
+    return MNIST_CACHE_BASE_PATH / ("-".join(file_name) + NUMPY_FILE_EXTENSION)
+
+
+def create_and_store_mnist_datasets(config: dict) -> np.ndarray:
     dataset = obtain_mnist_dataset(config)
-    return create_mnist_binary_datasets(config, dataset)
+    datasets = create_mnist_binary_datasets(config, dataset)
+    store_mnist_datasets(config, datasets)
+
+    return datasets
 
 
-def create_mnist_binary_datasets(config, dataset):
+def store_mnist_datasets(config: dict, datasets: np.ndarray) -> None:
+    MNIST_CACHE_BASE_PATH.mkdir(exist_ok=True)
+    np.save(create_datasets_cache_path(config), datasets)
+
+
+def create_mnist_binary_datasets(config: dict, dataset) -> np.ndarray:
     n_digits = 10
     maximum_of_datasets = n_digits * (n_digits - 1)
     assertion_msg = f"Given {n_digits} digits, we can't create more than {maximum_of_datasets} MNIST binary datasets."
@@ -73,7 +105,7 @@ def obtain_mnist_dataset(config: dict) -> torch.Tensor:
 
 
 def create_train_set(config: dict) -> torch.Tensor:
-    train_set = torchvision.datasets.MNIST(root=str(MNIST_DATASET_PATH), train=True, download=True)
+    train_set = torchvision.datasets.MNIST(root=str(DATA_BASE_PATH), train=True, download=True)
     train_set = apply_transforms_to_dataset(config, train_set)
     n_instances_in_mnist_train_set = train_set.data.shape[0]
     data = train_set.data.reshape((n_instances_in_mnist_train_set, config["n_features"]))
@@ -83,7 +115,7 @@ def create_train_set(config: dict) -> torch.Tensor:
 
 
 def create_test_set(config: dict) -> torch.Tensor:
-    test_set = torchvision.datasets.MNIST(root=str(MNIST_DATASET_PATH), train=False, download=True)
+    test_set = torchvision.datasets.MNIST(root=str(DATA_BASE_PATH), train=False, download=True)
     test_set = apply_transforms_to_dataset(config, test_set)
     n_instances_in_mnist_test_set = test_set.data.shape[0]
 
@@ -104,7 +136,7 @@ def apply_transforms_to_dataset(config: dict, dataset: MNIST) -> MNIST:
     transform = transforms.Compose([to_pil_image, transforms.Resize(new_img_size), ToTensor()])
 
     transformed_data = []
-    for img in tqdm(dataset.data, desc="Applying transforms"):
+    for img in tqdm(dataset.data, desc="Applying MNIST's transforms"):
         img = transform(img)
         transformed_data.append(img)
 
