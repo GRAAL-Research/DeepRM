@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch import nn as nn
+from src.model.lazy_batch_norm import LazyBatchNorm
 
 from src.model.utils.initialize_weights import initialize_weights
 from src.model.utils.sign_straight_through import SignStraightThrough
@@ -35,12 +36,7 @@ class MLP(nn.Module):
         modules = torch.nn.ModuleList()
         for dim_idx in range(len(input_and_hidden_dims) - 1):
             if has_batch_norm:
-                if batch_norm_dim == 1:
-                    modules.append(nn.LazyBatchNorm1d())
-                elif batch_norm_dim == 2:
-                    modules.append(nn.LazyBatchNorm2d())
-                elif batch_norm_dim == 3:
-                    modules.append(nn.LazyBatchNorm3d())
+                modules.append(LazyBatchNorm())
             modules.append(nn.Linear(input_and_hidden_dims[dim_idx], input_and_hidden_dims[dim_idx + 1]))
 
             is_last_layer = dim_idx == len(input_and_hidden_dims) - 2
