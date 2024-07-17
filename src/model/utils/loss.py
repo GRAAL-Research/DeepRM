@@ -10,14 +10,13 @@ def lin_loss(output, targets):
     Return:
         Float, the total linear loss incurred.
     """
-    tot = 0
     if torch.sum(targets == 1) > 0:
-        tot += torch.mean(((output[targets == 1] * targets[targets == 1]) + 1) / 4, dim=0)
+        tot = torch.mean(((output[targets == 1] * targets[targets == 1]) + 1) / 4)
     else:
-        tot += torch.tensor(0.5)
+        tot = torch.tensor(0.5)
         print("This batch contains only examples from a single class.")
     if torch.sum(targets == -1) > 0:
-        tot += torch.mean(((output[targets == -1] * targets[targets == -1]) + 1) / 4, dim=0)
+        tot += torch.mean(((output[targets == -1] * targets[targets == -1]) + 1) / 4)
     else:
         tot += torch.tensor(0.5)
         print("This batch contains only examples from a single class.")

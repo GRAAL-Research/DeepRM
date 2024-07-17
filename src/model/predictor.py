@@ -45,20 +45,17 @@ class Predictor(nn.Module):
 
         raise NotImplementedError(f"The predictor type '{self.pred_type}' is not supported.")
 
-    def create_predictor(self, config: dict) -> list[MLP]:
+    def create_predictor(self, config: dict) -> MLP:
         """
         Initialize the predictors: one predictor per dataset in a batch. Only relevant if pred_type == "small_nn".
         """
-        mlps = []
         if self.pred_type == "small_nn":
-            for _ in range(config["batch_size"]):
-                mlp = MLP(config["n_features"], self.pred_arch[1:], config["device"], config["has_skip_connection"],
-                          config["has_batch_norm"], "none")
-                mlps.append(mlp)
+            mlp = MLP(config["n_features"], self.pred_arch[1:], config["device"], config["has_skip_connection"],
+                      config["has_batch_norm"], "none")
+        return mlp
 
-        return mlps
 
-    def set_weights(self, weights, batch_size):
+    def set_weights(self, weights):
         """
         Fixes the weights of the various predictors.
         Args:
@@ -66,24 +63,6 @@ class Predictor(nn.Module):
             batch_size (int): batch size.
         """
         self.weights = weights
-        if self.pred_type == "small_nn":
-            for batch_idx in range(batch_size):
-                count_1 = 0
-                count_2 = 0
-                linear_layer_idx = 0
-                for layer in self.pred[batch_idx].module:
-                    if not isinstance(layer, nn.Linear):
-                        continue
-                    count_2 += self.pred_arch[linear_layer_idx] * self.pred_arch[linear_layer_idx + 1]
-                    layer.weight.data = torch.reshape(self.weights[batch_idx, count_1:count_2],
-                                                      (self.pred_arch[linear_layer_idx + 1],
-                                                       self.pred_arch[linear_layer_idx]))
-                    count_1 += self.pred_arch[linear_layer_idx] * self.pred_arch[linear_layer_idx + 1]
-                    count_2 += self.pred_arch[linear_layer_idx + 1]
-                    layer.bias.data = torch.reshape(self.weights[batch_idx, count_1:count_2],
-                                                    (self.pred_arch[linear_layer_idx + 1],))
-                    count_1 += self.pred_arch[linear_layer_idx + 1]
-                    linear_layer_idx += 1
 
     def forward(self, inputs, use_last_values=False, save_bn_params=False):
         if not use_last_values:
@@ -97,7 +76,7 @@ class Predictor(nn.Module):
             batch_size = len(inputs)
             input_0 = inputs[:, :, :-1]
             count_1, count_2, n_batch_norm, j = 0, 0, 0, 0
-            for layer in self.pred[0].module:
+            for layer in self.pred.module:
                 if isinstance(layer, nn.Linear):
                     count_2 += self.pred_arch[j] * self.pred_arch[j + 1]
                     w = torch.reshape(self.weights[:, count_1:count_2],

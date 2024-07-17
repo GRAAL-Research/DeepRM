@@ -25,10 +25,9 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
         i = 0
         examples = []
         for inputs in data_loader:
-            targets = (inputs.clone()[:, :, -1] + 1) / 2
-            inputs, targets = inputs.float(), targets.float()
+            inputs = inputs.float()
             if str(device) == "gpu":
-                inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
+                inputs, meta_pred = inputs.cuda(), meta_pred.cuda()
             m = int(len(inputs[0]) / 2)
             meta_outpt = meta_pred(inputs[:, :m])
             for j in range(len(inputs)):
@@ -57,7 +56,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                         mesh = torch.from_numpy(np.array([mesh])).float()
                         if str(device) == "gpu":
                             mesh = mesh.cuda()
-                        pred.set_weights(meta_output, 1)
+                        pred.set_weights(meta_output)
 
                         _, z = pred.forward(x, save_bn_params=True)
                         acc = lin_loss(z, x[0, :, -1])
