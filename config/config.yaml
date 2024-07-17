@@ -1,6 +1,6 @@
 dataset_config_path: dataset/moon.yaml
 log_config_path: log/off.yaml
-training_config_path: training/cpu.yaml
+training_config_path: training/gpu.yaml
 
 is_bound_computed: False
 
@@ -17,7 +17,7 @@ conv_one_by_one_n_filters: 3
 compression_set_size: 0
 attention_dim: [0]
 attention_temperature: 20
-attention_pooling_type: kme
+attention_pooling_type: fs_pool
 
 mlp_1_dim: [100]
 mlp_2_dim: [100]
@@ -28,7 +28,7 @@ has_skip_connection: True
 has_batch_norm: True
 
 optimizer: adam
-lr: 1e-3
+lr: 1e-2
 early_stopping_patience: 75
 early_stopping_tolerance: 1e-2
 
