@@ -2,6 +2,7 @@ import torch
 from torch import nn as nn
 
 from src.model.mlp import MLP
+from src.model.lazy_batch_norm import LazyBatchNorm
 
 
 class Predictor(nn.Module):
@@ -84,7 +85,7 @@ class Predictor(nn.Module):
                     count_1 += self.pred_arch[linear_layer_idx + 1]
                     linear_layer_idx += 1
 
-    def forward(self, inputs, use_last_values=False):
+    def forward(self, inputs, use_last_values=False, save_bn_params=False):
         if not use_last_values:
             self.batch_norm_params = []
         out = 0
@@ -108,20 +109,8 @@ class Predictor(nn.Module):
                     j += 1
                     w = torch.transpose(w, 1, 2)
                     input_0 = torch.matmul(input_0, w) + b
-                elif isinstance(layer, nn.BatchNorm1d) or \
-                        isinstance(layer, nn.BatchNorm2d) or \
-                        isinstance(layer, nn.BatchNorm3d):
-                    if use_last_values:
-                        curr_params = self.batch_norm_params[n_batch_norm]
-                        input_0 = (input_0 - curr_params['mean']) / torch.sqrt(curr_params['var'] + 1e-5) * \
-                                  curr_params['gamma'] + curr_params['beta']
-                    else:
-                        dico = {'mean': torch.mean(input_0, dim=0).clone(),
-                                'var': torch.var(input_0, dim=0).clone()}
-                        input_0 = layer(input_0)
-                        dico['gamma'] = layer.weight.clone()
-                        dico['beta'] = layer.bias.clone()
-                        self.batch_norm_params.append(dico)
+                elif isinstance(layer, LazyBatchNorm):
+                    input_0 = layer.forward(input_0, use_last_values, save_bn_params)
                     n_batch_norm += 1
                 else:
                     input_0 = layer(input_0)
