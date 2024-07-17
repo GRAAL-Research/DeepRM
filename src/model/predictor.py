@@ -110,7 +110,12 @@ class Predictor(nn.Module):
                     w = torch.transpose(w, 1, 2)
                     input_0 = torch.matmul(input_0, w) + b
                 elif isinstance(layer, LazyBatchNorm):
-                    input_0 = layer.forward(input_0, use_last_values, save_bn_params)
+                    if use_last_values:
+                        input_0 = layer.forward(input_0, use_last_values=use_last_values)
+                    elif save_bn_params:
+                        input_0 = layer.forward(input_0, save_bn_params=save_bn_params)
+                    else:
+                        input_0 = layer.forward(input_0)
                     n_batch_norm += 1
                 else:
                     input_0 = layer(input_0)
