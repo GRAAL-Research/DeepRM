@@ -3,8 +3,9 @@ from torch import nn as nn
 
 
 class LazyBatchNorm(nn.Module):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, device: str = "cpu", *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.device = device
         self.used = False
         self.gamma = None
         self.beta = None
@@ -27,6 +28,9 @@ class LazyBatchNorm(nn.Module):
             shape = [1] * len(x.shape)
             self.gamma = torch.normal(1, torch.ones(shape) * 1e-5)
             self.beta = torch.normal(0, torch.ones(shape) * 1e-5)
+            if self.device == "gpu":
+                self.gamma = self.gamma.to(device='cuda:0')
+                self.beta = self.beta.to(device='cuda:0')
             self.used = True
         if use_last_values:     # Whether to use previously saved means and stds
             return (x - self.last_mean) / (self.last_std + 1e-10) * \
