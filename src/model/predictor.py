@@ -2,6 +2,7 @@ import torch
 from torch import nn as nn
 
 from src.model.mlp import MLP
+from src.model.lazy_batch_norm import LazyBatchNorm
 
 
 class Predictor(nn.Module):
@@ -44,20 +45,17 @@ class Predictor(nn.Module):
 
         raise NotImplementedError(f"The predictor type '{self.pred_type}' is not supported.")
 
-    def create_predictor(self, config: dict) -> list[MLP]:
+    def create_predictor(self, config: dict) -> MLP:
         """
         Initialize the predictors: one predictor per dataset in a batch. Only relevant if pred_type == "small_nn".
         """
-        mlps = []
         if self.pred_type == "small_nn":
-            for _ in range(config["batch_size"]):
-                mlp = MLP(config["n_features"], self.pred_arch[1:], config["device"], config["has_skip_connection"],
-                          config["has_batch_norm"], "none")
-                mlps.append(mlp)
+            mlp = MLP(config["n_features"], self.pred_arch[1:], config["device"], config["has_skip_connection"],
+                      config["has_batch_norm"], "none")
+        return mlp
 
-        return mlps
 
-    def set_weights(self, weights, batch_size):
+    def set_weights(self, weights):
         """
         Fixes the weights of the various predictors.
         Args:
@@ -65,26 +63,8 @@ class Predictor(nn.Module):
             batch_size (int): batch size.
         """
         self.weights = weights
-        if self.pred_type == "small_nn":
-            for batch_idx in range(batch_size):
-                count_1 = 0
-                count_2 = 0
-                linear_layer_idx = 0
-                for layer in self.pred[batch_idx].module:
-                    if not isinstance(layer, nn.Linear):
-                        continue
-                    count_2 += self.pred_arch[linear_layer_idx] * self.pred_arch[linear_layer_idx + 1]
-                    layer.weight.data = torch.reshape(self.weights[batch_idx, count_1:count_2],
-                                                      (self.pred_arch[linear_layer_idx + 1],
-                                                       self.pred_arch[linear_layer_idx]))
-                    count_1 += self.pred_arch[linear_layer_idx] * self.pred_arch[linear_layer_idx + 1]
-                    count_2 += self.pred_arch[linear_layer_idx + 1]
-                    layer.bias.data = torch.reshape(self.weights[batch_idx, count_1:count_2],
-                                                    (self.pred_arch[linear_layer_idx + 1],))
-                    count_1 += self.pred_arch[linear_layer_idx + 1]
-                    linear_layer_idx += 1
 
-    def forward(self, inputs, use_last_values=False):
+    def forward(self, inputs, use_last_values=False, save_bn_params=False):
         if not use_last_values:
             self.batch_norm_params = []
         out = 0
@@ -93,68 +73,33 @@ class Predictor(nn.Module):
                    + self.weights[:, -1])
             out = torch.transpose(out, 0, 1)
         elif self.pred_type == "small_nn":
-            input_0 = inputs[0, :, :-1]
+            batch_size = len(inputs)
+            input_0 = inputs[:, :, :-1]
             count_1, count_2, n_batch_norm, j = 0, 0, 0, 0
-            for layer in self.pred[0].module:
+            for layer in self.pred.module:
                 if isinstance(layer, nn.Linear):
                     count_2 += self.pred_arch[j] * self.pred_arch[j + 1]
-                    w = torch.reshape(self.weights[0, count_1:count_2], (self.pred_arch[j + 1], self.pred_arch[j]))
+                    w = torch.reshape(self.weights[:, count_1:count_2],
+                                      (batch_size, self.pred_arch[j + 1], self.pred_arch[j]))
                     count_1 += self.pred_arch[j] * self.pred_arch[j + 1]
                     count_2 += self.pred_arch[j + 1]
-                    b = torch.reshape(self.weights[0, count_1:count_2], (self.pred_arch[j + 1],))
+                    b = torch.reshape(self.weights[:, count_1:count_2], (batch_size, 1, self.pred_arch[j + 1]))
                     count_1 += self.pred_arch[j + 1]
                     j += 1
-                    input_0 = torch.matmul(input_0, w.T) + b
-                elif isinstance(layer, nn.BatchNorm1d) or \
-                        isinstance(layer, nn.BatchNorm2d) or \
-                        isinstance(layer, nn.BatchNorm3d):
+                    w = torch.transpose(w, 1, 2)
+                    input_0 = torch.matmul(input_0, w) + b
+                elif isinstance(layer, LazyBatchNorm):
                     if use_last_values:
-                        curr_params = self.batch_norm_params[n_batch_norm]
-                        input_0 = (input_0 - curr_params['mean']) / torch.sqrt(curr_params['var'] + 1e-5) * \
-                                  curr_params['gamma'] + curr_params['beta']
+                        input_0 = layer.forward(input_0, use_last_values=use_last_values)
+                    elif save_bn_params:
+                        input_0 = layer.forward(input_0, save_bn_params=save_bn_params)
                     else:
-                        dico = {'mean': torch.mean(input_0, dim=0).clone(),
-                                'var': torch.var(input_0, dim=0).clone()}
-                        input_0 = layer(input_0)
-                        dico['gamma'] = layer.weight.clone()
-                        dico['beta'] = layer.bias.clone()
-                        self.batch_norm_params.append(dico)
+                        input_0 = layer.forward(input_0)
                     n_batch_norm += 1
                 else:
                     input_0 = layer(input_0)
             out = input_0
-            for i in range(1, len(inputs)):
-                input_i = inputs[i, :, :-1]
-                count_1, count_2, j = 0, 0, 0
-                for layer in self.pred[i].module:
-                    if isinstance(layer, nn.Linear):
-                        count_2 += self.pred_arch[j] * self.pred_arch[j + 1]
-                        w = torch.reshape(self.weights[i, count_1:count_2], (self.pred_arch[j + 1], self.pred_arch[j]))
-                        count_1 += self.pred_arch[j] * self.pred_arch[j + 1]
-                        count_2 += self.pred_arch[j + 1]
-                        b = torch.reshape(self.weights[i, count_1:count_2], (self.pred_arch[j + 1],))
-                        count_1 += self.pred_arch[j + 1]
-                        j += 1
-                        input_i = torch.matmul(input_i, w.T) + b
-                    elif isinstance(layer, nn.BatchNorm1d) or \
-                            isinstance(layer, nn.BatchNorm2d) or \
-                            isinstance(layer, nn.BatchNorm3d):
-                        if use_last_values:
-                            curr_params = self.batch_norm_params[n_batch_norm]
-                            input_i = (input_i - curr_params['mean']) / torch.sqrt(curr_params['var'] + 1e-5) * \
-                                      curr_params['gamma'] + curr_params['beta']
-                        else:
-                            dico = {'mean': torch.mean(input_i, dim=0).clone(),
-                                    'var': torch.var(input_i, dim=0).clone()}
-                            input_i = layer(input_i)
-                            dico['gamma'] = layer.weight.clone()
-                            dico['beta'] = layer.bias.clone()
-                            self.batch_norm_params.append(dico)
-                        n_batch_norm += 1
-                    else:
-                        input_i = layer(input_i)
-                out = torch.hstack((out, input_i))
-            out = torch.transpose(out, 0, 1)
+            out = torch.squeeze(torch.transpose(out, 1, 2))
         if self.task == "classification":
             return torch.sigmoid(out), torch.sign(out)
         elif self.task == "regression":
