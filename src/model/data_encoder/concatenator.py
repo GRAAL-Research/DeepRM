@@ -5,6 +5,7 @@ from src.model.data_encoder.data_encoder import DataEncoder
 
 class Concatenator(DataEncoder):
     def __init__(self, config: dict, n_instances_per_dataset_fed_to_deep_rm: int, is_target_provided: bool) -> None:
+        super().__init__()
         self.device = config["device"]
 
         instance_length = config["n_features"]

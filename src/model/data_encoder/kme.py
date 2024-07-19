@@ -5,13 +5,13 @@ from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.mlp import MLP
 
 
-class KME(nn.Module, DataEncoder):
+class KME(DataEncoder):
 
     def __init__(self, config: dict, hidden_dims: list[int]) -> None:
         """
         hidden_dims (list of int): architecture of the embedding;
         """
-        super(KME, self).__init__()
+        super().__init__()
         self.output_dim = hidden_dims[-1]
         self.embedding = MLP(config["n_features"], hidden_dims, config["device"], config["has_skip_connection"],
                              config["has_batch_norm"], 'none', config["init_scheme"])
