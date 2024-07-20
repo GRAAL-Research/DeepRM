@@ -25,7 +25,7 @@ class LazyBatchNorm(nn.Module):
             torch.Tensor: output of the custom attention heads layer.
         """
         if not self.used:   # For the first usage, the dims are stored; scale and offsets are initialized
-            shape = [1] * len(x.shape)
+            shape = [1] * (len(x.shape) - 1) + [x.shape[-1]]
             self.gamma = torch.normal(1, torch.ones(shape) * 1e-5)
             self.beta = torch.normal(0, torch.ones(shape) * 1e-5)
             if self.device == "gpu":
