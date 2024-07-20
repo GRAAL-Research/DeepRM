@@ -1,11 +1,11 @@
-project_name: [message-module-with-kme-exp5-moon]
+project_name: [message-module-with-kme-exp5-mnist]
 run_name_content: [[msg_size, lr, batch_size, pred_hidden_sizes, data_encoder_name]]
 
 batch_size: [10, 50, 200]
 lr: [1e-1, 1e-2, 1e-3, 1e-4]
 data_encoder_name: [KME, conv_one_by_one, concatenator, fs_pool]
 
-mlp_1_dim: [[1000]] # [[50], [100], [500], [1000]]
+mlp_1_dim: [[50]] # [[50], [100], [500], [1000]]
 msg_size: ${mlp_1_dim[0]}
 mlp_2_dim: ${mlp_1_dim}
 pred_hidden_sizes: [[3], [10]]
