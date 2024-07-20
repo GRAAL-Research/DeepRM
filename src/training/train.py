@@ -10,6 +10,7 @@ from src.data.loaders import train_valid_loaders
 from src.model.predictor import Predictor
 from src.result.compute_stats import stats
 from src.result.decision_boundaries import show_decision_boundaries
+from src.result.performance_matrix import show_performance_matrix
 from src.result.history import update_hist, update_wandb
 from src.training.criterion import create_criterion
 from src.training.message_penalty import create_message_penalty_function
@@ -68,7 +69,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
 
                 optimizer.zero_grad()
                 meta_output = meta_predictor(instances)
-                pred.set_weights(meta_output, len(instances))
+                pred.set_weights(meta_output)
                 output, _ = pred.forward(instances)
 
                 if config["is_dataset_balanced"] or config["task"] == "regression":
@@ -138,6 +139,12 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
 
     if config["n_features"] == 2 and config["is_using_wandb"]:
         show_decision_boundaries(meta_predictor, config["dataset"], test_loader, pred, wandb, config["device"])
+    if config["dataset"] == "mnist":
+        shuffle = config["shuffle_each_dataset_samples"]
+        config["shuffle_each_dataset_samples"] = False
+        dataset = create_datasets(config)
+        config["shuffle_each_dataset_samples"] = shuffle
+        show_performance_matrix(meta_predictor, pred, dataset, config["is_using_wandb"], wandb, config["device"])
 
     if config["is_using_wandb"]:
         if is_sending_wandb_last_run_alert and config["is_wandb_alert_activated"]:
