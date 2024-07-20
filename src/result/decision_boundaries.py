@@ -19,26 +19,28 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
         wandb (package): the weights and biases package;
         device (str): "gpu", or "cpu"; whether to use the gpu.
     """
-    max_number_vis = 32  # Maximum number of decision boundaries to compute
+    max_number_vis = 16  # Maximum number of decision boundaries to compute
     meta_pred.eval()
     with torch.no_grad():
         i = 0
         examples = []
         for inputs in data_loader:
-            inputs = inputs.float()
-            if str(device) == "gpu":
-                inputs, meta_pred = inputs.cuda(), meta_pred.cuda()
-            m = int(len(inputs[0]) / 2)
-            meta_outpt = meta_pred(inputs[:, :m])
             for j in range(len(inputs)):
-                if i < max_number_vis:
+                if  i < max_number_vis:
                     plt.figure().clear()
                     plt.close()
                     plt.cla()
                     plt.clf()
                     i += 1
+                    targets = (inputs.clone()[:, :, -1] + 1) / 2
+                    inputs, targets = inputs.float(), targets.float()
+                    # ... so that each class can be plotted with different colours
+
                     x = inputs[j:j+1]
-                    meta_output = meta_outpt[j:j + 1]
+                    m = int(len(x[0]) / 2)
+                    if str(device) == "gpu":
+                        inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
+                    meta_output = meta_pred(inputs[:, :m])[j:j + 1]
                     if pred.pred_type == "linear_classif":
                         px = [-20, 20]
                         py = [-(-20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1],
@@ -56,16 +58,16 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                         mesh = torch.from_numpy(np.array([mesh])).float()
                         if str(device) == "gpu":
                             mesh = mesh.cuda()
-                        pred.set_weights(meta_output)
+                        pred.set_weights(meta_output, 1)
 
-                        _, z = pred.forward(x, save_bn_params=True)
-                        acc = lin_loss(z, x[0, :, -1])
+                        _, z = pred.forward(x)
+                        acc = lin_loss(z[0], x[0, :, -1])
                         plt.scatter(x[0, x[0, :, 2] == 1, 0].cpu(), x[0, x[0, :, 2] == 1, 1].cpu(), c="r")
                         plt.scatter(x[0, x[0, :, 2] == -1, 0].cpu(), x[0, x[0, :, 2] == -1, 1].cpu(), c="b")
                         plt.text(torch.mean(x[0, :, 0].cpu()) - 9.5,
                                  torch.mean(x[0, :, 1].cpu()) - 9.2,
                                  f"Accuracy: {round(acc.item() * 100, 2)}%",
-                                 bbox=dict(fill=True, color='white', linewidth=2))
+                                 bbox=dict(fill=True, color='white', edgecolor='black', linewidth=2))
 
                         _, z = pred.forward(mesh, use_last_values=True)
                         z = z.reshape(xx.shape).cpu()

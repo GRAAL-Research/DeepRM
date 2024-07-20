@@ -34,7 +34,7 @@ def stats(task, meta_pred: SimpleMetaNet, pred: Predictor, criterion, data_loade
                 inputs, targets, meta_pred = inputs.cuda(), targets.cuda(), meta_pred.cuda()
             meta_output = meta_pred(
                 inputs[:, :n_instances_per_class_per_dataset])  # Computing the parameters of the predictor
-            pred.set_weights(meta_output)  # Updating the weights of the predictor
+            pred.set_weights(meta_output, len(inputs))  # Updating the weights of the predictor
             output = pred.forward(inputs[:, n_instances_per_class_per_dataset:])  # Computing the predictions for the task
             loss = criterion(output[0], targets[:, n_instances_per_class_per_dataset:])  # Loss computation
             tot_loss.append(torch.sum(loss).cpu())
