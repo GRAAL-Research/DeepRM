@@ -4,10 +4,10 @@ import torch.nn as nn
 from src.model.data_encoder.data_encoder import DataEncoder
 
 
-class ConvOneByOneBlock(nn.Module, DataEncoder):
+class ConvOneByOneBlock(DataEncoder):
     def __init__(self, n_features: int, n_instances_per_dataset_fed_to_deep_rm: int, n_filters: int,
                  is_target_provided: bool) -> None:
-        super(ConvOneByOneBlock, self).__init__()
+        super().__init__()
         self.output_dim = n_filters * n_instances_per_dataset_fed_to_deep_rm
 
         n_input_channels = n_features

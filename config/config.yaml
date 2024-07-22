@@ -13,6 +13,12 @@ data_encoder_name: kme
 kme_dim: [100]
 fs_pool_dim: [1000]
 conv_one_by_one_n_filters: 3
+tfm_input_dim: 64
+tfm_n_heads: 1
+tfm_mlp_dim: 50
+tfm_n_encoders: 1
+tfm_drop_out: 0
+tfm_output_dim: 10
 
 compression_set_size: 0
 attention_dim: [0]
