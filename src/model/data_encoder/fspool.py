@@ -5,11 +5,10 @@ from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.mlp import MLP
 
 
-class FSPool(nn.Module, DataEncoder):
-
+class FSPool(DataEncoder):
     def __init__(self, config: dict, mlp_hidden_dims: list[int]) -> None:
         n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
-        super(FSPool, self).__init__()
+        super().__init__()
         self.output_dimension = mlp_hidden_dims[-1]
 
         self.mlp = MLP(config["n_features"], mlp_hidden_dims, config["device"], config["has_skip_connection"],

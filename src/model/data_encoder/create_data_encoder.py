@@ -1,8 +1,9 @@
-from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.data_encoder.concatenator import Concatenator
 from src.model.data_encoder.conv_one_by_one_block import ConvOneByOneBlock
+from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.data_encoder.fspool import FSPool
 from src.model.data_encoder.kme import KME
+from src.model.data_encoder.customer_transformer_encoder import  CustomTransformerEncoder
 
 
 def create_data_compressor_1(config: dict) -> DataEncoder:
@@ -17,10 +18,13 @@ def create_data_compressor_1(config: dict) -> DataEncoder:
 
     if data_encoder_name.lower() == "conv_one_by_one":
         n_instances_per_dataset_fed_to_deep_rm = config["n_instances_per_dataset"] // 2
-        return ConvOneByOneBlock(config["n_features"], n_instances_per_dataset_fed_to_deep_rm, 
+        return ConvOneByOneBlock(config["n_features"], n_instances_per_dataset_fed_to_deep_rm,
                                  config["conv_one_by_one_n_filters"], is_target_provided=True)
 
     if data_encoder_name.lower() == "fs_pool":
         return FSPool(config, config["fs_pool_dim"])
+
+    if data_encoder_name.lower() == "transformer":
+        return CustomTransformerEncoder(config)
 
     raise NotImplementedError(f"'{data_encoder_name}' is not supported.")

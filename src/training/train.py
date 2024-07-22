@@ -56,16 +56,22 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
     for epoch_idx in range(config["max_epoch"]):
         meta_predictor.train()
         with (torch.enable_grad()):
-            for inputs in train_loader:  # Iterating over the various batches
-                inputs = inputs.float()[:, n_instances_per_class_per_dataset:]
-                targets = (inputs.clone()[:, :, -1] + 1) / 2
-                inputs, targets = inputs.float(), targets.float()
+            for instances in train_loader:
+                instances = instances.float()[:, n_instances_per_class_per_dataset:]
+                targets = (instances.clone()[:, :, -1] + 1) / 2
+                instances = instances.float()
+                targets = targets.float()
+
                 if config["device"] == "gpu":
-                    inputs, targets, meta_predictor = inputs.cuda(), targets.cuda(), meta_predictor.cuda()
+                    instances = instances.cuda()
+                    targets = targets.cuda()
+                    meta_predictor = meta_predictor.cuda()
+
                 optimizer.zero_grad()
-                meta_output = meta_predictor(inputs)
+                meta_output = meta_predictor(instances)
                 pred.set_weights(meta_output)
-                output, _ = pred.forward(inputs)
+                output, _ = pred.forward(instances)
+
                 if config["is_dataset_balanced"] or config["task"] == "regression":
                     loss = torch.mean(torch.mean(criterion(output, targets), dim=1) ** config["loss_exponent"])
                 else:
@@ -98,17 +104,22 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
 
         epo = "0" * (epoch_idx + 1 < 100) + "0" * (epoch_idx + 1 < 10) + str(epoch_idx + 1)
 
+        if config["is_bound_computed"]:
+            bound_info_to_log = (f" - bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), "
+                                 f"(marchand: {bound[3]:.2f})")
+        else:
+            bound_info_to_log = ""
+
+        time_info_to_log = f" - time: {round(time() - start_time)}s"
         if config["task"] == "classification":
             EpochLogger.log(
-                f"Epoch {epo} - Train acc: {tr_acc:.4f} - Val acc: {vd_acc:.4f} - Test acc: {te_acc:.4f} - "
-                f"Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), "
-                f"(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - start_time)}")
+                f"epoch {epo} - train_acc: {tr_acc:.3f} - val_acc: {vd_acc:.3f} - test_acc: {te_acc:.3f}"
+                f"{bound_info_to_log}{time_info_to_log}")
         elif config["task"] == "regression":
             EpochLogger.log(
-                f"Epoch {epo} - Train R2: {1 - tr_loss / tr_var:.4f} - Val R2: {1 - vd_loss / vd_var:.4f} - "
-                f"Test R2: {1 - te_loss / te_var:.4f} - "
-                f"Bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), "
-                f"(Marchand: {bound[3]:.2f}) - Time (s): {round(time() - start_time)}")
+                f"Epoch {epo} - Train R2: {1 - tr_loss / tr_var:.4f} - Val R2: {1 - vd_loss / vd_var:.4f}"
+                f" - Test R2: {1 - te_loss / te_var:.4f}"
+                f"{bound_info_to_log}{time_info_to_log}")
         else:
             raise NotImplementedError(f"The task '{config['task']}' is not supported.")
 
