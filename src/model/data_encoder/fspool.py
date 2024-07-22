@@ -1,5 +1,4 @@
 import torch
-from torch import nn as nn
 
 from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.mlp import MLP
