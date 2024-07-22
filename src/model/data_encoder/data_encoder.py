@@ -1,14 +1,14 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 
 import torch
 from torch import nn
 
 
-class DataEncoder(nn.Module):
+class DataEncoder(nn.Module, metaclass=ABCMeta):
     @abstractmethod
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     def get_output_dimension(self) -> int:
-        raise NotImplementedError
+        ...
