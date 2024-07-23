@@ -15,11 +15,13 @@ class Predictor(nn.Module):
         self.weights = []
         # It is useful to know how many parameters there is; the architecture now contains the input dim and output dim
         self.n_param, self.pred_arch = self.compute_n_params_and_arch_sizes(config["n_features"],
-                                                                            config["pred_hidden_sizes"])
+                                                                            config["pred_hidden_sizes"],
+                                                                            config["label_size"])
         self.pred = self.create_predictor(config)
         self.task = config["task"]
 
-    def compute_n_params_and_arch_sizes(self, n_features: int, pred_hidden_sizes: list[int]) -> tuple[int, list[int]]:
+    def compute_n_params_and_arch_sizes(self, n_features: int, pred_hidden_sizes: list[int],
+                                        output_size: int) -> tuple[int, list[int]]:
         """
         Computes the total number of parameters defining the predictor, and complete arch (with input and output dim)
 
@@ -33,7 +35,7 @@ class Predictor(nn.Module):
         elif self.pred_type == "small_nn":
             n_params = 0
             input_layer_size = n_features
-            output_layer_size = 1
+            output_layer_size = output_size
             architecture_sizes = [input_layer_size] + pred_hidden_sizes + [output_layer_size]
 
             for i in range(len(architecture_sizes) - 1):

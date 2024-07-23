@@ -21,6 +21,9 @@ def create_run_name(task_dict: dict) -> str:
 
     run_name_elements = []
     for parameter_name in run_name_content:
-        run_name_elements.append(f"{parameter_name.replace('_', '-')}={task_dict[parameter_name]}")
+        try:
+            run_name_elements.append(f"{parameter_name.replace('_', '-')}={task_dict[parameter_name]}")
+        except KeyError:
+            run_name_elements.append(f"{parameter_name.replace('_', '-')}={None}")
 
     return "_".join(run_name_elements)

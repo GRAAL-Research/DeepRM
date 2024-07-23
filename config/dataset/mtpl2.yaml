@@ -1,6 +1,7 @@
 dataset: MTPL2_frequency  # MTPL2_frequency, MTPL2_severity, MTPL2_pure
 
 task: regression
+label_size: 1
 criterion: mse_loss
 is_dataset_balanced: False
 splits: [0.55, 0.20, 0.25]

@@ -1,4 +1,4 @@
-dataset: blob_and_moon
+dataset: cifar100_binary
 
 task: classification
 label_size: 1
@@ -7,9 +7,6 @@ is_dataset_balanced: True
 splits: [0.55, 0.20, 0.25]
 shuffle_each_dataset_samples: True
 
-is_blob_identical: False
-is_moon_identical: False
-
-n_dataset: 4000
+n_dataset: 100
 n_instances_per_dataset: 100
-n_features: 2
+n_features: 300
