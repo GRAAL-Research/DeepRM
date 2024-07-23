@@ -16,7 +16,7 @@ class KME(DataEncoder):
 
     def forward(self, instances: torch.tensor) -> torch.tensor:
         targets_idx = -1
-        features = instances[:, :, :targets_idx]
+        features = instances[:, :, :targets_idx].clone()
         embeddings = self.mlp(features)
         targets = instances[:, :, -1].unsqueeze(-1)
 
