@@ -25,7 +25,7 @@ def create_datasets(config: dict) -> np.ndarray:
         return load_mnist(config)
 
     elif config["dataset"] == "cifar100_binary":
-        return load_cifar100(config, binary=True)
+        return load_cifar100(config)
 
     elif config["dataset"] in ["MTPL2_frequency", "MTPL2_severity", "MTPL2_pure"]:
         return load_MTPL(config["dataset"][6:], config["n_dataset"], config["n_instances_per_dataset"])

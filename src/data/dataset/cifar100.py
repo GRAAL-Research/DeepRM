@@ -18,7 +18,7 @@ CIFAR100_CACHE_BASE_PATH = CIFAR100_BASE_PATH / "cache"
 NUMPY_FILE_EXTENSION = ".npy"
 
 
-def load_cifar100(config: dict, binary: bool) -> np.ndarray:
+def load_cifar100(config: dict) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config)
 
     if expected_datasets_cache_path.exists():
