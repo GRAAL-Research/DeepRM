@@ -13,18 +13,18 @@ class FSPool(DataEncoder):
         self.mlp = MLP(config["n_features"], mlp_hidden_dims, config["device"], config["has_skip_connection"],
                        config["has_batch_norm"], "cnt", config["init_scheme"])
 
-        self.mat = torch.rand((n_instances_per_class_per_dataset, self.output_dimension))
+        self.matrix = torch.rand((n_instances_per_class_per_dataset, self.output_dimension))
         if config["device"] == "gpu":
-            self.mat = self.mat.to("cuda:0")
+            self.matrix = self.matrix.to("cuda:0")
 
     def forward(self, instances: torch.Tensor) -> torch.Tensor:
-        features = instances[:, :, :-1].clone()
-        outputs = self.mlp.forward(features)
+        features = instances[:, :, :-1]
+        outputs = self.mlp(features)
         outputs = torch.sort(outputs, dim=2)[0]
-        targets = instances[:, :, -1].reshape((len(instances), -1, 1))
+        targets = instances[:, :, -1].unsqueeze(-1)
 
-        outputs = torch.mean(outputs * self.mat * targets, dim=1)
-        return outputs.reshape((len(outputs), -1))
+        outputs = (outputs * self.matrix * targets).mean(dim=1)
+        return outputs.squeeze(-1)
 
     def get_output_dimension(self) -> int:
         return self.output_dimension

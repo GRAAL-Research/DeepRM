@@ -1,7 +1,7 @@
 import torch
 
 
-def lin_loss(output, targets):
+def linear_loss(output, targets):
     """
     Computes the linear loss.
     Args:

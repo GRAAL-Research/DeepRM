@@ -6,7 +6,7 @@ from PIL import Image
 from matplotlib import pyplot as plt
 
 from src.model.predictor import Predictor
-from src.model.utils.loss import lin_loss
+from src.model.utils.loss import linear_loss
 
 
 def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, wandb, device):
@@ -59,7 +59,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                         pred.set_weights(meta_output)
 
                         _, z = pred.forward(x, save_bn_params=True)
-                        acc = lin_loss(z, x[0, :, -1])
+                        acc = linear_loss(z, x[0, :, -1])
                         plt.scatter(x[0, x[0, :, 2] == 1, 0].cpu(), x[0, x[0, :, 2] == 1, 1].cpu(), c="r")
                         plt.scatter(x[0, x[0, :, 2] == -1, 0].cpu(), x[0, x[0, :, 2] == -1, 1].cpu(), c="b")
                         plt.text(torch.mean(x[0, :, 0].cpu()) - 9.5,

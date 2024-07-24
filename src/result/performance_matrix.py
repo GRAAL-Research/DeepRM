@@ -7,7 +7,7 @@ from PIL import Image
 from matplotlib import pyplot as plt
 
 from src.model.predictor import Predictor
-from src.model.utils.loss import lin_loss
+from src.model.utils.loss import linear_loss
 
 
 def show_performance_matrix(meta_pred, pred, dataset, is_using_wandb, wandb, device):
@@ -40,7 +40,7 @@ def show_performance_matrix(meta_pred, pred, dataset, is_using_wandb, wandb, dev
         for i in range(10):
             for j in range(10):
                 if i != j:
-                    loss = lin_loss(z[k], inputs[k, :m, -1])
+                    loss = linear_loss(z[k], inputs[k, :m, -1])
                     accs[i, j] = loss
                     k += 1
         plt.figure().clear()

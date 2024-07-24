@@ -37,8 +37,8 @@ class LazyBatchNorm(nn.Module):
                 self.last_gamma + self.last_beta
         else:
             if save_bn_params:  # Whether to save the computed means and stds for future use with same parameters
-                self.last_mean = torch.mean(x.clone(), dim=1, keepdim=True).clone()
-                self.last_std = torch.std(x.clone(), dim=1, keepdim=True).clone()
+                self.last_mean = x.mean(dim=1, keepdim=True)
+                self.last_std = x.std(dim=1, keepdim=True)
                 self.last_gamma = self.gamma.clone()
                 self.last_beta = self.beta.clone()
                 return ((x - torch.mean(x, dim=1, keepdim=True)) / (torch.std(x, dim=1, keepdim=True) + 1e-10) *

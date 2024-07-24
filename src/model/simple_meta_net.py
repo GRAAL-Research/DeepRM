@@ -107,18 +107,16 @@ class SimpleMetaNet(nn.Module):
         output = self.mod_2.forward(x_red)
         return output
 
-    def compute_compression_set(self, x):
+    def compute_compression_set(self, x: torch.Tensor) -> None:
         """
         Targets the examples that have the most contributed in the compression set.
-        Args:
-            x (torch.tensor of floats): input.
         """
         # Mask computation #
         if self.compression_set_size > 0:
-            mask = self.cas[0].forward(x.clone())
+            mask = self.cas[0](x)
             for j in range(1, len(self.cas)):
-                out = self.cas[j].forward(x.clone())
+                out = self.cas[j](x)
                 mask = torch.hstack((mask, out))
-            self.msk = torch.squeeze(torch.topk(mask, 1, dim=2).indices)
+            self.msk = torch.topk(mask, 1, dim=2).indices.squeeze()
         else:
-            assert False, "Cannot compute the compression set when it is of size 0."
+            raise ValueError("Cannot compute the compression set when it is of size 0.")

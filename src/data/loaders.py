@@ -5,7 +5,8 @@ import torch
 from torch.utils.data import Subset, DataLoader
 
 
-def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
+def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42) -> tuple[
+        DataLoader, DataLoader, DataLoader, np.ndarray, np.ndarray, np.ndarray]:
     """
     Divides a dataset into a training set and a validation set, both in a Pytorch DataLoader form.
     Args:
@@ -30,9 +31,9 @@ def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42):
     else:
         split_1 = math.floor(splits[0] / (1 - splits[2]) * num_data)
         train_idx, valid_idx, test_idx = indices[:split_1], indices[split_1:], np.arange(len(dataset[1]))
-    train_var = np.var((dataset[indices[:split_1], int(dataset.shape[1]/2):, -1] + 1) / 2)
-    valid_var = np.var((dataset[indices[split_1:split_2], int(dataset.shape[1]/2):, -1] + 1) / 2)
-    test_var = np.var((dataset[indices[split_2:], int(dataset.shape[1]/2):, -1] + 1) / 2)
+    train_var = np.var((dataset[indices[:split_1], int(dataset.shape[1] / 2):, -1] + 1) / 2)
+    valid_var = np.var((dataset[indices[split_1:split_2], int(dataset.shape[1] / 2):, -1] + 1) / 2)
+    test_var = np.var((dataset[indices[split_2:], int(dataset.shape[1] / 2):, -1] + 1) / 2)
     train_dataset = Subset(dataset, train_idx)
     valid_dataset = Subset(dataset, valid_idx)
     test_dataset = Subset(dataset, test_idx)

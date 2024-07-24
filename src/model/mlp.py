@@ -1,8 +1,10 @@
+from typing import Final
+
 import torch
 import torch.nn.functional as F
 from torch import nn as nn
-from src.model.lazy_batch_norm import LazyBatchNorm
 
+from src.model.lazy_batch_norm import LazyBatchNorm
 from src.model.utils.initialize_weights import initialize_weights
 from src.model.utils.sign_straight_through import SignStraightThrough
 
@@ -60,12 +62,19 @@ class MLP(nn.Module):
         raise NotImplementedError(f"The message type '{msg_type}' is not supported.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        initial_input = x.clone()
+        initial_x = x.clone()
         for layer_idx, layer in enumerate(self.module, start=1):
             if self.has_skip_connection and layer_idx == self.skip_position:
-                padding_size = x.shape[-1] - initial_input.shape[-1]
-                pad = F.pad(input=initial_input, pad=(0, padding_size, 0, 0), mode='constant', value=0)
-                x += pad
-            x = layer(x).clone()
+                x = self.apply_skip_connection(x, initial_x)
+            x = layer(x)
 
         return x
+
+    @staticmethod
+    def apply_skip_connection(x: torch.Tensor, initial_x: torch.Tensor) -> torch.tensor:
+        padding_size = x.shape[-1] - initial_x.shape[-1]
+        if padding_size > 0:
+            padding = F.pad(input=initial_x, pad=(0, padding_size, 0, 0), mode="constant", value=0)
+            return x + padding
+
+        return x + initial_x
