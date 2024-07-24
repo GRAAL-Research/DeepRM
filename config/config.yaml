@@ -3,6 +3,7 @@ log_config_path: log/off.yaml
 training_config_path: training/gpu.yaml
 
 is_bound_computed: False
+is_media_computed: True
 
 msg_type: cnt
 msg_size: 100

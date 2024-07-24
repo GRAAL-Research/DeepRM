@@ -15,7 +15,7 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.has_skip_connection = has_skip_connection
 
-        input_and_hidden_dims = MLP.compute_input_and_hidden_dims(input_dim, hidden_dims, has_skip_connection)
+        input_and_hidden_dims = MLP.compute_input_and_hidden_dims(input_dim, hidden_dims)
         self.module = MLP.create_mlp(has_batch_norm, msg_type, input_and_hidden_dims, device)
 
         last_layer_idx = len(self.module) - 1
@@ -28,7 +28,7 @@ class MLP(nn.Module):
             initialize_weights(init_scheme, self.module)
 
     @staticmethod
-    def compute_input_and_hidden_dims(input_dim: int, hidden_dims: list[int], has_skip_connection: bool) -> list[int]:
+    def compute_input_and_hidden_dims(input_dim: int, hidden_dims: list[int]) -> list[int]:
         input_and_hidden_dims = [input_dim] + hidden_dims
 
         return input_and_hidden_dims
