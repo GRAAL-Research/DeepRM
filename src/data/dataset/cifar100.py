@@ -127,7 +127,7 @@ def apply_transforms_to_dataset(config: dict, dataset: CIFAR100) -> CIFAR100:
     is_a_perfect_square = 0 <= config["n_features"] // 3 == int(square_root_of_n_features) ** 2
     assert is_a_perfect_square, "The number of features (per channel) must be a perfect square."
 
-    new_img_size = (int(square_root_of_n_features), int(square_root_of_n_features))
+    new_img_size = (int(square_root_of_n_features), int(square_root_of_n_features), 3)
 
     if new_img_size == CIFAR100_DEFAULT_IMG_SIZE:
         return dataset
