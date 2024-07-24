@@ -35,11 +35,11 @@ def show_performance_matrix(meta_pred, pred, dataset_name, dataset, n_datasets,
         for i in range(len(inputs)):
             random.shuffle(integers)
             inputs[i] = inputs[i, integers]
-        if str(device) == "gpu":
-            inputs, meta_pred = inputs.cuda(), meta_pred.cuda()
         m = int(len(inputs[0]) / 2)
         accs = np.ones((n_classes, n_classes))
         zs = torch.zeros((n_datasets, m))
+        if str(device) == "gpu":
+            inputs, meta_pred, zs = inputs.cuda(), meta_pred.cuda(), zs.cuda()
         for i in range(math.ceil(len(inputs) / batch_size)):
             first = i * batch_size
             last = min((i + 1)*batch_size, len(inputs))

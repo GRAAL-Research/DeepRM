@@ -52,9 +52,9 @@ def store_cifar100_datasets(config: dict, datasets: np.ndarray) -> None:
 
 def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
     n_classes = 100
-    maximum_of_datasets = n_classes * (n_classes - 1)
-    assertion_msg = f"Given {n_classes} digits, we can't create more than {maximum_of_datasets} CIFAR100 binary datasets."
-    assert config["n_dataset"] <= maximum_of_datasets, assertion_msg
+    max_of_datasets = n_classes * (n_classes - 1)
+    assertion_msg = f"Given {n_classes} digits, we can't create more than {max_of_datasets} CIFAR100 binary datasets."
+    assert config["n_dataset"] <= max_of_datasets, assertion_msg
     assert config["n_instances_per_dataset"] % 2 == 0, "The number of instances per dataset must be even."
 
     target_dim = 1
