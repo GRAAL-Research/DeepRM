@@ -114,7 +114,7 @@ def create_train_set(config: dict) -> torch.Tensor:
 
 
 def create_test_set(config: dict) -> torch.Tensor:
-    test_set = torchvision.datasets.CIFAR100(root=str(DATA_BASE_PATH), train=False, download=True)
+    test_set = torchvision.datasets.CIFAR100(root=str(CIFAR100_BASE_PATH), train=False, download=True)
     test_set = apply_transforms_to_dataset(config, test_set)
     n_instances_in_cifar100_test_set = test_set.data.shape[0]
 
