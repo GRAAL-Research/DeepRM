@@ -137,14 +137,16 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
             logger.info("The early stopping stopped the training.")
             break
 
-    if config["n_features"] == 2 and config["is_using_wandb"]:
-        show_decision_boundaries(meta_predictor, config["dataset"], test_loader, pred, wandb, config["device"])
-    if config["dataset"] == "mnist":
-        shuffle = config["shuffle_each_dataset_samples"]
-        config["shuffle_each_dataset_samples"] = False
-        dataset = create_datasets(config)
-        config["shuffle_each_dataset_samples"] = shuffle
-        show_performance_matrix(meta_predictor, pred, dataset, config["is_using_wandb"], wandb, config["device"])
+    if config["is_media_computed"]:
+        if config["n_features"] == 2 and config["is_using_wandb"]:
+            show_decision_boundaries(meta_predictor, config["dataset"], test_loader, pred, wandb, config["device"])
+        if config["dataset"] in ["mnist", "cifar100_binary"]:
+            shuffle = config["shuffle_each_dataset_samples"]
+            config["shuffle_each_dataset_samples"] = False
+            dataset = create_datasets(config)
+            show_performance_matrix(meta_predictor, pred, config["dataset"], dataset, config["n_dataset"],
+                                    config["is_using_wandb"], wandb, config["batch_size"], config["device"])
+            config["shuffle_each_dataset_samples"] = shuffle
 
     if config["is_using_wandb"]:
         if is_sending_wandb_last_run_alert and config["is_wandb_alert_activated"]:
