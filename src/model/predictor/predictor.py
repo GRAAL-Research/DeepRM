@@ -11,7 +11,7 @@ class Predictor(nn.Module, ABC):
         self.task = config["task"]
 
     @abstractmethod
-    def set_weights(self, weights: torch.Tensor) -> None:
+    def set_params(self, params: torch.Tensor) -> None:
         ...
 
     @abstractmethod

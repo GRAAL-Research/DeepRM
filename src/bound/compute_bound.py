@@ -35,7 +35,7 @@ def compute_bounds(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inp
             meta_output = meta_pred(inputs, n_samples=n_sample)
             for sample in range(n_sample):
                 outp = meta_output[[sample]]
-                pred.set_weights(outp)
+                pred.set_params(outp)
                 output = pred.forward(inputs)
                 tot_acc += m * linear_loss(output[1], targets * 2 - 1)
             tot_acc /= n_sample  # An average accuracy is computed...

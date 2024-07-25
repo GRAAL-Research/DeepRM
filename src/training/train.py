@@ -69,7 +69,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
 
                 optimizer.zero_grad()
                 meta_output = meta_predictor(instances)
-                predictor.set_weights(meta_output)
+                predictor.set_params(meta_output)
                 output, _ = predictor.forward(instances)
 
                 if config["is_dataset_balanced"] or config["task"] == "regression":
@@ -91,7 +91,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                                                                          train_loader)
         valid_accuracy, valid_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
                                                                          valid_loader)
-        test_accuracy, test_loss, bound = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
+        test_accuracy, test_loss, bound = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
                                                                            test_loader)
         hist_values = (
             train_accuracy, train_loss, valid_accuracy, valid_loss, test_accuracy, test_loss, bound, config["msg_size"],

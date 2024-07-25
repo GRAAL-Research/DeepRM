@@ -44,7 +44,7 @@ def show_performance_matrix(meta_pred, pred, dataset_name, dataset, n_datasets,
             first = i * batch_size
             last = min((i + 1)*batch_size, len(inputs))
             meta_output = meta_pred(inputs[first:last, :m])
-            pred.set_weights(meta_output)
+            pred.set_params(meta_output)
             _, z = pred.forward(inputs[first:last, :m])
             zs[first:last] = z
         k = 0
