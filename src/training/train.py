@@ -7,7 +7,7 @@ from loguru import logger
 
 from src.data.create_datasets import create_datasets
 from src.data.loaders import train_valid_loaders
-from src.model.predictor import Predictor
+from src.model.predictor.create_predictor import create_predictor
 from src.result.compute_stats import compute_accuracy_loss_and_bounds
 from src.result.decision_boundaries import show_decision_boundaries
 from src.result.history import update_hist, update_wandb
@@ -29,8 +29,8 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
     torch.autograd.set_detect_anomaly(True)
 
     datasets = create_datasets(config)
-    pred = Predictor(config)
-    meta_predictor = create_meta_predictor(config, pred)
+    predictor = create_predictor(config)
+    meta_predictor = create_meta_predictor(config, predictor)
     criterion = create_criterion(config)
     message_penalty_function = create_message_penalty_function(config)
     optimizer = create_optimizer(config, meta_predictor)
@@ -69,8 +69,8 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
 
                 optimizer.zero_grad()
                 meta_output = meta_predictor(instances)
-                pred.set_weights(meta_output)
-                output, _ = pred.forward(instances)
+                predictor.set_weights(meta_output)
+                output, _ = predictor.forward(instances)
 
                 if config["is_dataset_balanced"] or config["task"] == "regression":
                     loss = torch.mean(torch.mean(criterion(output, targets), dim=1) ** config["loss_exponent"])
@@ -87,11 +87,11 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                 loss.backward()
                 optimizer.step()
         # Computation of statistics about the current training epoch
-        train_accuracy, train_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
+        train_accuracy, train_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
                                                                          train_loader)
-        valid_accuracy, valid_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
+        valid_accuracy, valid_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
                                                                          valid_loader)
-        test_acc, test_loss, bound = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
+        test_acc, test_loss, bound = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
                                                                       test_loader)
         hist_values = (
             train_accuracy, train_loss, valid_accuracy, valid_loss, test_acc, test_loss, bound, config["msg_size"],
@@ -140,12 +140,12 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
 
     if config["is_media_computed"]:
         if config["n_features"] == 2 and config["is_using_wandb"]:
-            show_decision_boundaries(meta_predictor, config["dataset"], test_loader, pred, wandb, config["device"])
+            show_decision_boundaries(meta_predictor, config["dataset"], test_loader, predictor, wandb, config["device"])
         if config["dataset"] in ["mnist", "cifar100_binary"]:
             shuffle = config["shuffle_each_dataset_samples"]
             config["shuffle_each_dataset_samples"] = False
             dataset = create_datasets(config)
-            show_performance_matrix(meta_predictor, pred, config["dataset"], dataset, config["n_dataset"],
+            show_performance_matrix(meta_predictor, predictor, config["dataset"], dataset, config["n_dataset"],
                                     config["is_using_wandb"], wandb, config["batch_size"], config["device"])
             config["shuffle_each_dataset_samples"] = shuffle
 

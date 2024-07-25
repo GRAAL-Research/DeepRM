@@ -4,7 +4,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from src.bound.compute_bound import compute_bounds
-from src.model.predictor import Predictor
+from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
 

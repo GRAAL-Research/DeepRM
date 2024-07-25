@@ -7,7 +7,7 @@ import torch
 from PIL import Image
 from matplotlib import pyplot as plt
 
-from src.model.predictor import Predictor
+from src.model.predictor.predictor import Predictor
 from src.model.utils.loss import linear_loss
 
 

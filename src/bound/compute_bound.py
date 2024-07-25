@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from src.bound.utils import zeta, kl_inv, log_binomial_coefficient, sup_bin
-from src.model.predictor import Predictor
+from src.model.predictor.predictor import Predictor
 from src.model.utils.loss import linear_loss
 
 

@@ -1,11 +1,14 @@
 from pathlib import Path
-import torch.nn as nn
+
 import numpy as np
 import torch
+import torch.nn as nn
 from PIL import Image
 from matplotlib import pyplot as plt
 
-from src.model.predictor import Predictor
+from src.model.predictor.linear_classifier import LinearClassifier
+from src.model.predictor.predictor import Predictor
+from src.model.predictor.small_neural_network import SmallNeuralNetwork
 from src.model.utils.loss import linear_loss
 
 
@@ -37,14 +40,14 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                     plt.cla()
                     plt.clf()
                     i += 1
-                    x = inputs[j:j+1]
+                    x = inputs[j:j + 1]
                     meta_output = meta_outpt[j:j + 1]
-                    if pred.pred_type == "linear_classif":
+                    if isinstance(pred, LinearClassifier):
                         px = [-20, 20]
                         py = [-(-20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1],
                               -(20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1]]
                         plt.plot(px, py)  # With a linea classifier, only a line needs to be drawn
-                    if pred.pred_type == "small_nn":
+                    if isinstance(pred, SmallNeuralNetwork):
                         # With small nn: we plot the decision boundary by colouring each decision zone by its prediction
                         h = .05  # step size in the mesh
                         x_min, x_max = x[0, :, 0].cpu().min() - 10, x[0, :, 0].cpu().max() + 10
@@ -58,7 +61,13 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                             mesh = mesh.cuda()
                         pred.set_weights(meta_output)
 
-                        _, z = pred.forward(x, save_bn_params=True)
+                        if isinstance(pred, SmallNeuralNetwork):
+                            pred.set_forward_mode(save_bn_params=True)
+                            _, z = pred.forward(x)
+                            pred.reset_forward_mode()
+                        else:
+                            _, z = pred.forward(x)
+
                         targets = x[:, :, -1]
                         acc = linear_loss(z, targets)
                         plt.scatter(x[0, x[0, :, 2] == 1, 0].cpu(), x[0, x[0, :, 2] == 1, 1].cpu(), c="r")
@@ -68,7 +77,13 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                                  f"Accuracy: {round(acc.item() * 100, 2)}%",
                                  bbox=dict(fill=True, color='white', linewidth=2))
 
-                        _, z = pred.forward(mesh, use_last_values=True)
+                        if isinstance(pred, SmallNeuralNetwork):
+                            pred.set_forward_mode(use_last_values=True)
+                            _, z = pred.forward(mesh)
+                            pred.reset_forward_mode()
+                        else:
+                            _, z = pred.forward(mesh)
+
                         z = z.reshape(xx.shape).cpu()
                         plt.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha=0.6)
 
