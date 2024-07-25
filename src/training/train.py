@@ -91,10 +91,10 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                                                                          train_loader)
         valid_accuracy, valid_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
                                                                          valid_loader)
-        test_acc, test_loss, bound = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
-                                                                      test_loader)
+        test_accuracy, test_loss, bound = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
+                                                                           test_loader)
         hist_values = (
-            train_accuracy, train_loss, valid_accuracy, valid_loss, test_acc, test_loss, bound, config["msg_size"],
+            train_accuracy, train_loss, valid_accuracy, valid_loss, test_accuracy, test_loss, bound, config["msg_size"],
             meta_predictor.compression_set_size, epoch_idx
         )
         update_hist(hist, hist_values)
@@ -114,7 +114,8 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         time_info_to_log = f" - time: {round(time() - start_time)}s"
         if config["task"] == "classification":
             EpochLogger.log(
-                f"epoch {epo} - train_acc: {train_accuracy:.3f} - val_acc: {valid_accuracy:.3f} - test_acc: {test_acc:.3f}"
+                f"epoch {epo} - train_acc: {train_accuracy:.3f} - val_acc: {valid_accuracy:.3f}"
+                f"- test_acc: {test_accuracy:.3f}"
                 f"{bound_info_to_log}{time_info_to_log}")
         elif config["task"] == "regression":
             EpochLogger.log(

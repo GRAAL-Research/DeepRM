@@ -73,8 +73,5 @@ class MLP(nn.Module):
     @staticmethod
     def apply_skip_connection(x: torch.Tensor, initial_x: torch.Tensor) -> torch.tensor:
         padding_size = x.shape[-1] - initial_x.shape[-1]
-        if padding_size > 0:
-            padding = F.pad(input=initial_x, pad=(0, padding_size, 0, 0), mode="constant", value=0)
-            return x + padding
-
-        return x + initial_x
+        padding = F.pad(input=initial_x, pad=(0, padding_size, 0, 0), mode="constant", value=0)
+        return x + padding
