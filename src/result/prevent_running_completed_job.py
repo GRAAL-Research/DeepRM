@@ -5,7 +5,7 @@ def is_run_already_done(config: dict) -> bool:
         keys.append(key)
     keys.sort()
     for key in keys:
-        new.append(str(config[key]))
+        new.append(str(config[key]).replace("\n",""))
     try:
         with open("results/" + config["project_name"] + ".txt", "r") as tes:
             tess = [line.strip().split("\t") for line in tes]
@@ -45,7 +45,7 @@ def save_run_in_a_text_file(config: dict, hist, best_epoch):
     keys.sort()
     file = open("results/" + config["project_name"] + ".txt", "a")
     for key in keys:
-        file.write(str(config[key]) + "\t")
+        file.write(str(config[key]).replace("\n","") + "\t")
     file.write(str(hist["train_acc"][best_epoch].item()) + "\t")
     file.write(str(hist["valid_acc"][best_epoch].item()) + "\t")
     file.write(str(hist["test_acc"][best_epoch].item()) + "\t")
