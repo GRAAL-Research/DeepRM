@@ -9,9 +9,7 @@ from src.model.predictor.predictor import Predictor
 class SmallNeuralNetwork(Predictor):
     def __init__(self, config: dict) -> None:
         super().__init__(config)
-        input_layer_size = config["n_features"]
-        output_layer_size = config["label_size"]
-        self.architecture_sizes = [input_layer_size] + config["pred_hidden_sizes"] + [output_layer_size]
+        self.architecture_sizes = [config["n_features"]] + config["pred_hidden_sizes"] + [config["target_size"]]
         self.mlp = MLP(config["n_features"], self.architecture_sizes[1:], config["device"],
                        config["has_skip_connection"],
                        config["has_batch_norm"], "none")
@@ -20,6 +18,7 @@ class SmallNeuralNetwork(Predictor):
         self.batch_norm_params = []
         self.use_last_values = False
         self.save_bn_params = False
+        self.target_size = config["target_size"]
 
     @property
     def n_params(self) -> int:
@@ -37,8 +36,7 @@ class SmallNeuralNetwork(Predictor):
         self.save_bn_params = False
 
     def forward(self, instances: torch.Tensor) -> tuple:
-        target_idx = -1
-        x = instances[:, :, :target_idx]
+        x = instances[:, :, :-self.target_size]
         batch_size = len(x)
 
         if not self.use_last_values:

@@ -2,8 +2,8 @@ import numpy as np
 
 
 def create_empty_datasets(config: dict) -> np.ndarray:
-    y_target_second_dim = 1
-    return np.zeros((config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] + y_target_second_dim))
+    return np.zeros(
+        (config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] + config["target_size"]))
 
 
 def shuffled_x_and_y(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:

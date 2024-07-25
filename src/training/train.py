@@ -146,9 +146,9 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
             shuffle = config["shuffle_each_dataset_samples"]
             config["shuffle_each_dataset_samples"] = False
             dataset = create_datasets(config)
+            config["shuffle_each_dataset_samples"] = shuffle
             show_performance_matrix(meta_predictor, predictor, config["dataset"], dataset, config["n_dataset"],
                                     config["is_using_wandb"], wandb, config["batch_size"], config["device"])
-            config["shuffle_each_dataset_samples"] = shuffle
 
     if config["is_using_wandb"]:
         if is_sending_wandb_last_run_alert and config["is_wandb_alert_activated"]:

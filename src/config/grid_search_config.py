@@ -4,6 +4,7 @@ from sklearn.model_selection import ParameterGrid
 
 from src.config.utils import load_yaml_file_content, GRID_SEARCH_FILE_PATH, \
     get_sub_config_paths_keys, get_yaml_files_paths, get_yaml_files_merged_content
+from src.utils.utils import validate_run_names
 
 
 def create_config_combinations_sorted_by_dataset(config: dict) -> list[dict]:
@@ -14,7 +15,10 @@ def create_config_combinations_sorted_by_dataset(config: dict) -> list[dict]:
         datasets = grid_search_config["dataset"]
 
     config_combinations = generate_combinations(config)
-    return sort_config_combinations_by_dataset_name_idx(config_combinations, datasets)
+    config_combinations_sorted_by_dataset = sort_config_combinations_by_dataset_name_idx(config_combinations, datasets)
+    validate_run_names(config_combinations_sorted_by_dataset)
+
+    return config_combinations_sorted_by_dataset
 
 
 def generate_combinations(config: dict) -> list[dict]:
