@@ -8,10 +8,10 @@ from loguru import logger
 from src.data.create_datasets import create_datasets
 from src.data.loaders import train_valid_loaders
 from src.model.predictor import Predictor
-from src.result.compute_stats import stats
+from src.result.compute_stats import compute_accuracy_loss_and_bounds
 from src.result.decision_boundaries import show_decision_boundaries
-from src.result.performance_matrix import show_performance_matrix
 from src.result.history import update_hist, update_wandb
+from src.result.performance_matrix import show_performance_matrix
 from src.training.criterion import create_criterion
 from src.training.message_penalty import create_message_penalty_function
 from src.training.meta_predictor import create_meta_predictor
@@ -58,7 +58,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         with (torch.enable_grad()):
             for instances in train_loader:
                 instances = instances.float()[:, n_instances_per_class_per_dataset:]
-                targets = (instances.clone()[:, :, -1] + 1) / 2
+                targets = (instances[:, :, -1] + 1) / 2
                 instances = instances.float()
                 targets = targets.float()
 
@@ -87,16 +87,17 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                 loss.backward()
                 optimizer.step()
         # Computation of statistics about the current training epoch
-        tr_acc, tr_loss, _ = stats(config["task"], meta_predictor, pred, criterion, train_loader, config["msg_type"],
-                                   config["is_bound_computed"], config["device"])
-        vd_acc, vd_loss, _ = stats(config["task"], meta_predictor, pred, criterion, valid_loader, config["msg_type"],
-                                   config["is_bound_computed"], config["device"])
-        te_acc, te_loss, bound = stats(config["task"], meta_predictor, pred, criterion, test_loader,
-                                       config["msg_type"],
-                                       config["is_bound_computed"],
-                                       config["device"])
-        update_hist(hist, (tr_acc, tr_loss, vd_acc, vd_loss, te_acc, te_loss, bound, config["msg_size"],
-                           meta_predictor.compression_set_size, epoch_idx))  # Tracking results
+        train_accuracy, train_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
+                                                                         train_loader)
+        valid_accuracy, valid_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
+                                                                         valid_loader)
+        test_accuracy, test_loss, bound = compute_accuracy_loss_and_bounds(config, meta_predictor, pred, criterion,
+                                                                           test_loader)
+        hist_values = (
+            train_accuracy, train_loss, valid_accuracy, valid_loss, test_accuracy, test_loss, bound, config["msg_size"],
+            meta_predictor.compression_set_size, epoch_idx
+        )
+        update_hist(hist, hist_values)
         rolling_val_perf = torch.mean(torch.tensor(hist[valid_metric][-min(100, epoch_idx + 1):]))
 
         if config["is_using_wandb"]:
@@ -113,12 +114,13 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         time_info_to_log = f" - time: {round(time() - start_time)}s"
         if config["task"] == "classification":
             EpochLogger.log(
-                f"epoch {epo} - train_acc: {tr_acc:.3f} - val_acc: {vd_acc:.3f} - test_acc: {te_acc:.3f}"
+                f"epoch {epo} - train_acc: {train_accuracy:.3f} - val_acc: {valid_accuracy:.3f}"
+                f"- test_acc: {test_accuracy:.3f}"
                 f"{bound_info_to_log}{time_info_to_log}")
         elif config["task"] == "regression":
             EpochLogger.log(
-                f"Epoch {epo} - Train R2: {1 - tr_loss / tr_var:.4f} - Val R2: {1 - vd_loss / vd_var:.4f}"
-                f" - Test R2: {1 - te_loss / te_var:.4f}"
+                f"Epoch {epo} - Train R2: {1 - train_loss / tr_var:.4f} - Val R2: {1 - valid_loss / vd_var:.4f}"
+                f" - Test R2: {1 - test_loss / te_var:.4f}"
                 f"{bound_info_to_log}{time_info_to_log}")
         else:
             raise NotImplementedError(f"The task '{config['task']}' is not supported.")
@@ -131,7 +133,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
             best_epoch = epoch_idx
             best_rolling_val_acc = copy(rolling_val_perf)
 
-        has_no_learning_being_made = tr_acc < 0.525 and epoch_idx > 50
+        has_no_learning_being_made = train_accuracy < 0.525 and epoch_idx > 50
         has_no_improvement_for_a_while = epoch_idx - best_epoch > config["early_stopping_patience"]
         if has_no_learning_being_made or has_no_improvement_for_a_while:
             logger.info("The early stopping stopped the training.")

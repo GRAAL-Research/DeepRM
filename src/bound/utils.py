@@ -1,6 +1,6 @@
 import math
 
-from src.utils import *
+import numpy as np
 
 
 def log_stirling_approximation(n):
@@ -134,5 +134,3 @@ def kl_inv(q, epsilon, mode, tol=10 ** -9, nb_iter_max=1000):
         elif mode == "MIN" and kl_bern(q, p) < epsilon:
             p_max = p
     return p
-
-

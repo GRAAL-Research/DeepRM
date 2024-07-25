@@ -5,10 +5,10 @@ import torch
 
 from src.bound.utils import zeta, kl_inv, log_binomial_coefficient, sup_bin
 from src.model.predictor import Predictor
-from src.model.utils.loss import lin_loss
+from src.model.utils.loss import linear_loss
 
 
-def compute_bound(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inputs, targets):
+def compute_bounds(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inputs, targets):
     """
     Generates the DeepRM meta-predictor.
         Args:
@@ -35,9 +35,9 @@ def compute_bound(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inpu
             meta_output = meta_pred(inputs, n_samples=n_sample)
             for sample in range(n_sample):
                 outp = meta_output[[sample]]
-                pred.set_weights(outp, 1)
-                output = pred.forward(inputs, return_sign=True)
-                tot_acc += m * lin_loss(output[1], targets * 2 - 1)
+                pred.set_weights(outp)
+                output = pred.forward(inputs)
+                tot_acc += m * linear_loss(output[1], targets * 2 - 1)
             tot_acc /= n_sample  # An average accuracy is computed...
             r = m - tot_acc
             kl = torch.mean(torch.sum(meta_pred.msg ** 2, dim=1))  # ... as well as an avg KL value (shortcut, lighter)

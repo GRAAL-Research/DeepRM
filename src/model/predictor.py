@@ -1,8 +1,8 @@
 import torch
 from torch import nn as nn
 
-from src.model.mlp import MLP
 from src.model.lazy_batch_norm import LazyBatchNorm
+from src.model.mlp import MLP
 
 
 class Predictor(nn.Module):
@@ -12,20 +12,19 @@ class Predictor(nn.Module):
         """
         super(Predictor, self).__init__()
         self.pred_type = "linear_classif" if len(config["pred_hidden_sizes"]) == 0 else "small_nn"
-        self.weights = []
+        self.weights = torch.tensor([])
         # It is useful to know how many parameters there is; the architecture now contains the input dim and output dim
         self.n_param, self.pred_arch = self.compute_n_params_and_arch_sizes(config["n_features"],
                                                                             config["pred_hidden_sizes"],
                                                                             config["label_size"])
         self.pred = self.create_predictor(config)
         self.task = config["task"]
+        self.batch_norm_params = []
 
     def compute_n_params_and_arch_sizes(self, n_features: int, pred_hidden_sizes: list[int],
                                         output_size: int) -> tuple[int, list[int]]:
         """
         Computes the total number of parameters defining the predictor, and complete arch (with input and output dim)
-
-        n_features (int): Input dimension of each dataset;
         """
         if self.pred_type == "linear_classif":
             n_params = n_features + 1
@@ -48,25 +47,16 @@ class Predictor(nn.Module):
         raise NotImplementedError(f"The predictor type '{self.pred_type}' is not supported.")
 
     def create_predictor(self, config: dict) -> MLP:
-        """
-        Initialize the predictors: one predictor per dataset in a batch. Only relevant if pred_type == "small_nn".
-        """
         if self.pred_type == "small_nn":
-            mlp = MLP(config["n_features"], self.pred_arch[1:], config["device"], config["has_skip_connection"],
-                      config["has_batch_norm"], "none")
-        return mlp
+            return MLP(config["n_features"], self.pred_arch[1:], config["device"], config["has_skip_connection"],
+                       config["has_batch_norm"], "none")
 
+        raise ValueError(f"The predictor type {self.pred_type} is not supported.")
 
-    def set_weights(self, weights):
-        """
-        Fixes the weights of the various predictors.
-        Args:
-            weights (np.array of dims (batch_size, num_param) of float): weights defining the predictor;
-            batch_size (int): batch size.
-        """
+    def set_weights(self, weights: torch.Tensor) -> None:
         self.weights = weights
 
-    def forward(self, inputs, use_last_values=False, save_bn_params=False):
+    def forward(self, inputs, use_last_values=False, save_bn_params=False) -> tuple:
         if not use_last_values:
             self.batch_norm_params = []
         out = 0
@@ -101,8 +91,11 @@ class Predictor(nn.Module):
                 else:
                     input_0 = layer(input_0)
             out = input_0
-            out = torch.squeeze(torch.transpose(out, 1, 2))
+            out = torch.squeeze(torch.transpose(out, 1, 2), dim=-2)
+
         if self.task == "classification":
             return torch.sigmoid(out), torch.sign(out)
         elif self.task == "regression":
             return torch.relu(out), out
+        else:
+            raise ValueError(f"The task '{self.task}' is not supported.")
