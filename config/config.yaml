@@ -9,6 +9,7 @@ msg_type: cnt
 msg_size: 100
 msg_penalty: l1
 msg_penalty_coef: 0
+is_using_a_random_msg: False
 
 data_encoder_name: kme
 kme_dim: [100]

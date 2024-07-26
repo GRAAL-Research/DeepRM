@@ -84,7 +84,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                                     "loss_exponent"]
                     loss /= len(output)
                 if config["msg_type"] is not None and config["msg_size"] > 0:
-                    loss += message_penalty_function(meta_predictor.get_message(), config["msg_penalty_coef"])  # Regularized loss
+                    loss += message_penalty_function(meta_predictor.get_message(), config["msg_penalty_coef"])
                 loss.backward()
                 optimizer.step()
         # Computation of statistics about the current training epoch
