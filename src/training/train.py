@@ -68,7 +68,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                     meta_predictor = meta_predictor.cuda()
 
                 optimizer.zero_grad()
-                meta_output = meta_predictor(instances)
+                meta_output = meta_predictor.forward(instances)
                 predictor.set_params(meta_output)
                 output, _ = predictor.forward(instances)
 
