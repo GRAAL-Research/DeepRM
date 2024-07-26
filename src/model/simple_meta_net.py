@@ -14,24 +14,28 @@ class SimpleMetaNet(nn.Module):
         """
         super().__init__()
         self.compression_set_size = config["compression_set_size"]
-        self.msg_size = config["msg_size"]
         self.msg_type = config["msg_type"]
+        self.msg_size = config["msg_size"]
         self.n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
-        self.mlp_1_dim = config["mlp_1_dim"] + [self.msg_size]
+        self.module_1_dim = config["module_1_dim"] + [config["msg_size"]]
         self.msg = torch.tensor(0.0)
         self.msk = None  # Mask (compression selection)
         self.output_dim = pred_input_dim
 
         self.data_compressor_1 = create_data_compressor_1(config)
-        self.module_1 = MLP(self.data_compressor_1.get_output_dimension(), self.mlp_1_dim, config["device"],
-                            config["has_skip_connection"], config["has_batch_norm"], config["msg_type"],
-                            config["init_scheme"])
+        self.module_1 = MLP(self.data_compressor_1.get_output_dimension(), self.module_1_dim, config["device"],
+                            config["has_skip_connection"], config["has_batch_norm"], config["init_scheme"],
+                            config["msg_type"])
 
         self.cas = nn.ModuleList([Attention(config) for _ in range(self.compression_set_size)])
         self.kme_2 = KME(config, hidden_dims=config["kme_dim"])
 
-        self.module_2 = MLP(self.compute_module_2_input_dim(), config["mlp_2_dim"] + [self.output_dim], config["device"],
-                            config["has_skip_connection"], config["has_batch_norm"], "none", config["init_scheme"])
+        self.module_2 = MLP(self.compute_module_2_input_dim(), config["module_2_dim"] + [self.output_dim],
+                            config["device"], config["has_skip_connection"], config["has_batch_norm"],
+                            config["init_scheme"])
+
+    def get_message(self):
+        return self.msg
 
     def compute_module_2_input_dim(self) -> int:
         mod_2_input_dim = 0
@@ -39,8 +43,8 @@ class SimpleMetaNet(nn.Module):
         if self.compression_set_size > 0:
             mod_2_input_dim += self.data_compressor_1.get_output_dimension()
 
-        if self.msg_size > 0:
-            mod_2_input_dim += self.mlp_1_dim[-1]
+        if self.msg_type is not None and self.msg_size > 0:
+            mod_2_input_dim += self.module_1_dim[-1]
 
         return mod_2_input_dim
 
@@ -51,7 +55,7 @@ class SimpleMetaNet(nn.Module):
         msg_module_output = None
         compression_module_output = None
 
-        if self.msg_size > 0:
+        if self.msg_type is not None and self.msg_size > 0:
             msg_module_output = self.forward_msg_module(x, n_random_messages)
 
         if self.compression_set_size > 0:

@@ -11,7 +11,7 @@ class FSPool(DataEncoder):
         self.output_dimension = mlp_hidden_dims[-1]
 
         self.mlp = MLP(config["n_features"], mlp_hidden_dims, config["device"], config["has_skip_connection"],
-                       config["has_batch_norm"], "cnt", config["init_scheme"])
+                       config["has_batch_norm"], config["init_scheme"], "cnt")
 
         self.matrix = torch.rand((n_instances_per_class_per_dataset, self.output_dimension))
         if config["device"] == "gpu":

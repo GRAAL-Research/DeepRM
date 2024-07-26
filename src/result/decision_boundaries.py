@@ -9,10 +9,11 @@ from matplotlib import pyplot as plt
 from src.model.predictor.linear_classifier import LinearClassifier
 from src.model.predictor.predictor import Predictor
 from src.model.predictor.small_neural_network import SmallNeuralNetwork
+from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
 
 
-def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, wandb, device):
+def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pred: Predictor, wandb, device):
     """
     Builds a visual depiction of the decision boundary of the predictor for tackling a given problem.
     Args:
@@ -32,7 +33,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
             if str(device) == "gpu":
                 inputs, meta_pred = inputs.cuda(), meta_pred.cuda()
             m = int(len(inputs[0]) / 2)
-            meta_outpt = meta_pred(inputs[:, :m])
+            meta_outpt = meta_pred.forward(inputs[:, :m])
             for j in range(len(inputs)):
                 if i < max_number_vis:
                     plt.figure().clear()

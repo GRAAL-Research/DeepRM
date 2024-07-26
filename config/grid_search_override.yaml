@@ -1,11 +1,11 @@
-project_name: [message-module-with-kme-exp4]
-run_name_content: [[msg_size, lr, batch_size, pred_hidden_sizes, is_moon_identical, data_compressor_name]]
+# project_name: [message-module-with-kme-exp4]
+run_name_content: [[msg_size]]
 
 batch_size: [50]
 lr: [1e-3]
-data_encoder_name: [transformer]  # conv_one_by_one, kme, concatenator, fs_pool, transformer
+data_encoder_name: [kme] # conv_one_by_one, kme, concatenator, fs_pool, transformer
 
-mlp_1_dim: [[1000]]  # [[50], [100], [500], [1000]]
+module_1_dim: [[1000]] # [[50], [100], [500], [1000]]
 #msg_size: ${mlp_1_dim[0]}
-mlp_2_dim: ${mlp_1_dim}
+module_2_dim: ${module_1_dim}
 pred_hidden_sizes: [[10]]

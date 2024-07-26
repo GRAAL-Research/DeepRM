@@ -11,12 +11,12 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
         self.temperature = config["attention_temperature"]
         self.keys = MLP(config["n_features"] + 1, config["attention_dim"], config["device"],
-                        config["has_skip_connection"], config["has_batch_norm"], "cnt", config["init_scheme"])
+                        config["has_skip_connection"], config["has_batch_norm"], config["init_scheme"], "cnt")
         self.queries = self.create_queries(config)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        q = self.queries(x)
-        k = self.keys(x)
+        q = self.queries.forward(x)
+        k = self.keys.forward(x)
 
         qkt = q.matmul(k.transpose(-2, -1))
         max_qkt_value = qkt.max(dim=-1).values
@@ -26,12 +26,12 @@ class Attention(nn.Module):
 
     @staticmethod
     def create_queries(config: dict) -> nn.Module:
-        if config["attention_pooling_type"].lower() == "kme":
-            return KME(config, hidden_dims=config["attention_dim"])
-        elif config["attention_pooling_type"].lower() == "fspool":
-            return FSPool(config, config["attention_dim"])
-        elif config["attention_pooling_type"].lower() == "none":
+        if config["attention_pooling_type"] is None:
             return MLP(config["n_features"] + 1, config["attention_dim"], config["device"],
-                       config["has_skip_connection"], config["has_batch_norm"], "cnt", config["init_scheme"])
+                       config["has_skip_connection"], config["has_batch_norm"], config["init_scheme"], "cnt")
+        elif config["attention_pooling_type"].lower() == "kme":
+            return KME(config, hidden_dims=config["attention_dim"])
+        elif config["attention_pooling_type"].lower() == "fs_pool":
+            return FSPool(config, config["attention_dim"])
 
         raise NotImplementedError(f"The pooling '{config['attention_pooling_type']}' is not supported.")

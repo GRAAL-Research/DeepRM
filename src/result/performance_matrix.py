@@ -1,17 +1,19 @@
 import math
 import random
 from pathlib import Path
-import torch.nn as nn
+
 import numpy as np
 import torch
+import torch.nn as nn
 from PIL import Image
 from matplotlib import pyplot as plt
 
 from src.model.predictor.predictor import Predictor
+from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
 
 
-def show_performance_matrix(meta_pred, pred, dataset_name, dataset, n_datasets,
+def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, dataset, n_datasets,
                             is_using_wandb, wandb, batch_size, device):
     """
     Builds a visual depiction of the decision boundary of the predictor for tackling a given problem.
@@ -42,8 +44,8 @@ def show_performance_matrix(meta_pred, pred, dataset_name, dataset, n_datasets,
             inputs, meta_pred, zs = inputs.cuda(), meta_pred.cuda(), zs.cuda()
         for i in range(math.ceil(len(inputs) / batch_size)):
             first = i * batch_size
-            last = min((i + 1)*batch_size, len(inputs))
-            meta_output = meta_pred(inputs[first:last, :m])
+            last = min((i + 1) * batch_size, len(inputs))
+            meta_output = meta_pred.forward(inputs[first:last, :m])
             pred.set_params(meta_output)
             _, z = pred.forward(inputs[first:last, :m])
             zs[first:last] = z
