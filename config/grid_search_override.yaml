@@ -1,11 +1,16 @@
-project_name: [message-module-with-kme-exp4]
-run_name_content: [[msg_size, lr, batch_size, pred_hidden_sizes, is_moon_identical, data_compressor_name]]
+project_name: [message-module-with-kme-exp5-mnist] # moon
+run_name_content: [[msg_size, lr, batch_size, pred_hidden_sizes, data_encoder_name, tfm_input_dim, tfm_n_heads, tfm_mlp_dim, tfm_drop_out, tfm_output_dim]]
 
-batch_size: [50]
-lr: [1e-3]
+batch_size: [10, 50, 200]
+lr: [1e-1, 1e-2, 1e-3, 1e-4]
 data_encoder_name: [transformer]  # conv_one_by_one, kme, concatenator, fs_pool, transformer
+tfm_input_dim: [16, 32, 64]
+tfm_n_heads: [1, 4, 8]
+tfm_mlp_dim: [10, 25, 50]
+tfm_drop_out: [0, 0.1]
+tfm_output_dim: [2, 3, 5, 10]
 
-mlp_1_dim: [[1000]]  # [[50], [100], [500], [1000]]
-#msg_size: ${mlp_1_dim[0]}
+mlp_1_dim: [[50]] # [[50], [100], [500], [1000]]
+msg_size: ${mlp_1_dim[0]}
 mlp_2_dim: ${mlp_1_dim}
-pred_hidden_sizes: [[10]]
+pred_hidden_sizes: [[3], [10]]
