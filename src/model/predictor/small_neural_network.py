@@ -67,9 +67,9 @@ class SmallNeuralNetwork(Predictor):
 
             elif isinstance(layer, LazyBatchNorm):
                 if self.use_last_values:
-                    x = layer.forward(x, use_last_values=self.use_last_values)
+                    x = layer.forward(x, is_using_saved_stats=self.use_last_values)
                 elif self.save_bn_params:
-                    x = layer.forward(x, save_bn_params=self.save_bn_params)
+                    x = layer.forward(x, is_saving_computed_stats=self.save_bn_params)
                 else:
                     x = layer.forward(x)
 
