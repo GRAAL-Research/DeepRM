@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +28,10 @@ def load_mnist(config: dict) -> np.ndarray:
     return create_and_store_mnist_datasets(config)
 
 
+def load_mnist_labels() -> list:
+    return ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+
+
 def create_datasets_cache_path(config: dict) -> Path:
     dataset_config_not_overrode_by_grid_search_config = load_yaml_file_content(
         CONFIG_BASE_PATH / config["dataset_config_path"])
@@ -51,10 +56,14 @@ def store_mnist_datasets(config: dict, datasets: np.ndarray) -> None:
 
 
 def create_mnist_binary_datasets(config: dict, dataset) -> np.ndarray:
-    n_digits = 10
-    maximum_of_datasets = n_digits * (n_digits - 1)
-    assertion_msg = f"Given {n_digits} digits, we can't create more than {maximum_of_datasets} MNIST binary datasets."
+    max_digits = 10
+    maximum_of_datasets = max_digits * (max_digits - 1)
+    assertion_msg = f"Given {max_digits} digits, we can't create more than {maximum_of_datasets} MNIST binary datasets."
     assert config["n_dataset"] <= maximum_of_datasets, assertion_msg
+    n_digits = (1 + math.sqrt(1 + 4 * int(config["n_dataset"]))) / 2
+    assert n_digits.is_integer(), \
+        f"A round number of classes should be deduced from given number of datasets."
+    n_digits = int(n_digits)
     assert config["n_instances_per_dataset"] % 2 == 0, "The number of instances per dataset must be even."
 
     binary_datasets = np.zeros(

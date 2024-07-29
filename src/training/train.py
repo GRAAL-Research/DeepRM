@@ -28,7 +28,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
     """
     torch.autograd.set_detect_anomaly(True)
 
-    datasets = create_datasets(config)
+    datasets, classes_name = create_datasets(config)
     predictor = create_predictor(config)
     meta_predictor = create_meta_predictor(config, predictor)
     criterion = create_criterion(config)
@@ -144,8 +144,9 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         if config["n_features"] == 2 and config["is_using_wandb"]:
             show_decision_boundaries(meta_predictor, config["dataset"], test_loader, predictor, wandb, config["device"])
         if config["dataset"] in ["mnist", "cifar100_binary"]:
-            show_performance_matrix(meta_predictor, predictor, config["dataset"], datasets, idx, config["n_dataset"],
-                                    config["is_using_wandb"], wandb, config["batch_size"], config["device"])
+            show_performance_matrix(meta_predictor, predictor, config["dataset"], datasets, classes_name, idx,
+                                    config["n_dataset"], config["is_using_wandb"], wandb, config["batch_size"],
+                                    config["device"])
 
     if config["is_using_wandb"]:
         if is_sending_wandb_last_run_alert and config["is_wandb_alert_activated"]:

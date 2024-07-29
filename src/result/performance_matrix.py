@@ -13,18 +13,17 @@ from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
 
 
-
-def highlight_cell(x,y, ax=None, label='none', **kwargs):
+def highlight_cell(x, y, ax=None, label='none', **kwargs):
     if label == 'none':
         rect = plt.Rectangle((x - .5, y - .5), 0.95, 0.95, fill=False, **kwargs)
     else:
-        rect = plt.Rectangle((x-.5, y-.5), 0.95,0.95, fill=False, label=label, **kwargs)
+        rect = plt.Rectangle((x - .5, y - .5), 0.95, 0.95, fill=False, label=label, **kwargs)
     ax = ax or plt.gca()
     ax.add_patch(rect)
     return rect
 
 
-def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, dataset, idx, n_datasets,
+def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, dataset, classes_name, idx, n_datasets,
                             is_using_wandb, wandb, batch_size, device):
     """
     Builds a visual depiction of the decision boundary of the predictor for tackling a given problem.
@@ -34,6 +33,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         pred (Predictor):
         dataset_name:
         dataset (ndarray): the dataset;
+        classes_name:
         idx:
         n_datasets:
         is_using_wandb (bool): whether to use wandb;
@@ -79,7 +79,6 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         plt.close()
         plt.cla()
         plt.clf()
-        axis_vals = list(range(n_classes))
         if dataset_name == "mnist":
             fig, ax = plt.subplots()
         elif dataset_name == "cifar100_binary":
@@ -87,8 +86,8 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         im = ax.imshow(np.transpose(accs), cmap="Greys")
 
         # Show all ticks and label them with the respective list entries
-        ax.set_xticks(np.arange(len(axis_vals)), labels=axis_vals)
-        ax.set_yticks(np.arange(len(axis_vals)), labels=axis_vals)
+        ax.set_xticks(np.arange(len(classes_name)), labels=classes_name)
+        ax.set_yticks(np.arange(len(classes_name)), labels=classes_name)
 
         # Rotate the tick labels and set their alignment.
         plt.setp(ax.get_xticklabels(), ha="right", rotation_mode="anchor")
@@ -96,8 +95,8 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         # Loop over data dimensions and create text annotations.
         Train, Valid, Test = True, True, True
         min_accs = np.min(accs)
-        for i in range(len(axis_vals)):
-            for j in range(len(axis_vals)):
+        for i in range(len(classes_name)):
+            for j in range(len(classes_name)):
                 c = 'black' if accs[i, j] < (1 + min_accs) / 2 and not i == j else 'white'
                 ax.text(i, j, round(accs[i, j], 2), ha="center", va="center", color=c, size=10)
                 if train_valid_test[i, j] == "t":
