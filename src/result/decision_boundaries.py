@@ -58,7 +58,7 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
                         mesh = np.array(np.c_[xx.ravel(), yy.ravel()])
                         mesh = np.hstack((mesh, np.ones((len(mesh), 1))))
                         mesh = torch.from_numpy(np.array([mesh])).float()
-                        if str(device) == "gpu":
+                        if device == "gpu":
                             mesh = mesh.cuda()
                         pred.set_params(meta_output)
 
