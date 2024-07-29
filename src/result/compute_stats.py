@@ -10,7 +10,8 @@ from src.model.utils.loss import linear_loss
 
 
 def compute_accuracy_loss_and_bounds(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor,
-                                     criterion: nn.Module, data_loader: DataLoader) -> tuple[np.ndarray, np.ndarray, list]:
+                                     criterion: nn.Module, data_loader: DataLoader) -> tuple[
+    np.ndarray, np.ndarray, list]:
     linear_bounds = []
     hyperparam_bounds = []
     kl_bounds = []
@@ -46,8 +47,8 @@ def compute_accuracy_loss_and_bounds(config: dict, meta_predictor: SimpleMetaNet
 
             if config["task"] == "classification":
                 acc = n_instances_per_class_per_dataset * linear_loss(output[1],
-                                                                   targets[:,
-                                                                   n_instances_per_class_per_dataset:] * 2 - 1)
+                                                                      targets[:,
+                                                                      n_instances_per_class_per_dataset:] * 2 - 1)
                 tot_acc.append(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
                 if config["is_bound_computed"]:
                     for dataset_idx in range(len(instances)):
@@ -55,7 +56,8 @@ def compute_accuracy_loss_and_bounds(config: dict, meta_predictor: SimpleMetaNet
                                                 n_instances_per_class_per_dataset,
                                                 n_instances_per_class_per_dataset - acc.item(), 0.05, 0, 1,
                                                 instances[[dataset_idx], n_instances_per_class_per_dataset:],
-                                                targets[[dataset_idx], n_instances_per_class_per_dataset:])
+                                                targets[[dataset_idx], n_instances_per_class_per_dataset:],
+                                                config["msg_size"], config["msg_type"], config["compression_set_size"])
                         linear_bounds.append(bounds[0])
                         hyperparam_bounds.append(bounds[1])
                         kl_bounds.append(bounds[2])

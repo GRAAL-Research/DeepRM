@@ -1,5 +1,5 @@
 dataset_config_path: dataset/mnist.yaml
-log_config_path: log/on.yaml
+log_config_path: log/off.yaml
 training_config_path: training/gpu.yaml
 
 is_bound_computed: False
@@ -22,12 +22,12 @@ tfm_drop_out: 0
 tfm_output_dim: 10
 
 compression_set_size: 0
-attention_dim: [0]
+attention_dim: [100]
 attention_temperature: 20
-attention_pooling_type: fs_pool
+attention_pooling_type: kme
 
-mlp_1_dim: [100]
-mlp_2_dim: [100]
+module_1_dim: [100]
+module_2_dim: [100]
 meta_pred: simple_net
 pred_hidden_sizes: [3]
 

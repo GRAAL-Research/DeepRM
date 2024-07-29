@@ -13,10 +13,6 @@ def main(config_combinations: list[dict]) -> None:
     is_sending_wandb_last_run_alert = False
 
     for run_idx, config in enumerate(config_combinations):
-        if config["msg_size"] == 0:
-            config["msg_type"] = "none"
-            logger.info("Changing the message type to 'none' because the message size is 0.")
-
         logger.info(f"Launching run {run_idx + 1}/{n_runs} : {config}")
 
         if config["msg_type"] == "dsc" and config["msg_penalty_coef"] > 0:

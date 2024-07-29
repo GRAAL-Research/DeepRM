@@ -5,10 +5,12 @@ import torch
 
 from src.bound.utils import zeta, kl_inv, log_binomial_coefficient, sup_bin
 from src.model.predictor.predictor import Predictor
+from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
 
 
-def compute_bounds(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inputs, targets):
+def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, delta, a, b, inputs, targets,
+                   msg_size: str, msg_type: str, compression_set_size: int):
     """
     Generates the DeepRM meta-predictor.
         Args:
@@ -25,14 +27,13 @@ def compute_bounds(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inp
         Return:
             list of floats, the bound values.
     """
-    n_z = meta_pred.compression_set_size
-    n_sigma = meta_pred.msg_size
-    msg_type = meta_pred.msg_type
+    n_z = compression_set_size
+    n_sigma = msg_size
     n_sample, best_bnd, n_grid, best_bnds = 2, 0, 11, []
     for bnd_type in bnds_type:
-        if msg_type == 'cnt':  # The bounds are calculated differently, depending on the message type
+        if msg_type == "cnt":  # The bounds are calculated differently, depending on the message type
             tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
-            meta_output = meta_pred(inputs, n_samples=n_sample)
+            meta_output = meta_pred.forward(inputs, n_random_messages=n_sample)
             for sample in range(n_sample):
                 outp = meta_output[[sample]]
                 pred.set_params(outp)
@@ -40,7 +41,8 @@ def compute_bounds(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inp
                 tot_acc += m * linear_loss(output[1], targets * 2 - 1)
             tot_acc /= n_sample  # An average accuracy is computed...
             r = m - tot_acc
-            kl = torch.mean(torch.sum(meta_pred.msg ** 2, dim=1))  # ... as well as an avg KL value (shortcut, lighter)
+            kl = torch.mean(
+                torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut, lighter)
             if bnd_type == 'kl':
                 epsilon = (kl + np.log(2 * np.sqrt(m - n_z) / zeta(n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
@@ -67,7 +69,7 @@ def compute_bounds(bnds_type, meta_pred, pred: Predictor, m, r, delta, a, b, inp
                         best_bnd = bound
             elif 'marchand' in bnd_type:  # The marchand bound cannot be computed with continuous messages
                 best_bnd = 0
-        elif msg_type == 'dsc':
+        elif msg_type == "dsc":
             p_sigma = 2 ** (-n_sigma)  # Since the message is a binary vector, we consider a uniform distribution
             #   on its various possibilities (prob = 2 ** -number of possibilities)
             if bnd_type == 'kl':

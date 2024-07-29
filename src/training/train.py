@@ -83,7 +83,8 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                                                       targets[batch, targets[batch] == 1])) / 2) ** config[
                                     "loss_exponent"]
                     loss /= len(output)
-                loss += message_penalty_function(meta_predictor.msg, config["msg_penalty_coef"])  # Regularized loss
+                if config["msg_type"] is not None and config["msg_size"] > 0:
+                    loss += message_penalty_function(meta_predictor.get_message(), config["msg_penalty_coef"])  # Regularized loss
                 loss.backward()
                 optimizer.step()
         # Computation of statistics about the current training epoch
@@ -95,7 +96,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                                                                            test_loader)
         hist_values = (
             train_accuracy, train_loss, valid_accuracy, valid_loss, test_accuracy, test_loss, bound, config["msg_size"],
-            meta_predictor.compression_set_size, epoch_idx
+            config["compression_set_size"], epoch_idx
         )
         update_hist(hist, hist_values)
         rolling_val_perf = torch.mean(torch.tensor(hist[valid_metric][-min(100, epoch_idx + 1):]))
@@ -115,7 +116,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         if config["task"] == "classification":
             EpochLogger.log(
                 f"epoch {epo} - train_acc: {train_accuracy:.3f} - val_acc: {valid_accuracy:.3f}"
-                f"- test_acc: {test_accuracy:.3f}"
+                f" - test_acc: {test_accuracy:.3f}"
                 f"{bound_info_to_log}{time_info_to_log}")
         elif config["task"] == "regression":
             EpochLogger.log(
