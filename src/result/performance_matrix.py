@@ -86,7 +86,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         im = ax.imshow(np.transpose(accs), cmap="Greys")
 
         # Show all ticks and label them with the respective list entries
-        ax.set_xticks(np.arange(len(classes_name)), labels=classes_name)
+        ax.set_xticks(np.arange(len(classes_name)), labels=classes_name, rotation=30)
         ax.set_yticks(np.arange(len(classes_name)), labels=classes_name)
 
         # Rotate the tick labels and set their alignment.
