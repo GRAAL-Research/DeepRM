@@ -13,7 +13,18 @@ from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
 
 
-def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, dataset, n_datasets,
+
+def highlight_cell(x,y, ax=None, label='none', **kwargs):
+    if label == 'none':
+        rect = plt.Rectangle((x - .5, y - .5), 0.95, 0.95, fill=False, **kwargs)
+    else:
+        rect = plt.Rectangle((x-.5, y-.5), 0.95,0.95, fill=False, label=label, **kwargs)
+    ax = ax or plt.gca()
+    ax.add_patch(rect)
+    return rect
+
+
+def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, dataset, idx, n_datasets,
                             is_using_wandb, wandb, batch_size, device):
     """
     Builds a visual depiction of the decision boundary of the predictor for tackling a given problem.
@@ -23,6 +34,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         pred (Predictor):
         dataset_name:
         dataset (ndarray): the dataset;
+        idx:
         n_datasets:
         is_using_wandb (bool): whether to use wandb;
         wandb (package): the weights and biases package;
@@ -39,6 +51,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
             inputs[i] = inputs[i, integers]
         m = int(len(inputs[0]) / 2)
         accs = np.ones((n_classes, n_classes))
+        train_valid_test = np.ones((n_classes, n_classes), dtype=str)
         zs = torch.zeros((n_datasets, m))
         if str(device) == "gpu":
             inputs, meta_pred, zs = inputs.cuda(), meta_pred.cuda(), zs.cuda()
@@ -54,6 +67,12 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
             for j in range(n_classes):
                 if i != j:
                     loss = linear_loss(zs[k], inputs[k, :m, -1])
+                    if k in idx[0]:
+                        train_valid_test[i, j] = "t"
+                    elif k in idx[1]:
+                        train_valid_test[i, j] = "v"
+                    elif k in idx[2]:
+                        train_valid_test[i, j] = "e"
                     accs[i, j] = loss
                     k += 1
         plt.figure().clear()
@@ -65,7 +84,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
             fig, ax = plt.subplots()
         elif dataset_name == "cifar100_binary":
             fig, ax = plt.subplots(figsize=(40, 40))
-        im = ax.imshow(accs, cmap="Greys")
+        im = ax.imshow(np.transpose(accs), cmap="Greys")
 
         # Show all ticks and label them with the respective list entries
         ax.set_xticks(np.arange(len(axis_vals)), labels=axis_vals)
@@ -75,11 +94,31 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         plt.setp(ax.get_xticklabels(), ha="right", rotation_mode="anchor")
 
         # Loop over data dimensions and create text annotations.
+        Train, Valid, Test = True, True, True
+        min_accs = np.min(accs)
         for i in range(len(axis_vals)):
             for j in range(len(axis_vals)):
-                c = 'black' if accs[i, j] < 0.7 and not i == j else 'white'
-                ax.text(j, i, round(accs[i, j], 2), ha="center", va="center", color=c, size=10)
-
+                c = 'black' if accs[i, j] < (1 + min_accs) / 2 and not i == j else 'white'
+                ax.text(i, j, round(accs[i, j], 2), ha="center", va="center", color=c, size=10)
+                if train_valid_test[i, j] == "t":
+                    if Train == True:
+                        label = "Train"
+                        Train = False
+                    highlight_cell(i, j, color="green", linewidth=5, label=label)
+                    ax.legend(['Train'], loc="upper right", fontsize="large")
+                elif train_valid_test[i, j] == "v":
+                    if Valid == True:
+                        label = "Valid"
+                        Valid = False
+                    highlight_cell(i, j, color="blue", linewidth=5, label=label)
+                    ax.legend(['Valid'], loc="upper right", fontsize="large")
+                elif train_valid_test[i, j] == "e":
+                    if Test == True:
+                        label = "Test"
+                        Test = False
+                    highlight_cell(i, j, color="red", linewidth=5, label=label)
+                label = "none"
+        ax.legend(loc="upper right", fontsize="large")
         ax.set_title(f"Performance matrix for the {dataset_name} dataset")
         fig.tight_layout()
         cbar = ax.figure.colorbar(im, ax=ax)

@@ -38,10 +38,10 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
 
     valid_metric = "valid_acc" if config["task"] == "classification" else "valid_loss"
     n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
-    train_loader, valid_loader, test_loader, tr_var, vd_var, te_var = train_valid_loaders(datasets,
-                                                                                          config["batch_size"],
-                                                                                          config["splits"],
-                                                                                          seed=config["seed"])
+    train_loader, valid_loader, test_loader, tr_var, vd_var, te_var, idx = train_valid_loaders(datasets,
+                                                                                               config["batch_size"],
+                                                                                               config["splits"],
+                                                                                               seed=config["seed"])
     best_rolling_val_acc = 0
     best_epoch = 0
     # The following information will be recorded at each epoch
@@ -144,11 +144,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         if config["n_features"] == 2 and config["is_using_wandb"]:
             show_decision_boundaries(meta_predictor, config["dataset"], test_loader, predictor, wandb, config["device"])
         if config["dataset"] in ["mnist", "cifar100_binary"]:
-            shuffle = config["shuffle_each_dataset_samples"]
-            config["shuffle_each_dataset_samples"] = False
-            dataset = create_datasets(config)
-            config["shuffle_each_dataset_samples"] = shuffle
-            show_performance_matrix(meta_predictor, predictor, config["dataset"], dataset, config["n_dataset"],
+            show_performance_matrix(meta_predictor, predictor, config["dataset"], datasets, idx, config["n_dataset"],
                                     config["is_using_wandb"], wandb, config["batch_size"], config["device"])
 
     if config["is_using_wandb"]:

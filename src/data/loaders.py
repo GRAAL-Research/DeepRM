@@ -6,7 +6,7 @@ from torch.utils.data import Subset, DataLoader
 
 
 def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42) -> tuple[
-        DataLoader, DataLoader, DataLoader, np.ndarray, np.ndarray, np.ndarray]:
+        DataLoader, DataLoader, DataLoader, np.ndarray, np.ndarray, np.ndarray, list]:
     """
     Divides a dataset into a training set and a validation set, both in a Pytorch DataLoader form.
     Args:
@@ -41,5 +41,6 @@ def train_valid_loaders(dataset, batch_size, splits, shuffle=True, seed=42) -> t
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    idx = [train_idx, valid_idx, test_idx]
 
-    return train_loader, valid_loader, test_loader, train_var, valid_var, test_var
+    return train_loader, valid_loader, test_loader, train_var, valid_var, test_var, idx
