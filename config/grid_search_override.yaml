@@ -3,8 +3,8 @@ run_name_content: [[msg_size, lr, batch_size, pred_hidden_sizes,
                     data_encoder_name, tfm_input_dim, tfm_n_heads,
                     tfm_mlp_dim, tfm_drop_out, tfm_output_dim, tfm_n_encoders]]
 
-batch_size: [10, 45]
-lr: [1e-1, 1e-2, 1e-3, 1e-4]
+batch_size: [3, 10, 45]
+lr: [1e-2, 1e-3]
 
 data_encoder_name: [transformer]  # conv_one_by_one, kme, concatenator, fs_pool, transformer
 tfm_input_dim: [32, 64, 256, 1024]
