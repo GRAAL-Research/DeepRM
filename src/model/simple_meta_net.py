@@ -10,36 +10,30 @@ from src.model.mlp import MLP
 class SimpleMetaNet(nn.Module):
     def __init__(self, config: dict, pred_input_dim: int) -> None:
         """
-        Generates the DeepRM meta-predictor.
         pred_input_dim (int): Input dimension of the predictor;
         """
-        super(SimpleMetaNet, self).__init__()
+        super().__init__()
         self.compression_set_size = config["compression_set_size"]
         self.msg_size = config["msg_size"]
         self.msg_type = config["msg_type"]
         self.n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
         self.mlp_1_dim = config["mlp_1_dim"] + [self.msg_size]
-        self.msg = torch.tensor(0.0)  # Message (compression selection)
+        self.msg = torch.tensor(0.0)
         self.msk = None  # Mask (compression selection)
-        self.input_dim = config["n_features"]
         self.output_dim = pred_input_dim
 
-        # Generating the many components (custom attention (CA) multi-heads, KME #1-2, MLP #1-2) of the meta-learner
         self.data_compressor_1 = create_data_compressor_1(config)
-        self.mod_1 = MLP(self.data_compressor_1.get_output_dimension(), self.mlp_1_dim, config["device"],
-                         config["has_skip_connection"], config["has_batch_norm"], config["msg_type"],
-                         config["init_scheme"])
+        self.module_1 = MLP(self.data_compressor_1.get_output_dimension(), self.mlp_1_dim, config["device"],
+                            config["has_skip_connection"], config["has_batch_norm"], config["msg_type"],
+                            config["init_scheme"])
 
-        self.cas = nn.ModuleList([])
-        for i in range(self.compression_set_size):
-            self.cas.append(Attention(config))
-
+        self.cas = nn.ModuleList([Attention(config) for _ in range(self.compression_set_size)])
         self.kme_2 = KME(config, hidden_dims=config["kme_dim"])
 
-        self.mod_2 = MLP(self.compute_mod_2_input_dim(), config["mlp_2_dim"] + [self.output_dim], config["device"],
-                         config["has_skip_connection"], config["has_batch_norm"], "none", config["init_scheme"])
+        self.module_2 = MLP(self.compute_module_2_input_dim(), config["mlp_2_dim"] + [self.output_dim], config["device"],
+                            config["has_skip_connection"], config["has_batch_norm"], "none", config["init_scheme"])
 
-    def compute_mod_2_input_dim(self) -> int:
+    def compute_module_2_input_dim(self) -> int:
         mod_2_input_dim = 0
 
         if self.compression_set_size > 0:
@@ -50,62 +44,71 @@ class SimpleMetaNet(nn.Module):
 
         return mod_2_input_dim
 
-    def forward(self, x, n_samples=0):
+    def forward(self, x: torch.Tensor, n_random_messages: int = 0) -> torch.Tensor:
         """
-        Computes a forward pass, given an input.
-        Args:
-            x (torch.tensor of floats): input;
-            n_samples (int): number of random message to generate (0 to use mean as single message).
-        return:
-            torch.Tensor: output of the network.
+        n_random_messages (int): number of random message to generate (0 to use mean as single message).
         """
-        # Message computation #
-        x_ori = x.clone()
+        msg_module_output = None
+        compression_module_output = None
+
         if self.msg_size > 0:
-            x = self.data_compressor_1.forward(x)
-            # Passing through MLP #1 #
-            x = self.mod_1.forward(x)
+            msg_module_output = self.forward_msg_module(x, n_random_messages)
 
-            if self.msg_type == "cnt":
-                x = x * 3  # See bound computation
-            if n_samples == 0:
-                self.msg = x.clone()
-            if n_samples > 0:
-                x_reshaped = torch.reshape(x, (-1, 1))
-                for sample in range(n_samples):
-                    if sample == 0:
-                        self.msg = torch.reshape(torch.normal(x_reshaped, 1), (len(x), -1))
-                    else:
-                        self.msg = torch.vstack((self.msg, torch.reshape(torch.normal(x_reshaped, 1), (len(x), -1))))
-                x = self.msg
-
-        # Mask computation
         if self.compression_set_size > 0:
-            mask = self.cas[0].forward(x_ori.clone())
-            for j in range(1, len(self.cas)):
-                out = self.cas[j].forward(x_ori.clone())
-                mask = torch.hstack((mask, out))
+            compression_module_output = self.forward_compression_module(x, n_random_messages)
 
-            # Applying the mask to x #
-            x_masked = torch.matmul(mask, x_ori.clone())
+        return self.forward_module_2(msg_module_output, compression_module_output)
 
-            # Passing through KME #1 #
-            x_masked = self.kme_2.forward(x_masked)
+    def forward_msg_module(self, x, n_random_messages):
+        x = self.data_compressor_1.forward(x)
+        x = self.module_1.forward(x)
 
-            # Concatenating all the information (mask + msg) #
-            x_masked = torch.reshape(x_masked, (len(x_masked), -1))
-            if n_samples > 0:
-                x_masked = x_masked.repeat(n_samples, 1)
-            if self.msg_size > 0:
-                x_red = torch.hstack((x, x_masked))
-            else:
-                x_red = x_masked
-        else:
-            x_red = x
+        if self.msg_type == "cnt":
+            x = x * 3  # See bound computation
+        if n_random_messages == 0:
+            self.msg = x.clone()
+        if n_random_messages > 0:
+            x_reshaped = x.unsqueeze(-1)
+            for random_message_idx in range(n_random_messages):
+                normal_dist = torch.normal(x_reshaped, 1).reshape((len(x), -1))
+                if random_message_idx == 0:
+                    self.msg = normal_dist
+                else:
+                    self.msg = torch.vstack((self.msg, normal_dist))
+            x = self.msg
 
-        # Final output computation #
-        output = self.mod_2.forward(x_red)
-        return output
+        return x
+
+    def forward_compression_module(self, x, n_random_messages):
+        mask = self.cas[0].forward(x.clone())
+        for j in range(1, len(self.cas)):
+            out = self.cas[j].forward(x.clone())
+            mask = torch.hstack((mask, out))
+
+        x_masked = mask.matmul(x.clone())
+        x_masked = self.kme_2.forward(x_masked)
+
+        # Concatenating all the information (mask + msg)
+        x_masked = torch.reshape(x_masked, (len(x_masked), -1))
+        if n_random_messages > 0:
+            x_masked = x_masked.repeat(n_random_messages, 1)
+
+        return x_masked
+
+    def forward_module_2(self, msg_module_output: torch.Tensor | None,
+                         compression_module_output: torch.Tensor | None) -> torch.Tensor:
+
+        if msg_module_output is not None and compression_module_output is not None:
+            merged_msg_and_compression_output = torch.hstack((msg_module_output, compression_module_output))
+            return self.module_2.forward(merged_msg_and_compression_output)
+
+        if msg_module_output is not None:
+            return self.module_2.forward(msg_module_output)
+
+        if compression_module_output is not None:
+            return self.module_2.forward(compression_module_output)
+
+        raise ValueError(f"The message module and the compression module are both disabled.")
 
     def compute_compression_set(self, x: torch.Tensor) -> None:
         """

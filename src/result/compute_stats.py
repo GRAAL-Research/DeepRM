@@ -38,7 +38,7 @@ def compute_accuracy_loss_and_bounds(config: dict, meta_predictor: SimpleMetaNet
                 targets = targets.cuda()
                 meta_predictor = meta_predictor.cuda()
 
-            meta_output = meta_predictor(instances[:, :n_instances_per_class_per_dataset])
+            meta_output = meta_predictor.forward(instances[:, :n_instances_per_class_per_dataset])
             predictor.set_params(meta_output)
             output = predictor(instances[:, n_instances_per_class_per_dataset:])
             loss = criterion(output[0], targets[:, n_instances_per_class_per_dataset:])
