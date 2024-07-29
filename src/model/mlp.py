@@ -16,16 +16,19 @@ class MLP(nn.Module):
         self.has_skip_connection = has_skip_connection
 
         input_and_hidden_dims = MLP.compute_input_and_hidden_dims(input_dim, hidden_dims)
-        self.module = MLP.create_mlp(has_batch_norm, msg_type, input_and_hidden_dims, device)
+        self.mlp = MLP.create_mlp(has_batch_norm, msg_type, input_and_hidden_dims, device)
 
-        last_layer_idx = len(self.module) - 1
+        last_layer_idx = len(self.mlp) - 1
         self.skip_position = last_layer_idx - has_batch_norm
 
         if device == "gpu":
-            self.module.to("cuda:0")
+            self.mlp.cuda()
 
         if init_scheme:
-            initialize_weights(init_scheme, self.module)
+            initialize_weights(init_scheme, self.mlp)
+
+    def get_modules(self):
+        return self.mlp
 
     @staticmethod
     def compute_input_and_hidden_dims(input_dim: int, hidden_dims: list[int]) -> list[int]:
@@ -63,7 +66,7 @@ class MLP(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         initial_x = x.clone()
-        for layer_idx, layer in enumerate(self.module, start=1):
+        for layer_idx, layer in enumerate(self.mlp, start=1):
             if self.has_skip_connection and layer_idx == self.skip_position:
                 x = self.apply_skip_connection(x, initial_x)
             x = layer(x)

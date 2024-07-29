@@ -16,7 +16,7 @@ class SmallNeuralNetwork(Predictor):
                        config["has_skip_connection"],
                        config["has_batch_norm"], "none")
 
-        self.weights = torch.tensor([])
+        self.params = torch.tensor([])
         self.batch_norm_params = []
         self.use_last_values = False
         self.save_bn_params = False
@@ -25,8 +25,8 @@ class SmallNeuralNetwork(Predictor):
     def n_params(self) -> int:
         return sum(parameter.numel() for parameter in self.parameters() if parameter.requires_grad)
 
-    def set_weights(self, weights: torch.Tensor) -> None:
-        self.weights = weights
+    def set_params(self, params: torch.Tensor) -> None:
+        self.params = params
 
     def set_forward_mode(self, use_last_values: bool = False, save_bn_params: bool = False):
         self.use_last_values = use_last_values
@@ -37,38 +37,47 @@ class SmallNeuralNetwork(Predictor):
         self.save_bn_params = False
 
     def forward(self, instances: torch.Tensor) -> tuple:
+        target_idx = -1
+        x = instances[:, :, :target_idx]
+        batch_size = len(x)
+
         if not self.use_last_values:
             self.batch_norm_params = []
 
-        batch_size = len(instances)
-        input_0 = instances[:, :, :-1]
-        count_1 = 0
-        count_2 = 0
-        n_batch_norm = 0
-        j = 0
-        for layer in self.mlp.module:
+        params_low_idx = 0
+        params_high_idx = 0
+        linear_layer_idx = 0
+
+        for layer in self.mlp.get_modules():
             if isinstance(layer, nn.Linear):
-                count_2 += self.architecture_sizes[j] * self.architecture_sizes[j + 1]
-                w = torch.reshape(self.weights[:, count_1:count_2],
-                                  (batch_size, self.architecture_sizes[j + 1], self.architecture_sizes[j]))
-                count_1 += self.architecture_sizes[j] * self.architecture_sizes[j + 1]
-                count_2 += self.architecture_sizes[j + 1]
-                b = torch.reshape(self.weights[:, count_1:count_2], (batch_size, 1, self.architecture_sizes[j + 1]))
-                count_1 += self.architecture_sizes[j + 1]
-                j += 1
-                w = torch.transpose(w, 1, 2)
-                input_0 = torch.matmul(input_0, w) + b
+                current_linear_layer_dim = self.architecture_sizes[linear_layer_idx]
+                new_linear_layer_dim = self.architecture_sizes[linear_layer_idx + 1]
+
+                params_high_idx += current_linear_layer_dim * new_linear_layer_dim
+                weights = self.params[:, params_low_idx: params_high_idx].reshape(batch_size,
+                                                                                  new_linear_layer_dim,
+                                                                                  current_linear_layer_dim)
+
+                params_low_idx += current_linear_layer_dim * new_linear_layer_dim
+                params_high_idx += new_linear_layer_dim
+                bias = self.params[:, params_low_idx: params_high_idx].unsqueeze(dim=-2)
+
+                weights = weights.transpose(-2, -1)
+                x = x.matmul(weights) + bias
+
+                params_low_idx += new_linear_layer_dim
+                linear_layer_idx += 1
+
             elif isinstance(layer, LazyBatchNorm):
                 if self.use_last_values:
-                    input_0 = layer.forward(input_0, use_last_values=self.use_last_values)
+                    x = layer.forward(x, use_last_values=self.use_last_values)
                 elif self.save_bn_params:
-                    input_0 = layer.forward(input_0, save_bn_params=self.save_bn_params)
+                    x = layer.forward(x, save_bn_params=self.save_bn_params)
                 else:
-                    input_0 = layer.forward(input_0)
-                n_batch_norm += 1
-            else:
-                input_0 = layer(input_0)
-        output = input_0
-        output = output.transpose(1, 2).squeeze(dim=-2)
+                    x = layer.forward(x)
 
+            else:
+                x = layer(x)
+
+        output = x.transpose(-2, -1).squeeze(dim=-2)
         return self._process_output(output)

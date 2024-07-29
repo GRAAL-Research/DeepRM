@@ -59,7 +59,7 @@ def show_decision_boundaries(meta_pred, dataset, data_loader, pred: Predictor, w
                         mesh = torch.from_numpy(np.array([mesh])).float()
                         if device == "gpu":
                             mesh = mesh.cuda()
-                        pred.set_weights(meta_output)
+                        pred.set_params(meta_output)
 
                         if isinstance(pred, SmallNeuralNetwork):
                             pred.set_forward_mode(save_bn_params=True)
