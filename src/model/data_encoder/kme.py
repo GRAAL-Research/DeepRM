@@ -13,10 +13,10 @@ class KME(DataEncoder):
                        config["has_skip_connection"],
                        config["has_batch_norm"], 'none', config["init_scheme"])
         self.task = config["task"]
+        self.target_size = config["target_size"]
 
     def forward(self, instances: torch.tensor) -> torch.tensor:
-        targets_idx = -1
-        features = instances[:, :, :targets_idx]
+        features = instances[:, :, :-self.target_size]
         embeddings = self.mlp(features)
         targets = instances[:, :, -1].unsqueeze(-1)
 

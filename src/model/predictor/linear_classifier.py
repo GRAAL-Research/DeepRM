@@ -8,6 +8,7 @@ class LinearClassifier(Predictor):
         super().__init__(config)
         self.params = torch.tensor([])
         self.n_features = config["n_features"]
+        self.target_size = config["target_size"]
 
     def set_params(self, params):
         self.params = params
@@ -20,9 +21,8 @@ class LinearClassifier(Predictor):
 
     def forward(self, instances: torch.Tensor, **kwargs) -> tuple:
         bias_idx = -1
-        target_dim = -1
         weights = self.params[:, :bias_idx]
-        x = instances[:, :, :target_dim].transpose(0, 1)
+        x = instances[:, :, :-self.target_size].transpose(0, 1)
         wx = (x * weights).sum(dim=-1)
         bias = self.params[:, bias_idx]
         output = wx + bias

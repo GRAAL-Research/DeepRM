@@ -16,7 +16,7 @@ CIFAR100_BASE_PATH = DATA_BASE_PATH / "CIFAR100"
 CIFAR100_DEFAULT_IMG_SIZE = (32, 32)
 CIFAR100_CACHE_BASE_PATH = CIFAR100_BASE_PATH / "cache"
 NUMPY_FILE_EXTENSION = ".npy"
-
+N_CHANNELS = 3
 
 def load_cifar100(config: dict) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config)
@@ -57,13 +57,12 @@ def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
     assert config["n_dataset"] <= max_of_datasets, assertion_msg
     assert config["n_instances_per_dataset"] % 2 == 0, "The number of instances per dataset must be even."
 
-    target_dim = 1
     binary_datasets = np.zeros(
-        (config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] + target_dim))
+        (config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] + config["target_size"]))
 
     n_instance_per_class_per_dataset = config["n_instances_per_dataset"] // 2
     binary_dataset_idx = 0
-    target_idx = -1
+    target_starting_idx = -config["target_size"]
 
     for first_class in range(n_classes):
         for second_class in range(n_classes):
@@ -72,11 +71,11 @@ def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
             if first_class == second_class:
                 continue
 
-            first_class_filter = dataset[:, target_idx] == first_class
-            first_class_x = dataset[first_class_filter, :target_idx]
+            first_class_filter = dataset[:, target_starting_idx] == first_class
+            first_class_x = dataset[first_class_filter, :target_starting_idx]
 
-            second_class_filter = dataset[:, target_idx] == second_class
-            second_class_x = dataset[second_class_filter, :target_idx]
+            second_class_filter = dataset[:, target_starting_idx] == second_class
+            second_class_x = dataset[second_class_filter, :target_starting_idx]
 
             x = torch.vstack((first_class_x[:n_instance_per_class_per_dataset],
                               second_class_x[:n_instance_per_class_per_dataset]))
@@ -123,8 +122,8 @@ def create_test_set(config: dict) -> torch.Tensor:
 
 
 def apply_transforms_to_dataset(config: dict, dataset: CIFAR100) -> CIFAR100:
-    square_root_of_n_features = np.sqrt(config["n_features"] // 3)
-    is_a_perfect_square = 0 <= config["n_features"] // 3 == int(square_root_of_n_features) ** 2
+    square_root_of_n_features = np.sqrt(config["n_features"] // N_CHANNELS)
+    is_a_perfect_square = 0 <= config["n_features"] // N_CHANNELS == int(square_root_of_n_features) ** 2
     assert is_a_perfect_square, "The number of features (per channel) must be a perfect square."
 
     new_img_size = (int(square_root_of_n_features), int(square_root_of_n_features))

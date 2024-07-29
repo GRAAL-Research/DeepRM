@@ -5,14 +5,13 @@ from src.model.data_encoder.data_encoder import DataEncoder
 
 
 class ConvOneByOneBlock(DataEncoder):
-    def __init__(self, n_features: int, n_instances_per_dataset_fed_to_deep_rm: int, n_filters: int,
-                 is_target_provided: bool) -> None:
+    def __init__(self, config: dict, n_instances_per_dataset_fed_to_deep_rm: int, is_target_provided: bool) -> None:
         super().__init__()
+        n_filters = config["conv_one_by_one_n_filters"]
         self.output_dim = n_filters * n_instances_per_dataset_fed_to_deep_rm
-
-        n_input_channels = n_features
+        n_input_channels = config["n_features"]
         if is_target_provided:
-            n_input_channels += 1
+            n_input_channels += config["target_size"]
 
         self.conv_one_by_one = nn.Conv1d(n_input_channels, n_filters, kernel_size=1)
 

@@ -10,7 +10,7 @@ class Concatenator(DataEncoder):
 
         instance_length = config["n_features"]
         if is_target_provided:
-            instance_length += 1
+            instance_length += config["target_size"]
         self.output_dim = n_instances_per_dataset_fed_to_deep_rm * instance_length
 
     def forward(self, datasets: torch.Tensor) -> torch.Tensor:
