@@ -16,6 +16,10 @@ class SimpleMetaNet(nn.Module):
         self.compression_set_size = config["compression_set_size"]
         self.msg_type = config["msg_type"]
         self.msg_size = config["msg_size"]
+        self.batch_size = config["batch_size"]
+        self.device = config["device"]
+        self.is_using_a_random_msg = config["is_using_a_random_msg"]
+
         self.n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
         self.module_1_dim = config["module_1_dim"] + [config["msg_size"]]
         self.msg = torch.tensor(0.0)
@@ -48,42 +52,49 @@ class SimpleMetaNet(nn.Module):
 
         return mod_2_input_dim
 
-    def forward(self, x: torch.Tensor, n_random_messages: int = 0) -> torch.Tensor:
-        """
-        n_random_messages (int): number of random message to generate (0 to use mean as single message).
-        """
+    def forward(self, x: torch.Tensor, n_noisy_messages: int = 0) -> torch.Tensor:
         msg_module_output = None
         compression_module_output = None
 
         if self.msg_type is not None and self.msg_size > 0:
-            msg_module_output = self.forward_msg_module(x, n_random_messages)
+            msg_module_output = self.forward_msg_module(x, n_noisy_messages)
+            self.msg = msg_module_output.clone()
 
         if self.compression_set_size > 0:
-            compression_module_output = self.forward_compression_module(x, n_random_messages)
+            compression_module_output = self.forward_compression_module(x, n_noisy_messages)
 
         return self.forward_module_2(msg_module_output, compression_module_output)
 
-    def forward_msg_module(self, x, n_random_messages):
+    def forward_msg_module(self, x: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:
+        if self.is_using_a_random_msg:
+            return self.create_random_message(x.shape[0])
+
         x = self.data_compressor_1.forward(x)
-        x = self.module_1.forward(x)
+        message = self.module_1.forward(x)
 
         if self.msg_type == "cnt":
-            x = x * 3  # See bound computation
-        if n_random_messages == 0:
-            self.msg = x.clone()
-        if n_random_messages > 0:
-            x_reshaped = x.unsqueeze(-1)
-            for random_message_idx in range(n_random_messages):
-                normal_dist = torch.normal(x_reshaped, 1).reshape((len(x), -1))
-                if random_message_idx == 0:
-                    self.msg = normal_dist
-                else:
-                    self.msg = torch.vstack((self.msg, normal_dist))
-            x = self.msg
+            message = message * 3  # See bound computation
 
-        return x
+        if n_noisy_messages == 0:
+            return message
 
-    def forward_compression_module(self, x, n_random_messages):
+        elif n_noisy_messages > 0:
+            noisy_messages = [self.create_noisy_message(message) for _ in range(n_noisy_messages)]
+            return torch.stack(noisy_messages).squeeze(0)
+
+        raise ValueError(f"The number of noisy messages must be greater or equal to 0.")
+
+    def create_random_message(self, batch_size: int) -> torch.Tensor:
+        random_message = torch.rand((batch_size, self.msg_size))
+        if self.device == "gpu":
+            random_message = random_message.cuda()
+        return random_message
+
+    @staticmethod
+    def create_noisy_message(x: torch.Tensor) -> torch.Tensor:
+        return torch.normal(x, 1)
+
+    def forward_compression_module(self, x: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:
         mask = self.cas[0].forward(x.clone())
         for j in range(1, len(self.cas)):
             out = self.cas[j].forward(x.clone())
@@ -94,8 +105,8 @@ class SimpleMetaNet(nn.Module):
 
         # Concatenating all the information (mask + msg)
         x_masked = torch.reshape(x_masked, (len(x_masked), -1))
-        if n_random_messages > 0:
-            x_masked = x_masked.repeat(n_random_messages, 1)
+        if n_noisy_messages > 0:
+            x_masked = x_masked.repeat(n_noisy_messages, 1)
 
         return x_masked
 
