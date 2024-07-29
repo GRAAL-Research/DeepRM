@@ -1,3 +1,4 @@
+import wandb
 from loguru import logger
 
 from src.config.config import create_config
@@ -5,7 +6,7 @@ from src.config.grid_search_config import create_config_combinations_sorted_by_d
 from src.result.prevent_running_completed_job import is_run_already_done, save_run_in_a_text_file
 from src.training.train import train_meta_predictor
 from src.utils.default_logger import DefaultLogger
-from src.utils.utils import set_random_seed
+from src.utils.utils import set_random_seed, create_run_name
 
 
 def main(config_combinations: list[dict]) -> None:
@@ -22,6 +23,10 @@ def main(config_combinations: list[dict]) -> None:
             logger.info("Skipping the run... It is already done.")
             continue
 
+        if config["is_using_wandb"]:
+            run_name = create_run_name(config)
+            wandb.init(name=run_name, project=config["project_name"], config=config)
+
         set_random_seed(config["seed"])
 
         is_the_last_run = run_idx + 1 == n_runs
@@ -35,8 +40,11 @@ def main(config_combinations: list[dict]) -> None:
 
 
 if __name__ == "__main__":
-    DefaultLogger.apply_format()
-    loaded_config = create_config()
-
-    config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
-    main(config_combinations)
+    try:
+        DefaultLogger.apply_format()
+        loaded_config = create_config()
+        config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
+        main(config_combinations)
+    except Exception as e:
+        wandb.alert(title="❌ Error", text="The experiment failed.")
+        raise e
