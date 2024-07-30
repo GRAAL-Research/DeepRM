@@ -19,7 +19,7 @@ class LinearClassifier(Predictor):
         n_weights = self.n_features
         return n_bias + n_weights
 
-    def forward(self, instances: torch.Tensor, **kwargs) -> tuple:
+    def forward(self, instances: torch.Tensor) -> tuple:
         bias_idx = -1
         weights = self.params[:, :bias_idx]
         x = instances[:, :, :-self.target_size].transpose(0, 1)

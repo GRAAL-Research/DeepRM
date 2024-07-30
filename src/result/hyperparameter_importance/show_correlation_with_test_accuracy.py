@@ -1,0 +1,55 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+from src.result.hyperparameter_importance.download_and_save_wandb_data import fetch_wandb_data
+from src.result.hyperparameter_importance.utils import RESULT_PATH
+from src.utils.utils import TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL
+
+COLOR_MAP = "PiYG"
+
+
+def show_correlation_with_test_accuracy(data: pd.DataFrame) -> None:
+    important_hparams = find_important_hyperparameters(data)
+    correlation_matrix = data[important_hparams].corr()[TEST_ACCURACY_LABEL].sort_values(ascending=False)
+
+    plt.figure(figsize=(12, 6))
+    show_test_accuracy_values = True
+    min_correlation_value = -1
+    max_correlation_value = 1
+    sns.heatmap(correlation_matrix.to_frame().T, annot=show_test_accuracy_values, vmin=min_correlation_value,
+                vmax=max_correlation_value,
+                cmap=COLOR_MAP, cbar_kws={"label": "Correlation"})
+    plot_title = "Hyperparameters' Correlation with Test Accuracy"
+    plt.title(plot_title)
+
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+    if not RESULT_PATH.exists():
+        RESULT_PATH.mkdir(parents=True)
+    plt.savefig(RESULT_PATH / f"correlation.png")
+
+    plt.show()
+
+
+def find_important_hyperparameters(data: pd.DataFrame) -> list[str]:
+    numerical_hparams = data.select_dtypes(include=["float64", "int64"]).columns.tolist()
+    numerical_hparams.remove(VALID_ACCURACY_LABEL)
+    numerical_hparams.remove(TRAIN_ACCURACY_LABEL)
+
+    correlation_matrix = data[numerical_hparams].corr()[TEST_ACCURACY_LABEL]
+
+    important_numerical_params = []
+    for numerical_param in numerical_hparams:
+        if np.abs(correlation_matrix[numerical_param]) > 0:
+            important_numerical_params.append(numerical_param)
+
+    return important_numerical_params
+
+
+if __name__ == "__main__":
+    team = "graal-deeprm2024"
+    project = "message-module-with-kme-exp5-mnist"
+    data = fetch_wandb_data(team, project)
+    show_correlation_with_test_accuracy(data)

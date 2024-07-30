@@ -2,9 +2,10 @@ import random
 
 import numpy as np
 import torch
-from matplotlib import pyplot as plt
 
-plt.switch_backend("agg")
+TEST_ACCURACY_LABEL: str = "test_acc"
+TRAIN_ACCURACY_LABEL: str = "train_acc"
+VALID_ACCURACY_LABEL: str = "valid_acc"
 
 
 def set_random_seed(seed: int) -> None:
