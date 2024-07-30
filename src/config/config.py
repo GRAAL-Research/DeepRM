@@ -15,9 +15,9 @@ def create_config():
 
 def create_default_config(config):
     try:
-        config['test_classes_are_shared']
+        config['are_test_classes_shared_with_train']
     except KeyError:
-        config['test_classes_are_shared'] = True
+        config['are_test_classes_shared_with_train'] = True
     return config
 
 def add_sub_config_parameters(config: dict) -> dict:

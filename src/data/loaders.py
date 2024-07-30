@@ -5,15 +5,15 @@ import torch
 from torch.utils.data import Subset, DataLoader
 
 
-def train_valid_loaders(dataset, batch_size, splits, test_classes_are_shared, shuffle=True, seed=42) -> tuple[
-    DataLoader, DataLoader, DataLoader, np.ndarray, np.ndarray, np.ndarray, list]:
+def train_valid_loaders(dataset, batch_size, splits, are_test_classes_shared_with_train, shuffle=True, seed=42) -> (
+        tuple)[DataLoader, DataLoader, DataLoader, np.ndarray, np.ndarray, np.ndarray, list]:
     """
     Divides a dataset into a training set and a validation set, both in a Pytorch DataLoader form.
     Args:
         dataset (torch.utils.data.Dataset): Dataset
         batch_size (int): Desired batch-size for the DataLoader
         splits (list of float): Desired proportion of training, validation and test example must sum to 1).
-        test_classes_are_shared ():
+        are_test_classes_shared_with_train ():
         shuffle (bool): Whether the examples are shuffled before train/validation split.
         seed (int): A random seed.
     Returns:
@@ -22,7 +22,7 @@ def train_valid_loaders(dataset, batch_size, splits, test_classes_are_shared, sh
     assert sum(splits) == 1, 'The sum of splits must be 1.'
     num_data = len(dataset)
     indices = np.arange(num_data)
-    if not test_classes_are_shared:
+    if not are_test_classes_shared_with_train:
         num_classes = int((1 + math.sqrt(1 + 4 * int(num_data))) / 2)
         test_idx = []
         curr_class = -1
