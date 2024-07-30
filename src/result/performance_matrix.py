@@ -128,7 +128,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         for i in range(len(classes_name)):
             for j in range(len(classes_name)):
                 c = 'black' if accs[i, j] < (1 + min_accs) / 2 and not i == j else 'white'
-                ax.text(i, j, round(accs[i, j], 2), ha="center", va="center", color=c, size=10)
+                ax.text(i, j, round(accs[i, j], 2), ha="center", va="center", color=c, size=8)
                 if t_v_e_matrix[i, j] == "t":
                     if not tr_in_legend:
                         label = "Train"
@@ -148,16 +148,20 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
                     highlight_cell(i, j, color="red", linewidth=linewidth, label=label)
                 label = "none"
         ax.legend(loc="upper right", fontsize="large")
-        ax.set_title(f"Performance matrix for the {dataset_name} dataset")
         fig.tight_layout()
         cbar = ax.figure.colorbar(im, ax=ax)
         cbar.ax.set_ylabel("Accuracy", rotation=-90, va="bottom")
         if test_classes_are_shared:
-            ax.text(-1, -1, f"Train acc.: {round(train_acc, 3)} \n Valid acc.: {round(valid_acc, 3)} \n Test acc.: "
-                            f"{round(test_with_acc, 3)}")
+            ax.set_title(
+                f"Performance matrix for the {dataset_name} dataset\nTrain acc.: {round(train_acc, 3)} \nValid acc.: "
+                f"{round(valid_acc, 3)} \nTest acc.: {round(test_with_acc, 3)}", fontsize=10)
         else:
-            ax.text(-1, -1, f"Train acc.: {round(train_acc, 3)} \nValid acc.: {round(valid_acc, 3)} \nTest acc. (sh"
-                            f"ared): {round(test_with_acc, 3)} \nTest acc. (not shared): {round(test_without_acc, 3)}")
+            ax.set_title(
+                f"Performance matrix for the {dataset_name} dataset\nTrain acc.: {round(train_acc, 3)} \nValid acc.: "
+                f"{round(valid_acc, 3)} \nTest acc. (shared): {round(test_with_acc, 3)} \nTest acc. (not shared): "
+                f"{round(test_without_acc, 3)}", fontsize=10)
+
+    plt.tight_layout()
     figure_folder_path = Path("figures")
     if not figure_folder_path.exists():
         figure_folder_path.mkdir()
