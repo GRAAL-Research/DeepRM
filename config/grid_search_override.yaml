@@ -10,7 +10,7 @@ tfm_mlp_dim: [10, 25, 50]
 tfm_drop_out: [0, 0.1]
 tfm_output_dim: [2, 3, 5, 10]
 
-mlp_1_dim: [[50]] # [[50], [100], [500], [1000]]
-msg_size: ${mlp_1_dim[0]}
-mlp_2_dim: ${mlp_1_dim}
+module_1_dim: [[50]] # [[50], [100], [500], [1000]]
+msg_size: ${module_1_dim[0]}
+module_2_dim: ${module_1_dim}
 pred_hidden_sizes: [[3], [10]]
