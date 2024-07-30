@@ -148,7 +148,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
                     highlight_cell(i, j, color="red", linewidth=linewidth, label=label)
                 label = "none"
         ax.legend(loc="upper right", fontsize="large")
-        fig.tight_layout()
+        plt.tight_layout()
         cbar = ax.figure.colorbar(im, ax=ax)
         cbar.ax.set_ylabel("Accuracy", rotation=-90, va="bottom")
         if are_test_classes_shared_with_train:

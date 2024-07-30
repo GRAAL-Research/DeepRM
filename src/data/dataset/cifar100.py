@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import numpy as np
-import math
 import torch
 import torchvision
 from torchvision import transforms as transforms
@@ -54,14 +53,10 @@ def store_cifar100_datasets(config: dict, datasets: np.ndarray) -> None:
 
 
 def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
-    max_classes = 100
-    max_of_datasets = max_classes * (max_classes - 1)
-    assertion_msg = f"Given {max_classes} digits, we can't create more than {max_of_datasets} CIFAR100 binary datasets."
+    n_classes = 100
+    max_of_datasets = n_classes * (n_classes - 1)
+    assertion_msg = f"Given {n_classes} digits, we can't create more than {max_of_datasets} CIFAR100 binary datasets."
     assert config["n_dataset"] <= max_of_datasets, assertion_msg
-    n_classes = (1 + math.sqrt(1 + 4 * int(config["n_dataset"]))) / 2
-    assert n_classes.is_integer(), \
-        f"A round number of classes should be deduced from given number of datasets."
-    n_classes = int(n_classes)
     assert config["n_instances_per_dataset"] % 2 == 0, "The number of instances per dataset must be even."
 
     binary_datasets = np.zeros(

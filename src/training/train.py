@@ -149,7 +149,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         if config["dataset"] in ["mnist", "cifar100_binary"]:
             show_performance_matrix(meta_predictor, predictor, config["dataset"], datasets, classes_name, idx,
                                     config["n_dataset"], config["is_using_wandb"], wandb, config["batch_size"],
-                                    config["test_classes_are_shared"], config["device"])
+                                    config["are_test_classes_shared_with_train"], config["device"])
 
     if config["is_using_wandb"]:
         if is_sending_wandb_last_run_alert and config["is_wandb_alert_activated"]:

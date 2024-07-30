@@ -6,8 +6,6 @@ from src.result.prevent_running_completed_job import is_run_already_done, save_r
 from src.training.train import train_meta_predictor
 from src.utils.default_logger import DefaultLogger
 from src.utils.utils import set_random_seed
-import warnings
-warnings.filterwarnings("ignore")
 
 
 def main(config_combinations: list[dict]) -> None:
