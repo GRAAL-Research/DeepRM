@@ -9,16 +9,8 @@ def create_config():
     add_sub_config_parameters(config)
     if config["is_logging_commit_info"]:
         config = update_config_with_commit_name_and_hash(config)
-    config = create_default_config(config)
     return config
 
-
-def create_default_config(config):
-    try:
-        config['are_test_classes_shared_with_train']
-    except KeyError:
-        config['are_test_classes_shared_with_train'] = True
-    return config
 
 def add_sub_config_parameters(config: dict) -> dict:
     for sub_config_paths_key in get_sub_config_paths_keys(config):
