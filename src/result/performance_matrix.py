@@ -1,5 +1,4 @@
 import math
-import random
 from pathlib import Path
 
 import numpy as np
@@ -23,8 +22,52 @@ def highlight_cell(x, y, ax=None, label='none', **kwargs):
     return rect
 
 
+def compute_acc(n_classes, idx, m, inputs, outputs, accs, test_classes_are_shared):
+    t_v_e_matrix = np.ones((n_classes, n_classes), dtype=str)
+    k = 0
+    train_acc, train_cnt = 0, 0
+    valid_acc, valid_cnt = 0, 0
+    test_with_acc, test_with_cnt = 0, 0
+    test_without_acc, test_without_cnt = 0, 0
+    n_test = -1
+    n_test_without = 0
+    while n_test_without < len(idx[2]):
+        n_test += 1
+        n_test_without = 0
+        for j in range(n_test + 1):
+            n_test_without += (n_classes - j - 1) * 2
+    for i in range(n_classes):
+        for j in range(n_classes):
+            if i != j:
+                loss = linear_loss(outputs[k], inputs[k, m:, -1])
+                accs[i, j] = loss
+                if k in idx[0]:
+                    t_v_e_matrix[i, j] = "t"
+                    train_acc += accs[i, j]
+                    train_cnt += 1
+                elif k in idx[1]:
+                    t_v_e_matrix[i, j] = "v"
+                    valid_acc += accs[i, j]
+                    valid_cnt += 1
+                elif k in idx[2]:
+                    t_v_e_matrix[i, j] = "e"
+                    if i > n_test or j > n_test or test_classes_are_shared:
+                        test_with_acc += accs[i, j]
+                        test_with_cnt += 1
+                    else:
+                        test_without_acc += accs[i, j]
+                        test_without_cnt += 1
+                k += 1
+    train_acc /= train_cnt
+    valid_acc /= valid_cnt
+    test_with_acc /= test_with_cnt
+    if not test_classes_are_shared:
+        test_without_acc /= test_without_cnt
+    return train_acc, valid_acc, test_with_acc, test_without_acc, t_v_e_matrix
+
+
 def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, dataset, classes_name, idx, n_datasets,
-                            is_using_wandb, wandb, batch_size, device):
+                            is_using_wandb, wandb, batch_size, test_classes_are_shared, device):
     """
     Builds a visual depiction of the decision boundary of the predictor for tackling a given problem.
     Args:
@@ -38,6 +81,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         n_datasets:
         is_using_wandb (bool): whether to use wandb;
         wandb (package): the weights and biases package;
+        test_classes_are_shared:
         device (str): "gpu", or "cpu"; whether to use the gpu.
     """
     n_classes = int((1 + (1 + n_datasets * 4) ** 0.5) / 2)
@@ -45,36 +89,21 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
     with torch.no_grad():
         examples = []
         inputs = torch.from_numpy(dataset).float()
-        integers = list(range(len(inputs[0])))
-        for i in range(len(inputs)):
-            random.shuffle(integers)
-            inputs[i] = inputs[i, integers]
         m = int(len(inputs[0]) / 2)
         accs = np.ones((n_classes, n_classes))
-        train_valid_test = np.ones((n_classes, n_classes), dtype=str)
-        zs = torch.zeros((n_datasets, m))
+        outputs = torch.zeros((n_datasets, m))
         if str(device) == "gpu":
-            inputs, meta_pred, zs = inputs.cuda(), meta_pred.cuda(), zs.cuda()
+            inputs, meta_pred, outputs = inputs.cuda(), meta_pred.cuda(), outputs.cuda()
         for i in range(math.ceil(len(inputs) / batch_size)):
             first = i * batch_size
             last = min((i + 1) * batch_size, len(inputs))
             meta_output = meta_pred.forward(inputs[first:last, :m])
             pred.set_params(meta_output)
-            _, z = pred.forward(inputs[first:last, :m])
-            zs[first:last] = z
-        k = 0
-        for i in range(n_classes):
-            for j in range(n_classes):
-                if i != j:
-                    loss = linear_loss(zs[k], inputs[k, :m, -1])
-                    if k in idx[0]:
-                        train_valid_test[i, j] = "t"
-                    elif k in idx[1]:
-                        train_valid_test[i, j] = "v"
-                    elif k in idx[2]:
-                        train_valid_test[i, j] = "e"
-                    accs[i, j] = loss
-                    k += 1
+            _, output = pred.forward(inputs[first:last, m:])
+            outputs[first:last] = output
+        train_acc, valid_acc, test_with_acc, test_without_acc, t_v_e_matrix = \
+            compute_acc(n_classes, idx, m, inputs, outputs, accs, test_classes_are_shared)
+
         plt.figure().clear()
         plt.close()
         plt.cla()
@@ -93,35 +122,42 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         plt.setp(ax.get_xticklabels(), ha="right", rotation_mode="anchor")
 
         # Loop over data dimensions and create text annotations.
-        Train, Valid, Test = True, True, True
+        tr_in_legend, vd_in_legend, te_in_legend = False, False, False
+        linewidth = 5 * (dataset_name == "cifar100_binary") + 2 * (dataset_name == "mnist")
         min_accs = np.min(accs)
         for i in range(len(classes_name)):
             for j in range(len(classes_name)):
                 c = 'black' if accs[i, j] < (1 + min_accs) / 2 and not i == j else 'white'
                 ax.text(i, j, round(accs[i, j], 2), ha="center", va="center", color=c, size=10)
-                if train_valid_test[i, j] == "t":
-                    if Train == True:
+                if t_v_e_matrix[i, j] == "t":
+                    if not tr_in_legend:
                         label = "Train"
-                        Train = False
-                    highlight_cell(i, j, color="green", linewidth=5, label=label)
+                        tr_in_legend = True
+                    highlight_cell(i, j, color="green", linewidth=linewidth, label=label)
                     ax.legend(['Train'], loc="upper right", fontsize="large")
-                elif train_valid_test[i, j] == "v":
-                    if Valid == True:
+                elif t_v_e_matrix[i, j] == "v":
+                    if not vd_in_legend:
                         label = "Valid"
-                        Valid = False
-                    highlight_cell(i, j, color="blue", linewidth=5, label=label)
+                        vd_in_legend = True
+                    highlight_cell(i, j, color="blue", linewidth=linewidth, label=label)
                     ax.legend(['Valid'], loc="upper right", fontsize="large")
-                elif train_valid_test[i, j] == "e":
-                    if Test == True:
+                elif t_v_e_matrix[i, j] == "e":
+                    if not te_in_legend:
                         label = "Test"
-                        Test = False
-                    highlight_cell(i, j, color="red", linewidth=5, label=label)
+                        te_in_legend = True
+                    highlight_cell(i, j, color="red", linewidth=linewidth, label=label)
                 label = "none"
         ax.legend(loc="upper right", fontsize="large")
         ax.set_title(f"Performance matrix for the {dataset_name} dataset")
         fig.tight_layout()
         cbar = ax.figure.colorbar(im, ax=ax)
         cbar.ax.set_ylabel("Accuracy", rotation=-90, va="bottom")
+        if test_classes_are_shared:
+            ax.text(-1, -1, f"Train acc.: {round(train_acc, 3)} \n Valid acc.: {round(valid_acc, 3)} \n Test acc.: "
+                            f"{round(test_with_acc, 3)}")
+        else:
+            ax.text(-1, -1, f"Train acc.: {round(train_acc, 3)} \nValid acc.: {round(valid_acc, 3)} \nTest acc. (sh"
+                            f"ared): {round(test_with_acc, 3)} \nTest acc. (not shared): {round(test_without_acc, 3)}")
     figure_folder_path = Path("figures")
     if not figure_folder_path.exists():
         figure_folder_path.mkdir()
