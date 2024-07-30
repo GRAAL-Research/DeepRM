@@ -28,10 +28,6 @@ def load_mnist(config: dict) -> np.ndarray:
     return create_and_store_mnist_datasets(config)
 
 
-def load_mnist_labels() -> list:
-    return ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-
-
 def create_datasets_cache_path(config: dict) -> Path:
     dataset_config_not_overrode_by_grid_search_config = load_yaml_file_content(
         CONFIG_BASE_PATH / config["dataset_config_path"])

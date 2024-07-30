@@ -6,6 +6,7 @@ import wandb
 from loguru import logger
 
 from src.data.create_datasets import create_datasets
+from src.data.create_datasets_labels import create_datasets_labels
 from src.data.loaders import train_valid_loaders
 from src.model.predictor.create_predictor import create_predictor
 from src.result.compute_stats import compute_accuracy_loss_and_bounds
@@ -28,7 +29,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
     """
     torch.autograd.set_detect_anomaly(True)
 
-    datasets, classes_name = create_datasets(config)
+    datasets, classes_name = create_datasets(config), create_datasets_labels(config)
     predictor = create_predictor(config)
     meta_predictor = create_meta_predictor(config, predictor)
     criterion = create_criterion(config)
@@ -42,7 +43,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         vd_var, te_var, idx = train_valid_loaders(datasets,
                                                   config["batch_size"],
                                                   config["splits"],
-                                                  config["test_classes_are_shared"],
+                                                  config["are_test_classes_shared_with_train"],
                                                   seed=config["seed"])
     best_rolling_val_acc = 0
     best_epoch = 0
