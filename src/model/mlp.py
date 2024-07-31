@@ -42,7 +42,9 @@ class MLP(nn.Module):
                    device: str = "cpu") -> nn.ModuleList:
         modules = torch.nn.ModuleList()
         for dim_idx in range(len(input_and_hidden_dims) - 1):
-            if has_batch_norm and batch_norm_min_dim <= input_and_hidden_dims[dim_idx]:
+            if (has_batch_norm and
+                    batch_norm_min_dim <= input_and_hidden_dims[dim_idx] and
+                    (msg_type is None or dim_idx > 0)):
                 modules.append(LazyBatchNorm(device))
             modules.append(nn.Linear(input_and_hidden_dims[dim_idx], input_and_hidden_dims[dim_idx + 1]))
 
