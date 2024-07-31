@@ -1,4 +1,5 @@
 import random
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -6,6 +7,8 @@ import torch
 TEST_ACCURACY_LABEL: str = "test_acc"
 TRAIN_ACCURACY_LABEL: str = "train_acc"
 VALID_ACCURACY_LABEL: str = "valid_acc"
+
+FIGURE_BASE_PATH = Path(__file__).parent.parent.parent / "figures"
 
 
 def set_random_seed(seed: int) -> None:

@@ -4,13 +4,12 @@ import pandas as pd
 import seaborn as sns
 
 from src.result.hyperparameter_importance.download_and_save_wandb_data import fetch_wandb_data
-from src.result.hyperparameter_importance.utils import RESULT_PATH
-from src.utils.utils import TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL
+from src.utils.utils import TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL, FIGURE_BASE_PATH
 
 COLOR_MAP = "PiYG"
 
 
-def show_correlation_with_test_accuracy(data: pd.DataFrame) -> None:
+def show_correlation_with_test_accuracy(data: pd.DataFrame, figure_file_name: str) -> None:
     important_hparams = find_important_hyperparameters(data)
     correlation_matrix = data[important_hparams].corr()[TEST_ACCURACY_LABEL].sort_values(ascending=False)
 
@@ -26,9 +25,11 @@ def show_correlation_with_test_accuracy(data: pd.DataFrame) -> None:
 
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
-    if not RESULT_PATH.exists():
-        RESULT_PATH.mkdir(parents=True)
-    plt.savefig(RESULT_PATH / f"correlation.png")
+
+    correlation_figure_path = FIGURE_BASE_PATH / "correlation"
+    if not correlation_figure_path.exists():
+        correlation_figure_path.mkdir(parents=True)
+    plt.savefig(correlation_figure_path / f"{figure_file_name}.png")
 
     plt.show()
 
@@ -51,5 +52,7 @@ def find_important_hyperparameters(data: pd.DataFrame) -> list[str]:
 if __name__ == "__main__":
     team = "graal-deeprm2024"
     project = "message-module-with-kme-exp5-mnist"
+    figure_file_name = f"{team}_{project}"
+
     data = fetch_wandb_data(team, project)
-    show_correlation_with_test_accuracy(data)
+    show_correlation_with_test_accuracy(data, figure_file_name)

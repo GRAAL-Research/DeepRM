@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -11,6 +9,7 @@ from src.model.predictor.predictor import Predictor
 from src.model.predictor.small_neural_network import SmallNeuralNetwork
 from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
+from src.utils.utils import FIGURE_BASE_PATH
 
 
 def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pred: Predictor, wandb, device):
@@ -99,12 +98,11 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
                         plt.xlim(torch.mean(x[0, :, 0].cpu()) - 10, torch.mean(x[0, :, 0].cpu()) + 10)
                         plt.ylim(torch.mean(x[0, :, 1].cpu()) - 10, torch.mean(x[0, :, 1].cpu()) + 10)
 
-                    figure_folder_path = Path("figures")
-                    if not figure_folder_path.exists():
-                        figure_folder_path.mkdir()
+                    if not FIGURE_BASE_PATH.exists():
+                        FIGURE_BASE_PATH.mkdir()
 
                     decision_boundaries_folder_name = "decision_boundaries"
-                    decision_boundaries_folder_path = figure_folder_path / decision_boundaries_folder_name
+                    decision_boundaries_folder_path = FIGURE_BASE_PATH / decision_boundaries_folder_name
                     if not decision_boundaries_folder_path.exists():
                         decision_boundaries_folder_path.mkdir()
 

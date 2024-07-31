@@ -3,10 +3,10 @@ from itertools import combinations
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from loguru import logger
 
 from src.result.hyperparameter_importance.download_and_save_wandb_data import fetch_wandb_data
-from src.result.hyperparameter_importance.utils import RESULT_PATH
-from src.utils.utils import TEST_ACCURACY_LABEL
+from src.utils.utils import TEST_ACCURACY_LABEL, FIGURE_BASE_PATH
 
 ACCURACY_MIN_VALUE = 0
 ACCURACY_MAX_VALUE = 1
@@ -27,13 +27,20 @@ def create_heatmap(data: pd.DataFrame) -> None:
     data, x_hparam, y_hparam = data
     mean_data = data.pivot_table(values=TEST_ACCURACY_LABEL, index=y_hparam, columns=x_hparam, aggfunc="mean")
 
+    columns = mean_data.columns
+    index = mean_data.index
+    if len(index) == 1:
+        logger.info(f"Skipping {x_hparam} vs {y_hparam} because there is only one value in {y_hparam}.")
+        return
+    if len(columns) == 1:
+        logger.info(f"Skipping {x_hparam} vs {y_hparam} because there is only one value in {x_hparam}.")
+        return
+
     fig, ax = plt.subplots(figsize=(10, 8))
     img = ax.imshow(mean_data, cmap=COLOR_MAP, vmin=ACCURACY_MIN_VALUE, vmax=ACCURACY_MAX_VALUE)
     ax.set_xlabel(x_hparam)
     ax.set_ylabel(y_hparam)
 
-    columns = mean_data.columns
-    index = mean_data.index
     ax.set_xticks(range(len(columns)))
     ax.set_yticks(range(len(index)))
     ax.set_xticklabels(columns)
@@ -51,9 +58,12 @@ def create_heatmap(data: pd.DataFrame) -> None:
     fig.colorbar(img, ax=ax, label="Test Accuracy")
 
     plt.tight_layout()
-    if not RESULT_PATH.exists():
-        RESULT_PATH.mkdir()
-    plt.savefig(RESULT_PATH / f"impact_of_{x_hparam}_and_{y_hparam}.png")
+
+    hparam_impact_figure_path = FIGURE_BASE_PATH / "hparam_impact"
+    if not hparam_impact_figure_path.exists():
+        hparam_impact_figure_path.mkdir(parents=True)
+
+    plt.savefig(hparam_impact_figure_path / f"{x_hparam}_and_{y_hparam}.png")
     plt.close(fig)
 
 
