@@ -76,6 +76,9 @@ def create_mnist_binary_datasets(config: dict, dataset) -> np.ndarray:
             if first_class == second_class:
                 continue
 
+            idx = np.arange(len(dataset))
+            np.random.shuffle(idx)
+            dataset = dataset[idx]
             first_class_filter = dataset[:, target_starting_idx] == first_class
             first_class_x = dataset[first_class_filter, :target_starting_idx]
 
