@@ -34,6 +34,7 @@ pred_hidden_sizes: [3]
 
 has_skip_connection: True
 has_batch_norm: True
+batch_norm_min_dim: 20
 
 optimizer: adam
 lr: 1e-2

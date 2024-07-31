@@ -11,12 +11,13 @@ from src.model.utils.sign_straight_through import SignStraightThrough
 
 class MLP(nn.Module):
     def __init__(self, input_dim: int, hidden_dims: list[int], device: str, has_skip_connection: bool,
-                 has_batch_norm: bool, init_scheme: str = None, msg_type: str | None = None) -> None:
+                 has_batch_norm: bool, batch_norm_min_dim: int, init_scheme: str = None,
+                 msg_type: str | None = None) -> None:
         super(MLP, self).__init__()
         self.has_skip_connection = has_skip_connection
 
         input_and_hidden_dims = MLP.compute_input_and_hidden_dims(input_dim, hidden_dims)
-        self.mlp = MLP.create_mlp(has_batch_norm, msg_type, input_and_hidden_dims, device)
+        self.mlp = MLP.create_mlp(has_batch_norm, batch_norm_min_dim, msg_type, input_and_hidden_dims, device)
 
         last_layer_idx = len(self.mlp) - 1
         self.skip_position = last_layer_idx - has_batch_norm
@@ -37,11 +38,11 @@ class MLP(nn.Module):
         return input_and_hidden_dims
 
     @staticmethod
-    def create_mlp(has_batch_norm: bool, msg_type: str, input_and_hidden_dims: list[int],
+    def create_mlp(has_batch_norm: bool, batch_norm_min_dim: int, msg_type: str, input_and_hidden_dims: list[int],
                    device: str = "cpu") -> nn.ModuleList:
         modules = torch.nn.ModuleList()
         for dim_idx in range(len(input_and_hidden_dims) - 1):
-            if has_batch_norm:
+            if has_batch_norm and batch_norm_min_dim <= input_and_hidden_dims[dim_idx]:
                 modules.append(LazyBatchNorm(device))
             modules.append(nn.Linear(input_and_hidden_dims[dim_idx], input_and_hidden_dims[dim_idx + 1]))
 

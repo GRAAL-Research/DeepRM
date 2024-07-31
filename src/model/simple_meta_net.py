@@ -28,15 +28,15 @@ class SimpleMetaNet(nn.Module):
 
         self.data_compressor_1 = create_data_compressor_1(config)
         self.module_1 = MLP(self.data_compressor_1.get_output_dimension(), self.module_1_dim, config["device"],
-                            config["has_skip_connection"], config["has_batch_norm"], config["init_scheme"],
-                            config["msg_type"])
+                            config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
+                            config["init_scheme"], config["msg_type"])
 
         self.cas = nn.ModuleList([Attention(config) for _ in range(self.compression_set_size)])
         self.kme_2 = KME(config, hidden_dims=config["kme_dim"])
 
         self.module_2 = MLP(self.compute_module_2_input_dim(), config["module_2_dim"] + [self.output_dim],
                             config["device"], config["has_skip_connection"], config["has_batch_norm"],
-                            config["init_scheme"])
+                            config["batch_norm_min_dim"], config["init_scheme"])
 
     def get_message(self):
         return self.msg
