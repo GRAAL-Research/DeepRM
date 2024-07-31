@@ -1,5 +1,4 @@
 import math
-from pathlib import Path
 
 import numpy as np
 import torch
@@ -10,6 +9,7 @@ from matplotlib import pyplot as plt
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
+from src.utils.utils import FIGURE_BASE_PATH
 
 
 def highlight_cell(x, y, ax=None, label='none', **kwargs):
@@ -162,12 +162,11 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
                 f"{round(test_without_acc, 3)}", fontsize=10)
 
     plt.tight_layout()
-    figure_folder_path = Path("figures")
-    if not figure_folder_path.exists():
-        figure_folder_path.mkdir()
+    if not FIGURE_BASE_PATH.exists():
+        FIGURE_BASE_PATH.mkdir()
 
     decision_boundaries_folder_name = "performance_matrix"
-    decision_boundaries_folder_path = figure_folder_path / decision_boundaries_folder_name
+    decision_boundaries_folder_path = FIGURE_BASE_PATH / decision_boundaries_folder_name
     if not decision_boundaries_folder_path.exists():
         decision_boundaries_folder_path.mkdir()
     plt.savefig(decision_boundaries_folder_path / "performance_matrix.png")

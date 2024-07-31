@@ -143,3 +143,5 @@ widgetsnbextension==4.0.9
 omegaconf==2.3.0
 loguru==0.7.2
 tqdm==4.66.4
+fastparquet==2024.5.0
+seaborn==0.13.2
