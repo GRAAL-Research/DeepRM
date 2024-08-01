@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from src.result.hyperparameter_importance.download_and_save_wandb_data import fetch_wandb_data
 from src.utils.utils import TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL, FIGURE_BASE_PATH
 
 COLOR_MAP = "PiYG"
@@ -47,12 +46,3 @@ def find_important_hyperparameters(data: pd.DataFrame) -> list[str]:
             important_numerical_params.append(numerical_param)
 
     return important_numerical_params
-
-
-if __name__ == "__main__":
-    team = "graal-deeprm2024"
-    project = "message-module-with-kme-exp5-mnist"
-    figure_file_name = f"{team}_{project}"
-
-    data = fetch_wandb_data(team, project)
-    show_correlation_with_test_accuracy(data, figure_file_name)

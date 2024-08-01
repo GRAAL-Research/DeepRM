@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from loguru import logger
 
-from src.result.hyperparameter_importance.download_and_save_wandb_data import fetch_wandb_data
 from src.utils.utils import TEST_ACCURACY_LABEL, FIGURE_BASE_PATH
 
 ACCURACY_MIN_VALUE = 0
@@ -13,7 +12,7 @@ ACCURACY_MAX_VALUE = 1
 COLOR_MAP = "viridis"
 
 
-def show_hyperparameters_impact_on_test_accuracy(data: pd.DataFrame, hyperparameters: list[str]) -> None:
+def show_two_hparams_impact_on_test_accuracy(data: pd.DataFrame, hyperparameters: list[str]) -> None:
     data_filtered = data[hyperparameters + [TEST_ACCURACY_LABEL]]
     length_of_the_groups = 2
     hyperparameters_combinations = list(combinations(hyperparameters, length_of_the_groups))
@@ -65,13 +64,3 @@ def create_heatmap(data: pd.DataFrame) -> None:
 
     plt.savefig(hparam_impact_figure_path / f"{x_hparam}_and_{y_hparam}.png")
     plt.close(fig)
-
-
-if __name__ == "__main__":
-    team = "graal-deeprm2024"
-    project = "message-module-with-kme-exp5-mnist"
-    data = fetch_wandb_data(team, project)
-
-    hyperparameters = ["lr", "batch_size", "msg_size", "tfm_input_dim", "tfm_n_heads", "tfm_mlp_dim", "tfm_n_encoders",
-                       "tfm_drop_out", "tfm_output_dim"]
-    show_hyperparameters_impact_on_test_accuracy(data, hyperparameters)
