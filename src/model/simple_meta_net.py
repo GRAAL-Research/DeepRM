@@ -36,7 +36,7 @@ class SimpleMetaNet(nn.Module):
 
         self.module_2 = MLP(self.compute_module_2_input_dim(), config["module_2_dim"] + [self.output_dim],
                             config["device"], config["has_skip_connection"], config["has_batch_norm"],
-                            config["batch_norm_min_dim"], config["init_scheme"], follows_msg=True)
+                            config["batch_norm_min_dim"], config["init_scheme"], has_msg_as_input=True)
 
     def get_message(self):
         return self.msg
