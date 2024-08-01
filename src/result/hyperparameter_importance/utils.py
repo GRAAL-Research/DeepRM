@@ -3,9 +3,10 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from loguru import logger
 from sklearn.ensemble import RandomForestRegressor
 
-from src.utils.utils import TEST_ACCURACY_LABEL, VALID_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL
+from src.utils.utils import TEST_ACCURACY_LABEL, VALID_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, FIGURE_BASE_PATH
 
 RANDOM_STATE = 123
 
@@ -25,6 +26,14 @@ def plot_feature_importance(hyperparameters: list[str], importance: np.ndarray, 
     plt.ylabel(y_label)
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
+
+    importance_figure_path = FIGURE_BASE_PATH / "importance"
+    if not importance_figure_path.exists():
+        importance_figure_path.mkdir(parents=True)
+
+    file_name = title.lower().replace(" ", "-")
+    plt.savefig(importance_figure_path / f"{file_name}.png")
+
     plt.show()
 
 
@@ -36,8 +45,13 @@ def create_sorted_and_filtered_importance(feature_names, importances: np.ndarray
     return importance_data["feature_name"], importance_data["importance"]
 
 
-def get_processed_x_and_y(data: pd.DataFrame) -> tuple:
-    data = data.dropna(axis="rows")
+def get_processed_x_and_y(data: pd.DataFrame, is_dropping_na: bool = False) -> tuple:
+    if is_dropping_na:
+        data = data.dropna(axis="rows")
+    else:
+        if data.isna().any().any():
+            logger.warning("The data contains NaN.")
+
     x = process_x(data)
     y = data[TEST_ACCURACY_LABEL]
 
