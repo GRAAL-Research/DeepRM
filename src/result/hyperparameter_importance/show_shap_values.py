@@ -27,7 +27,7 @@ def show_and_save_shap_plot(shap_values: np.ndarray, x: np.ndarray, n_instances:
         shap_figure_path.mkdir(parents=True)
 
     shap.summary_plot(shap_values, x, alpha=alpha, plot_type=plot_type, show=False)
-    plt.tight_layout()
+    plt.gcf().set_size_inches(10, 8)
     plt.savefig(shap_figure_path / f"{plot_type}-plot-{n_instances}.png")
     plt.show()
     plt.clf()
