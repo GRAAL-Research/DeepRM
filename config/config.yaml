@@ -1,5 +1,5 @@
 dataset_config_path: dataset/mnist.yaml
-log_config_path: log/off.yaml
+log_config_path: log/on.yaml
 training_config_path: training/gpu.yaml
 
 is_bound_computed: False

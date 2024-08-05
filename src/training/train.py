@@ -52,10 +52,6 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
             VALID_ACCURACY_LABEL: [], TEST_ACCURACY_LABEL: [], "bound_lin": [], "bound_hyp": [], "bound_kl": [],
             "bound_mrch": []}
 
-    if config["is_using_wandb"]:
-        run_name = create_run_name(config)
-        wandb.init(name=run_name, project=config["project_name"], config=config)
-
     start_time = time()
     for epoch_idx in range(config["max_epoch"]):
         meta_predictor.train()
