@@ -45,6 +45,6 @@ if __name__ == "__main__":
         loaded_config = create_config()
         config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
         main(config_combinations)
-    except Exception as e:
+    except Exception as error:
         wandb.alert(title="❌ Error", text="The experiment failed.")
-        raise e
+        raise error
