@@ -2,6 +2,7 @@ from src.result.hyperparameter_importance.download_and_save_wandb_data import fe
 from src.result.hyperparameter_importance.show_correlation_with_test_accuracy import show_correlation_with_test_accuracy
 from src.result.hyperparameter_importance.show_gini_importance import show_gini_importance
 from src.result.hyperparameter_importance.show_permutation_importance import show_permutation_importance
+from src.result.hyperparameter_importance.show_shap_values import show_shap_values
 from src.result.hyperparameter_importance.show_two_hparams_impact_on_test_accuracy import \
     show_two_hparams_impact_on_test_accuracy
 
@@ -18,3 +19,4 @@ if __name__ == '__main__':
     show_two_hparams_impact_on_test_accuracy(data, hyperparameters)
     show_gini_importance(data)
     show_permutation_importance(data)
+    show_shap_values(data, team, project, n_instances=5_000)
