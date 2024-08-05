@@ -9,7 +9,6 @@ def create_config():
     add_sub_config_parameters(config)
     if config["is_logging_commit_info"]:
         config = update_config_with_commit_name_and_hash(config)
-
     return config
 
 

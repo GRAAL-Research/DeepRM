@@ -11,7 +11,7 @@ class SmallNeuralNetwork(Predictor):
         super().__init__(config)
         self.architecture_sizes = [config["n_features"]] + config["pred_hidden_sizes"] + [config["target_size"]]
         self.mlp = MLP(config["n_features"], self.architecture_sizes[1:], config["device"],
-                       config["has_skip_connection"], config["has_batch_norm"])
+                       config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"])
 
         self.params = torch.tensor([])
         self.batch_norm_params = []

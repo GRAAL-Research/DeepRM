@@ -6,6 +6,7 @@ import wandb
 from loguru import logger
 
 from src.data.create_datasets import create_datasets
+from src.data.create_datasets_labels import create_datasets_labels
 from src.data.loaders import train_valid_loaders
 from src.model.predictor.create_predictor import create_predictor
 from src.result.compute_stats import compute_accuracy_loss_and_bounds
@@ -18,7 +19,7 @@ from src.training.meta_predictor import create_meta_predictor
 from src.training.optimizer import create_optimizer
 from src.training.scheduler import create_scheduler
 from src.utils.epoch_logger import EpochLogger
-from src.utils.utils import create_run_name
+from src.utils.utils import create_run_name, TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL
 
 
 def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) -> tuple[dict, int]:
@@ -28,7 +29,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
     """
     torch.autograd.set_detect_anomaly(True)
 
-    datasets = create_datasets(config)
+    datasets, classes_name = create_datasets(config), create_datasets_labels(config)
     predictor = create_predictor(config)
     meta_predictor = create_meta_predictor(config, predictor)
     criterion = create_criterion(config)
@@ -36,17 +37,20 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
     optimizer = create_optimizer(config, meta_predictor)
     scheduler = create_scheduler(config, optimizer)
 
-    valid_metric = "valid_acc" if config["task"] == "classification" else "valid_loss"
+    valid_metric = VALID_ACCURACY_LABEL if config["task"] == "classification" else "valid_loss"
     n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
-    train_loader, valid_loader, test_loader, tr_var, vd_var, te_var = train_valid_loaders(datasets,
-                                                                                          config["batch_size"],
-                                                                                          config["splits"],
-                                                                                          seed=config["seed"])
+    train_loader, valid_loader, test_loader, tr_var, \
+        vd_var, te_var, idx = train_valid_loaders(datasets,
+                                                  config["batch_size"],
+                                                  config["splits"],
+                                                  config["are_test_classes_shared_with_train"],
+                                                  seed=config["seed"])
     best_rolling_val_acc = 0
     best_epoch = 0
     # The following information will be recorded at each epoch
-    hist = {"epoch": [], "train_loss": [], "valid_loss": [], "test_loss": [], "train_acc": [], "valid_acc": [],
-            "test_acc": [], "bound_lin": [], "bound_hyp": [], "bound_kl": [], "bound_mrch": []}
+    hist = {"epoch": [], "train_loss": [], "valid_loss": [], "test_loss": [], TRAIN_ACCURACY_LABEL: [],
+            VALID_ACCURACY_LABEL: [], TEST_ACCURACY_LABEL: [], "bound_lin": [], "bound_hyp": [], "bound_kl": [],
+            "bound_mrch": []}
 
     start_time = time()
     for epoch_idx in range(config["max_epoch"]):
@@ -112,7 +116,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         if config["task"] == "classification":
             EpochLogger.log(
                 f"epoch {epo} - train_acc: {train_accuracy:.3f} - val_acc: {valid_accuracy:.3f}"
-                f" - test_acc: {test_accuracy:.3f}"
+                f" - {TEST_ACCURACY_LABEL}: {test_accuracy:.3f}"
                 f"{bound_info_to_log}{time_info_to_log}")
         elif config["task"] == "regression":
             EpochLogger.log(
@@ -140,12 +144,9 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         if config["n_features"] == 2 and config["is_using_wandb"]:
             show_decision_boundaries(meta_predictor, config["dataset"], test_loader, predictor, wandb, config["device"])
         if config["dataset"] in ["mnist", "cifar100_binary"]:
-            shuffle = config["shuffle_each_dataset_samples"]
-            config["shuffle_each_dataset_samples"] = False
-            dataset = create_datasets(config)
-            config["shuffle_each_dataset_samples"] = shuffle
-            show_performance_matrix(meta_predictor, predictor, config["dataset"], dataset, config["n_dataset"],
-                                    config["is_using_wandb"], wandb, config["batch_size"], config["device"])
+            show_performance_matrix(meta_predictor, predictor, config["dataset"], datasets, classes_name, idx,
+                                    config["n_dataset"], config["is_using_wandb"], wandb, config["batch_size"],
+                                    config["are_test_classes_shared_with_train"], config["device"])
 
     if config["is_using_wandb"]:
         if is_sending_wandb_last_run_alert and config["is_wandb_alert_activated"]:

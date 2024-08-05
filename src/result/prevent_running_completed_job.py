@@ -1,3 +1,6 @@
+from src.utils.utils import TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL
+
+
 def is_run_already_done(config: dict) -> bool:
     cnt_nw = 0
     new, keys = [], []
@@ -17,9 +20,9 @@ def is_run_already_done(config: dict) -> bool:
         file = open(config["project_name"] + ".txt", "a")
         for key in keys:
             file.write(key + "\t")
-        file.write("train_acc" + "\t")
-        file.write("valid_acc" + "\t")
-        file.write("test_acc" + "\t")
+        file.write(TRAIN_ACCURACY_LABEL + "\t")
+        file.write(VALID_ACCURACY_LABEL + "\t")
+        file.write(TEST_ACCURACY_LABEL + "\t")
         file.write("bound_lin" + "\t")
         file.write("bound_hyp" + "\t")
         file.write("bound_kl" + "\t")
@@ -46,9 +49,9 @@ def save_run_in_a_text_file(config: dict, hist, best_epoch):
     file = open("results/" + config["project_name"] + ".txt", "a")
     for key in keys:
         file.write(str(config[key]).replace("\n","") + "\t")
-    file.write(str(hist["train_acc"][best_epoch].item()) + "\t")
-    file.write(str(hist["valid_acc"][best_epoch].item()) + "\t")
-    file.write(str(hist["test_acc"][best_epoch].item()) + "\t")
+    file.write(str(hist[TRAIN_ACCURACY_LABEL][best_epoch].item()) + "\t")
+    file.write(str(hist[VALID_ACCURACY_LABEL][best_epoch].item()) + "\t")
+    file.write(str(hist[TEST_ACCURACY_LABEL][best_epoch].item()) + "\t")
     file.write(str(hist["bound_lin"][best_epoch].item()) + "\t")
     file.write(str(hist["bound_hyp"][best_epoch].item()) + "\t")
     file.write(str(hist["bound_kl"][best_epoch]) + "\t")

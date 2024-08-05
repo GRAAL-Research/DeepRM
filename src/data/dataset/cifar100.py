@@ -18,6 +18,7 @@ CIFAR100_CACHE_BASE_PATH = CIFAR100_BASE_PATH / "cache"
 NUMPY_FILE_EXTENSION = ".npy"
 N_CHANNELS = 3
 
+
 def load_cifar100(config: dict) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config)
 
@@ -32,7 +33,8 @@ def create_datasets_cache_path(config: dict) -> Path:
         CONFIG_BASE_PATH / config["dataset_config_path"])
     file_name = []
     for key in dataset_config_not_overrode_by_grid_search_config.keys():
-        file_name.append(f"{key}={config[key]}")
+        if key not in ["task", "target_size", "criterion", "is_dataset_balanced"]:
+            file_name.append(f"{key}={config[key]}")
 
     return CIFAR100_CACHE_BASE_PATH / ("-".join(file_name) + NUMPY_FILE_EXTENSION)
 
@@ -71,6 +73,9 @@ def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
             if first_class == second_class:
                 continue
 
+            idx = np.arange(len(dataset))
+            np.random.shuffle(idx)
+            dataset = dataset[idx]
             first_class_filter = dataset[:, target_starting_idx] == first_class
             first_class_x = dataset[first_class_filter, :target_starting_idx]
 

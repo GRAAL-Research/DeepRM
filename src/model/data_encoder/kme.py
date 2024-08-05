@@ -10,7 +10,7 @@ class KME(DataEncoder):
         super().__init__()
         self.output_dim = hidden_dims[-1]
         self.mlp = MLP(config["n_features"], hidden_dims, config["device"], config["has_skip_connection"],
-                       config["has_batch_norm"], config["init_scheme"])
+                       config["has_batch_norm"], config["batch_norm_min_dim"], config["init_scheme"])
         self.task = config["task"]
         self.target_size = config["target_size"]
 
