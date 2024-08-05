@@ -15,7 +15,7 @@ def get_and_save_wandb_data(team: str, project: str):
 
     runs_data = []
     for run in runs:
-        if not dict(run.summary):
+        if len(dict(run.summary)) <= 1:
             continue
         run_data = {
             TEST_ACCURACY_LABEL: run.summary[TEST_ACCURACY_LABEL],
