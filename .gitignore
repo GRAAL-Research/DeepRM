@@ -6,4 +6,5 @@ __pycache__
 /results/
 /dataset/
 /src/result/hyperparameter_importance/wandb_cache/
+/src/result/hyperparameter_importance/shap_cache/
 /src/result/hyperparameter_importance/result/
