@@ -7,11 +7,12 @@ from src.bound.compute_bound import compute_bounds
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
+from src.utils.utils import LINEAR_BOUND, HPARAM_BOUND, KL_BOUND, MARCHAND_BOUND
 
 
 def compute_accuracy_loss_and_bounds(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor,
                                      criterion: nn.Module, data_loader: DataLoader) -> tuple[
-    np.ndarray, np.ndarray, list]:
+    np.ndarray, np.ndarray, dict[str, np.ndarray]]:
     linear_bounds = []
     hyperparam_bounds = []
     kl_bounds = []
@@ -72,10 +73,11 @@ def compute_accuracy_loss_and_bounds(config: dict, meta_predictor: SimpleMetaNet
             raise NotImplementedError(f"The task '{config['task']}' is not supported.")
 
         if config["is_bound_computed"]:
-            mean_bounds = [np.mean(linear_bounds), np.mean(hyperparam_bounds), np.mean(kl_bounds),
-                           np.mean(marchand_bounds)]
+            mean_bounds = {LINEAR_BOUND: np.mean(linear_bounds), HPARAM_BOUND: np.mean(hyperparam_bounds),
+                           KL_BOUND: np.mean(kl_bounds),
+                           MARCHAND_BOUND: np.mean(marchand_bounds)}
         else:
-            mean_bounds = [zero, zero, zero, zero]
+            mean_bounds = {LINEAR_BOUND: zero, HPARAM_BOUND: zero, KL_BOUND: zero, MARCHAND_BOUND: zero}
 
         mean_loss = np.sum(summed_losses_per_batch) / n_instances_seen
 

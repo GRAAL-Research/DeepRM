@@ -11,7 +11,7 @@ from src.data.loaders import train_valid_loaders
 from src.model.predictor.create_predictor import create_predictor
 from src.result.compute_stats import compute_accuracy_loss_and_bounds
 from src.result.decision_boundaries import show_decision_boundaries
-from src.result.history import update_hist, update_wandb
+from src.result.history import add_new_values_to_history, log_history_in_wandb
 from src.result.performance_matrix import show_performance_matrix
 from src.training.criterion import create_criterion
 from src.training.message_penalty import create_message_penalty_function
@@ -20,11 +20,11 @@ from src.training.optimizer import create_optimizer
 from src.training.scheduler import create_scheduler
 from src.utils.epoch_logger import EpochLogger
 from src.utils.utils import TEST_ACCURACY, TRAIN_ACCURACY, VALID_ACCURACY, \
-    TEST_LOSS, TRAIN_LOSS, VALID_LOSS, HYP_BOUND, LINEAR_BOUND, KL_BOUND, \
+    TEST_LOSS, TRAIN_LOSS, VALID_LOSS, HPARAM_BOUND, LINEAR_BOUND, KL_BOUND, \
     MARCHAND_BOUND
 
 
-def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) -> tuple[dict, int]:
+def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) -> tuple[dict[str, list], int]:
     """
     Returns:
         tuple of: information about the model at the best training epoch (dictionary), best training epoch (int).
@@ -49,10 +49,9 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                                                   seed=config["seed"])
     best_rolling_val_acc = 0
     best_epoch = 0
-    # The following information will be recorded at each epoch
-    hist = {"epoch": [], TRAIN_LOSS: [], VALID_LOSS: [], TEST_LOSS: [], TRAIN_ACCURACY: [],
-            VALID_ACCURACY: [], TEST_ACCURACY: [], LINEAR_BOUND: [], HYP_BOUND: [],
-            KL_BOUND: [], MARCHAND_BOUND: []}
+    history = {TRAIN_LOSS: [], VALID_LOSS: [], TEST_LOSS: [], TRAIN_ACCURACY: [],
+               VALID_ACCURACY: [], TEST_ACCURACY: [], LINEAR_BOUND: [], HPARAM_BOUND: [],
+               KL_BOUND: [], MARCHAND_BOUND: []}
 
     start_time = time()
     for epoch_idx in range(config["max_epoch"]):
@@ -89,28 +88,30 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
                     loss += message_penalty_function(meta_predictor.get_message(), config["msg_penalty_coef"])
                 loss.backward()
                 optimizer.step()
-        # Computation of statistics about the current training epoch
+
         train_accuracy, train_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
                                                                          train_loader)
         valid_accuracy, valid_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
                                                                          valid_loader)
-        test_accuracy, test_loss, bound = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
-                                                                           test_loader)
-        hist_values = (
-            train_accuracy, train_loss, valid_accuracy, valid_loss, test_accuracy, test_loss, bound, config["msg_size"],
-            config["compression_set_size"], epoch_idx
-        )
-        update_hist(hist, hist_values)
-        rolling_val_perf = torch.mean(torch.tensor(hist[valid_metric][-min(100, epoch_idx + 1):]))
+        test_accuracy, test_loss, bounds = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor,
+                                                                            criterion, test_loader)
+        new_history_values = {
+            TRAIN_ACCURACY: train_accuracy, TRAIN_LOSS: train_loss, VALID_ACCURACY: valid_accuracy,
+            VALID_LOSS: valid_loss, TEST_ACCURACY: test_accuracy, TEST_LOSS: test_loss, **bounds
+        }
+        add_new_values_to_history(history, new_history_values)
+
+        rolling_val_perf = torch.mean(torch.tensor(history[valid_metric][-min(100, epoch_idx + 1):]))
 
         if config["is_using_wandb"]:
-            update_wandb(wandb, hist)
+            log_history_in_wandb(history)
 
         epo = "0" * (epoch_idx + 1 < 100) + "0" * (epoch_idx + 1 < 10) + str(epoch_idx + 1)
 
         if config["is_bound_computed"]:
-            bound_info_to_log = (f" - bounds: (lin: {bound[0]:.2f}), (hyp: {bound[1]:.2f}), (kl: {bound[2]:.2f}), "
-                                 f"(marchand: {bound[3]:.2f})")
+            bound_info_to_log = (
+                f" - bounds: (lin: {bounds[LINEAR_BOUND]:.2f}), (hyp: {bounds[HPARAM_BOUND]:.2f})"
+                f", (kl: {bounds[KL_BOUND]:.2f}), (marchand: {bounds[MARCHAND_BOUND]:.2f})")
         else:
             bound_info_to_log = ""
 
@@ -155,4 +156,4 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
             wandb.alert(title="✅ Done", text="The experiment is over.")
         wandb.finish()
 
-    return hist, best_epoch
+    return history, best_epoch
