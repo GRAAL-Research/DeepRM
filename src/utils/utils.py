@@ -9,7 +9,6 @@ TRAIN_LOSS = "train_loss"
 
 VALID_ACCURACY = "valid_acc"
 VALID_LOSS = "valid_loss"
-epoch
 TEST_ACCURACY = "test_acc"
 TEST_LOSS = "test_loss"
 
