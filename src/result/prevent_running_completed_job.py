@@ -1,4 +1,5 @@
-from src.utils.utils import TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL
+from src.utils.utils import TEST_ACCURACY, TRAIN_ACCURACY, VALID_ACCURACY, LINEAR_BOUND, \
+    HYP_BOUND, KL_BOUND, MARCHAND_BOUND
 
 
 def is_run_already_done(config: dict) -> bool:
@@ -8,7 +9,7 @@ def is_run_already_done(config: dict) -> bool:
         keys.append(key)
     keys.sort()
     for key in keys:
-        new.append(str(config[key]).replace("\n",""))
+        new.append(str(config[key]).replace("\n", ""))
     try:
         with open("results/" + config["project_name"] + ".txt", "r") as tes:
             tess = [line.strip().split("\t") for line in tes]
@@ -20,13 +21,13 @@ def is_run_already_done(config: dict) -> bool:
         file = open(config["project_name"] + ".txt", "a")
         for key in keys:
             file.write(key + "\t")
-        file.write(TRAIN_ACCURACY_LABEL + "\t")
-        file.write(VALID_ACCURACY_LABEL + "\t")
-        file.write(TEST_ACCURACY_LABEL + "\t")
-        file.write("bound_lin" + "\t")
-        file.write("bound_hyp" + "\t")
-        file.write("bound_kl" + "\t")
-        file.write("bound_mrch" + "\t")
+        file.write(TRAIN_ACCURACY + "\t")
+        file.write(VALID_ACCURACY + "\t")
+        file.write(TEST_ACCURACY + "\t")
+        file.write(LINEAR_BOUND + "\t")
+        file.write(HYP_BOUND + "\t")
+        file.write(KL_BOUND + "\t")
+        file.write(MARCHAND_BOUND + "\t")
         file.write("n_sigma" + "\t")
         file.write("n_Z" + "\n")
         file.close()
@@ -34,7 +35,7 @@ def is_run_already_done(config: dict) -> bool:
     return cnt_nw > 0
 
 
-def save_run_in_a_text_file(config: dict, hist, best_epoch):
+def save_run_in_a_text_file(config: dict, hist, best_epoch: int) -> None:
     """
     Writes in a .txt file the hyperparameters and results of a training of the BGN algorithm
         on a given dataset.
@@ -48,13 +49,13 @@ def save_run_in_a_text_file(config: dict, hist, best_epoch):
     keys.sort()
     file = open("results/" + config["project_name"] + ".txt", "a")
     for key in keys:
-        file.write(str(config[key]).replace("\n","") + "\t")
-    file.write(str(hist[TRAIN_ACCURACY_LABEL][best_epoch].item()) + "\t")
-    file.write(str(hist[VALID_ACCURACY_LABEL][best_epoch].item()) + "\t")
-    file.write(str(hist[TEST_ACCURACY_LABEL][best_epoch].item()) + "\t")
-    file.write(str(hist["bound_lin"][best_epoch].item()) + "\t")
-    file.write(str(hist["bound_hyp"][best_epoch].item()) + "\t")
-    file.write(str(hist["bound_kl"][best_epoch]) + "\t")
-    file.write(str(hist["bound_mrch"][best_epoch]) + "\t")
+        file.write(str(config[key]).replace("\n", "") + "\t")
+    file.write(str(hist[TRAIN_ACCURACY][best_epoch].item()) + "\t")
+    file.write(str(hist[VALID_ACCURACY][best_epoch].item()) + "\t")
+    file.write(str(hist[TEST_ACCURACY][best_epoch].item()) + "\t")
+    file.write(str(hist[LINEAR_BOUND][best_epoch].item()) + "\t")
+    file.write(str(hist[HYP_BOUND][best_epoch].item()) + "\t")
+    file.write(str(hist[KL_BOUND][best_epoch]) + "\t")
+    file.write(str(hist[MARCHAND_BOUND][best_epoch]) + "\t")
     file.write("\n")
     file.close()

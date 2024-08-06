@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from loguru import logger
 
-from src.utils.utils import TEST_ACCURACY_LABEL, FIGURE_BASE_PATH
+from src.utils.utils import TEST_ACCURACY, FIGURE_BASE_PATH
 
 ACCURACY_MIN_VALUE = 0
 ACCURACY_MAX_VALUE = 1
@@ -13,7 +13,7 @@ COLOR_MAP = "viridis"
 
 
 def show_two_hparams_impact_on_test_accuracy(data: pd.DataFrame, hyperparameters: list[str]) -> None:
-    data_filtered = data[hyperparameters + [TEST_ACCURACY_LABEL]]
+    data_filtered = data[hyperparameters + [TEST_ACCURACY]]
     length_of_the_groups = 2
     hyperparameters_combinations = list(combinations(hyperparameters, length_of_the_groups))
     data_to_plot = [(data_filtered, x_hparam, y_hparam) for x_hparam, y_hparam in hyperparameters_combinations]
@@ -24,7 +24,7 @@ def show_two_hparams_impact_on_test_accuracy(data: pd.DataFrame, hyperparameters
 
 def create_heatmap(data: pd.DataFrame) -> None:
     data, x_hparam, y_hparam = data
-    mean_data = data.pivot_table(values=TEST_ACCURACY_LABEL, index=y_hparam, columns=x_hparam, aggfunc="mean")
+    mean_data = data.pivot_table(values=TEST_ACCURACY, index=y_hparam, columns=x_hparam, aggfunc="mean")
 
     columns = mean_data.columns
     index = mean_data.index
