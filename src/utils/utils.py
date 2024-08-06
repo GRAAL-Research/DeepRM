@@ -13,7 +13,7 @@ TEST_ACCURACY = "test_acc"
 TEST_LOSS = "test_loss"
 
 LINEAR_BOUND = "bound_lin"
-HYP_BOUND = "bound_hyp"
+HPARAM_BOUND = "bound_hyp"
 KL_BOUND = "bound_kl"
 MARCHAND_BOUND = "bound_mrch"
 
