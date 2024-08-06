@@ -1,4 +1,5 @@
-from src.utils.utils import TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL
+from src.utils.utils import TEST_ACCURACY, TRAIN_ACCURACY, VALID_ACCURACY, TEST_LOSS, \
+    TRAIN_LOSS, VALID_LOSS, LINEAR_BOUND, HYP_BOUND, KL_BOUND, MARCHAND_BOUND
 
 
 def update_hist(hist, values):
@@ -8,16 +9,16 @@ def update_hist(hist, values):
         hist (dic): A dictionary that keep track of training metrics.
         values (Tuple): Elements to be added to the dictionary.
     """
-    hist[TRAIN_ACCURACY_LABEL].append(values[0])
-    hist["train_loss"].append(values[1])
-    hist[VALID_ACCURACY_LABEL].append(values[2])
-    hist["valid_loss"].append(values[3])
-    hist[TEST_ACCURACY_LABEL].append(values[4])
-    hist["test_loss"].append(values[5])
-    hist["bound_lin"].append(values[6][0])
-    hist["bound_hyp"].append(values[6][1])
-    hist["bound_kl"].append(values[6][2])
-    hist["bound_mrch"].append(values[6][3])
+    hist[TRAIN_ACCURACY].append(values[0])
+    hist[TRAIN_LOSS].append(values[1])
+    hist[VALID_ACCURACY].append(values[2])
+    hist[VALID_LOSS].append(values[3])
+    hist[TEST_ACCURACY].append(values[4])
+    hist[TEST_LOSS].append(values[5])
+    hist[LINEAR_BOUND].append(values[6][0])
+    hist[HYP_BOUND].append(values[6][1])
+    hist[KL_BOUND].append(values[6][2])
+    hist[MARCHAND_BOUND].append(values[6][3])
 
 
 def update_wandb(wandb, hist):
@@ -27,13 +28,13 @@ def update_wandb(wandb, hist):
         wandb (package): the weights and biases package;
         hist (dic): A dictionary that keep track of training metrics.
     """
-    wandb.log({TRAIN_ACCURACY_LABEL: hist[TRAIN_ACCURACY_LABEL][-1],
-               "train_loss": hist["train_loss"][-1],
-               VALID_ACCURACY_LABEL: hist[VALID_ACCURACY_LABEL][-1],
-               "valid_loss": hist["valid_loss"][-1],
-               TEST_ACCURACY_LABEL: hist[TEST_ACCURACY_LABEL][-1],
-               "test_loss": hist["test_loss"][-1],
-               "bound_lin": hist["bound_lin"][-1],
-               "bound_hyp": hist["bound_hyp"][-1],
-               "bound_kl": hist["bound_kl"][-1],
-               "bound_mrch": hist["bound_mrch"][-1]})
+    wandb.log({TRAIN_ACCURACY: hist[TRAIN_ACCURACY][-1],
+               TRAIN_LOSS: hist[TRAIN_LOSS][-1],
+               VALID_ACCURACY: hist[VALID_ACCURACY][-1],
+               VALID_LOSS: hist[VALID_LOSS][-1],
+               TEST_ACCURACY: hist[TEST_ACCURACY][-1],
+               TEST_LOSS: hist[TEST_LOSS][-1],
+               LINEAR_BOUND: hist[LINEAR_BOUND][-1],
+               HYP_BOUND: hist[HYP_BOUND][-1],
+               KL_BOUND: hist[KL_BOUND][-1],
+               MARCHAND_BOUND: hist[MARCHAND_BOUND][-1]})

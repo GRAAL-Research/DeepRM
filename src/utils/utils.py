@@ -4,9 +4,19 @@ from pathlib import Path
 import numpy as np
 import torch
 
-TEST_ACCURACY_LABEL: str = "test_acc"
-TRAIN_ACCURACY_LABEL: str = "train_acc"
-VALID_ACCURACY_LABEL: str = "valid_acc"
+TRAIN_ACCURACY = "train_acc"
+TRAIN_LOSS = "train_loss"
+
+VALID_ACCURACY = "valid_acc"
+VALID_LOSS = "valid_loss"
+epoch
+TEST_ACCURACY = "test_acc"
+TEST_LOSS = "test_loss"
+
+LINEAR_BOUND = "bound_lin"
+HYP_BOUND = "bound_hyp"
+KL_BOUND = "bound_kl"
+MARCHAND_BOUND = "bound_mrch"
 
 FIGURE_BASE_PATH = Path(__file__).parent.parent.parent / "figures"
 

@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import wandb
 
-from src.utils.utils import TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL
+from src.utils.utils import TEST_ACCURACY, TRAIN_ACCURACY, VALID_ACCURACY
 
 CACHE_BASE_DIR = Path(__file__).parent / "wandb_cache"
 CACHE_FILE_EXTENSION = "parquet"
@@ -18,9 +18,9 @@ def get_and_save_wandb_data(team: str, project: str):
         if len(dict(run.summary)) <= 1:
             continue
         run_data = {
-            TEST_ACCURACY_LABEL: run.summary[TEST_ACCURACY_LABEL],
-            TRAIN_ACCURACY_LABEL: run.summary[TRAIN_ACCURACY_LABEL],
-            VALID_ACCURACY_LABEL: run.summary[VALID_ACCURACY_LABEL],
+            TEST_ACCURACY: run.summary[TEST_ACCURACY],
+            TRAIN_ACCURACY: run.summary[TRAIN_ACCURACY],
+            VALID_ACCURACY: run.summary[VALID_ACCURACY],
             **run.config
         }
         runs_data.append(run_data)

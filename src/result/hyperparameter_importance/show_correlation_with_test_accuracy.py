@@ -3,14 +3,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from src.utils.utils import TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL, FIGURE_BASE_PATH
+from src.utils.utils import TEST_ACCURACY, TRAIN_ACCURACY, VALID_ACCURACY, FIGURE_BASE_PATH
 
 COLOR_MAP = "PiYG"
 
 
 def show_correlation_with_test_accuracy(data: pd.DataFrame, figure_file_name: str) -> None:
     important_hparams = find_important_hyperparameters(data)
-    correlation_matrix = data[important_hparams].corr()[TEST_ACCURACY_LABEL].sort_values(ascending=False)
+    correlation_matrix = data[important_hparams].corr()[TEST_ACCURACY].sort_values(ascending=False)
 
     plt.figure(figsize=(12, 6))
     show_test_accuracy_values = True
@@ -35,10 +35,10 @@ def show_correlation_with_test_accuracy(data: pd.DataFrame, figure_file_name: st
 
 def find_important_hyperparameters(data: pd.DataFrame) -> list[str]:
     numerical_hparams = data.select_dtypes(include=["float64", "int64"]).columns.tolist()
-    numerical_hparams.remove(VALID_ACCURACY_LABEL)
-    numerical_hparams.remove(TRAIN_ACCURACY_LABEL)
+    numerical_hparams.remove(VALID_ACCURACY)
+    numerical_hparams.remove(TRAIN_ACCURACY)
 
-    correlation_matrix = data[numerical_hparams].corr()[TEST_ACCURACY_LABEL]
+    correlation_matrix = data[numerical_hparams].corr()[TEST_ACCURACY]
 
     important_numerical_params = []
     for numerical_param in numerical_hparams:

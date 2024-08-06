@@ -19,7 +19,9 @@ from src.training.meta_predictor import create_meta_predictor
 from src.training.optimizer import create_optimizer
 from src.training.scheduler import create_scheduler
 from src.utils.epoch_logger import EpochLogger
-from src.utils.utils import create_run_name, TEST_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, VALID_ACCURACY_LABEL
+from src.utils.utils import TEST_ACCURACY, TRAIN_ACCURACY, VALID_ACCURACY, \
+    TEST_LOSS, TRAIN_LOSS, VALID_LOSS, HYP_BOUND, LINEAR_BOUND, KL_BOUND, \
+    MARCHAND_BOUND
 
 
 def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) -> tuple[dict, int]:
@@ -37,7 +39,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
     optimizer = create_optimizer(config, meta_predictor)
     scheduler = create_scheduler(config, optimizer)
 
-    valid_metric = VALID_ACCURACY_LABEL if config["task"] == "classification" else "valid_loss"
+    valid_metric = VALID_ACCURACY if config["task"] == "classification" else VALID_LOSS
     n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
     train_loader, valid_loader, test_loader, tr_var, \
         vd_var, te_var, idx = train_valid_loaders(datasets,
@@ -48,9 +50,9 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
     best_rolling_val_acc = 0
     best_epoch = 0
     # The following information will be recorded at each epoch
-    hist = {"epoch": [], "train_loss": [], "valid_loss": [], "test_loss": [], TRAIN_ACCURACY_LABEL: [],
-            VALID_ACCURACY_LABEL: [], TEST_ACCURACY_LABEL: [], "bound_lin": [], "bound_hyp": [], "bound_kl": [],
-            "bound_mrch": []}
+    hist = {"epoch": [], TRAIN_LOSS: [], VALID_LOSS: [], TEST_LOSS: [], TRAIN_ACCURACY: [],
+            VALID_ACCURACY: [], TEST_ACCURACY: [], LINEAR_BOUND: [], HYP_BOUND: [],
+            KL_BOUND: [], MARCHAND_BOUND: []}
 
     start_time = time()
     for epoch_idx in range(config["max_epoch"]):
@@ -116,7 +118,7 @@ def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) ->
         if config["task"] == "classification":
             EpochLogger.log(
                 f"epoch {epo} - train_acc: {train_accuracy:.3f} - val_acc: {valid_accuracy:.3f}"
-                f" - {TEST_ACCURACY_LABEL}: {test_accuracy:.3f}"
+                f" - {TEST_ACCURACY}: {test_accuracy:.3f}"
                 f"{bound_info_to_log}{time_info_to_log}")
         elif config["task"] == "regression":
             EpochLogger.log(

@@ -6,7 +6,7 @@ import pandas as pd
 from loguru import logger
 from sklearn.ensemble import RandomForestRegressor
 
-from src.utils.utils import TEST_ACCURACY_LABEL, VALID_ACCURACY_LABEL, TRAIN_ACCURACY_LABEL, FIGURE_BASE_PATH
+from src.utils.utils import TEST_ACCURACY, VALID_ACCURACY, TRAIN_ACCURACY, FIGURE_BASE_PATH
 
 RANDOM_STATE = 123
 
@@ -53,7 +53,7 @@ def get_processed_x_and_y(data: pd.DataFrame, is_dropping_na: bool = False) -> t
             logger.warning("The data contains NaN.")
 
     x = process_x(data)
-    y = data[TEST_ACCURACY_LABEL]
+    y = data[TEST_ACCURACY]
 
     return x, y
 
@@ -65,9 +65,9 @@ def get_trained_random_forest(x_train: pd.DataFrame, y_train: pd.Series) -> Rand
 
 
 def process_x(data: pd.DataFrame) -> pd.DataFrame:
-    columns_to_drop = [TEST_ACCURACY_LABEL,
-                       VALID_ACCURACY_LABEL,
-                       TRAIN_ACCURACY_LABEL,
+    columns_to_drop = [TEST_ACCURACY,
+                       VALID_ACCURACY,
+                       TRAIN_ACCURACY,
                        "commit_hash",
                        "commit_name",
                        "run_name_content"
