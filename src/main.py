@@ -20,7 +20,7 @@ def main(config_combinations: list[dict]) -> None:
             logger.info("Skipping the run... It doesn't make sens to regularize discrete messages.")
             continue
         if is_run_already_completed(config):
-            logger.info("Skipping the run... It is already done.")
+            logger.info("Skipping the run... It is already completed.")
             continue
 
         if config["is_using_wandb"]:

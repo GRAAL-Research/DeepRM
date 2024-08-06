@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 SEPARATOR = "\t"
-CACHE_PATH = Path(__file__).parent / "completed_run_cache"
+CACHE_PATH = Path(__file__).parent / "completed_runs_cache"
 
 
 def is_run_already_completed(config: dict) -> bool:
