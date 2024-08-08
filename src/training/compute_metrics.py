@@ -7,12 +7,26 @@ from src.bound.compute_bound import compute_bounds
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
-from src.utils.utils import LINEAR_BOUND, HPARAM_BOUND, KL_BOUND, MARCHAND_BOUND
+from src.utils.utils import SetType, \
+    get_metric_name, Metric
 
 
-def compute_accuracy_loss_and_bounds(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor,
-                                     criterion: nn.Module, data_loader: DataLoader) -> tuple[
-    np.ndarray, np.ndarray, dict[str, np.ndarray]]:
+def compute_metrics_for_all_sets(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor,
+                                 criterion: nn.Module, train_loader: DataLoader, valid_loader: DataLoader,
+                                 test_loader: DataLoader, is_computing_test_bounds: bool) -> tuple[dict, dict, dict]:
+    train_metrics = compute_metrics(config, meta_predictor, predictor, criterion, train_loader, False,
+                                    set_type=SetType.TRAIN)
+    valid_metrics = compute_metrics(config, meta_predictor, predictor, criterion, valid_loader,
+                                    False, set_type=SetType.VALID)
+
+    test_metrics = compute_metrics(config, meta_predictor, predictor, criterion, test_loader,
+                                   is_computing_test_bounds, set_type=SetType.TEST)
+
+    return train_metrics, valid_metrics, test_metrics
+
+
+def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor, criterion: nn.Module,
+                    data_loader: DataLoader, are_bounds_computed: bool, set_type: SetType) -> dict[str, np.ndarray]:
     linear_bounds = []
     hyperparam_bounds = []
     kl_bounds = []
@@ -51,7 +65,7 @@ def compute_accuracy_loss_and_bounds(config: dict, meta_predictor: SimpleMetaNet
                                                                       targets[:,
                                                                       n_instances_per_class_per_dataset:] * 2 - 1)
                 tot_acc.append(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
-                if config["is_bound_computed"]:
+                if are_bounds_computed:
                     for dataset_idx in range(len(instances)):
                         bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand"], meta_predictor, predictor,
                                                 n_instances_per_class_per_dataset,
@@ -72,13 +86,15 @@ def compute_accuracy_loss_and_bounds(config: dict, meta_predictor: SimpleMetaNet
         else:
             raise NotImplementedError(f"The task '{config['task']}' is not supported.")
 
-        if config["is_bound_computed"]:
-            mean_bounds = {LINEAR_BOUND: np.mean(linear_bounds), HPARAM_BOUND: np.mean(hyperparam_bounds),
-                           KL_BOUND: np.mean(kl_bounds),
-                           MARCHAND_BOUND: np.mean(marchand_bounds)}
-        else:
-            mean_bounds = {LINEAR_BOUND: zero, HPARAM_BOUND: zero, KL_BOUND: zero, MARCHAND_BOUND: zero}
-
         mean_loss = np.sum(summed_losses_per_batch) / n_instances_seen
 
-        return mean_accuracy, mean_loss, mean_bounds
+        if are_bounds_computed:
+            mean_bounds = {Metric.LINEAR_BOUND.value: np.mean(linear_bounds),
+                           Metric.HPARAM_BOUND.value: np.mean(hyperparam_bounds),
+                           Metric.KL_BOUND.value: np.mean(kl_bounds),
+                           Metric.MARCHAND_BOUND.value: np.mean(marchand_bounds)}
+            return {get_metric_name(set_type, Metric.ACCURACY): mean_accuracy,
+                    get_metric_name(set_type, Metric.LOSS): mean_loss, **mean_bounds}
+
+        return {get_metric_name(set_type, Metric.ACCURACY): mean_accuracy,
+                get_metric_name(set_type, Metric.LOSS): mean_loss}

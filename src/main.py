@@ -29,11 +29,13 @@ def main(config_combinations: list[dict]) -> None:
 
         set_random_seed(config["seed"])
 
-        is_the_last_run = run_idx + 1 == n_runs
-        if is_the_last_run:
-            is_sending_wandb_last_run_alert = True
+        train_meta_predictor(config)
 
-        train_meta_predictor(config, is_sending_wandb_last_run_alert)
+        is_the_last_run = run_idx + 1 == n_runs
+        if is_the_last_run and config["is_using_wandb"]:
+            if is_sending_wandb_last_run_alert and config["is_wandb_alert_activated"]:
+                wandb.alert(title="✅ Done", text="The experiment is over.")
+            wandb.finish()
 
         if config["is_saving_completed_runs_locally"]:
             label_run_config_as_completed(config)

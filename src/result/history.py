@@ -1,7 +1,15 @@
 import wandb
 
+from src.utils.utils import TEST_ACCURACY, TRAIN_ACCURACY, VALID_ACCURACY, TEST_LOSS, TRAIN_LOSS, VALID_LOSS, Metric
 
-def add_new_values_to_history(history: dict[str, list], new_values: dict) -> None:
+
+def create_history() -> dict[str, list]:
+    return {TRAIN_LOSS: [], VALID_LOSS: [], TEST_LOSS: [], TRAIN_ACCURACY: [],
+            VALID_ACCURACY: [], TEST_ACCURACY: [], Metric.LINEAR_BOUND.value: [],
+            Metric.HPARAM_BOUND.value: [], Metric.KL_BOUND.value: [], Metric.MARCHAND_BOUND.value: []}
+
+
+def update_history(history: dict[str, list], new_values: dict) -> None:
     for key, new_value in new_values.items():
         if key not in history:
             raise ValueError(f"The key '{key}' is not in history.")
