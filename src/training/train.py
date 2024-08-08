@@ -1,159 +1,91 @@
+import time
 from copy import copy
-from time import time
 
 import torch
-import wandb
 from loguru import logger
 
 from src.data.create_datasets import create_datasets
 from src.data.create_datasets_labels import create_datasets_labels
-from src.data.loaders import train_valid_loaders
+from src.data.loaders import train_valid_and_test_indices, create_data_loader, compute_variances
 from src.model.predictor.create_predictor import create_predictor
-from src.result.compute_stats import compute_accuracy_loss_and_bounds
-from src.result.decision_boundaries import show_decision_boundaries
-from src.result.history import add_new_values_to_history, log_history_in_wandb
-from src.result.performance_matrix import show_performance_matrix
-from src.training.criterion import create_criterion
-from src.training.message_penalty import create_message_penalty_function
-from src.training.meta_predictor import create_meta_predictor
-from src.training.optimizer import create_optimizer
-from src.training.scheduler import create_scheduler
-from src.utils.epoch_logger import EpochLogger
-from src.utils.utils import TEST_ACCURACY, TRAIN_ACCURACY, VALID_ACCURACY, \
-    TEST_LOSS, TRAIN_LOSS, VALID_LOSS, HPARAM_BOUND, LINEAR_BOUND, KL_BOUND, \
-    MARCHAND_BOUND
+from src.result.history import update_history, log_history_in_wandb, create_history
+from src.training.compute_medias import compute_medias
+from src.training.compute_metrics import compute_metrics_for_all_sets
+from src.training.early_stopping import is_stopping_training
+from src.training.factory.criterion import create_criterion
+from src.training.factory.meta_predictor import create_meta_predictor
+from src.training.factory.optimizer import create_optimizer
+from src.training.factory.scheduler import create_scheduler
+from src.training.launch_epoch_training import launch_epoch_training
+from src.training.log_epoch_in_terminal import log_epoch_info_in_terminal
+from src.utils.utils import VALID_ACCURACY, VALID_LOSS
 
 
-def train_meta_predictor(config: dict, is_sending_wandb_last_run_alert: bool) -> tuple[dict[str, list], int]:
-    """
-    Returns:
-        tuple of: information about the model at the best training epoch (dictionary), best training epoch (int).
-    """
+def train_meta_predictor(config: dict) -> None:
     torch.autograd.set_detect_anomaly(True)
 
-    datasets, classes_name = create_datasets(config), create_datasets_labels(config)
+    datasets = create_datasets(config)
     predictor = create_predictor(config)
     meta_predictor = create_meta_predictor(config, predictor)
     criterion = create_criterion(config)
-    message_penalty_function = create_message_penalty_function(config)
     optimizer = create_optimizer(config, meta_predictor)
     scheduler = create_scheduler(config, optimizer)
 
-    valid_metric = VALID_ACCURACY if config["task"] == "classification" else VALID_LOSS
-    n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
-    train_loader, valid_loader, test_loader, tr_var, \
-        vd_var, te_var, idx = train_valid_loaders(datasets,
-                                                  config["batch_size"],
-                                                  config["splits"],
-                                                  config["are_test_classes_shared_with_train"],
-                                                  seed=config["seed"])
+    validation_metric = VALID_ACCURACY if config["task"] == "classification" else VALID_LOSS
+
+    train_idx, valid_idx, test_idx = train_valid_and_test_indices(datasets,
+                                                                  config["splits"],
+                                                                  config["are_test_classes_shared_with_train"],
+                                                                  config["seed"])
+    train_loader = create_data_loader(datasets, config["batch_size"], train_idx)
+    valid_loader = create_data_loader(datasets, config["batch_size"], valid_idx)
+    test_loader = create_data_loader(datasets, config["batch_size"], test_idx)
+    train_var, valid_var, test_var = compute_variances(datasets, train_idx, valid_idx, test_idx)
+
     best_rolling_val_acc = 0
     best_epoch = 0
-    history = {TRAIN_LOSS: [], VALID_LOSS: [], TEST_LOSS: [], TRAIN_ACCURACY: [],
-               VALID_ACCURACY: [], TEST_ACCURACY: [], LINEAR_BOUND: [], HPARAM_BOUND: [],
-               KL_BOUND: [], MARCHAND_BOUND: []}
+    history = create_history()
+    start_time = time.time()
 
-    start_time = time()
     for epoch_idx in range(config["max_epoch"]):
-        meta_predictor.train()
-        with (torch.enable_grad()):
-            for instances in train_loader:
-                instances = instances.float()[:, n_instances_per_class_per_dataset:]
-                targets = (instances[:, :, -1] + 1) / 2
-                instances = instances.float()
-                targets = targets.float()
+        predictor = launch_epoch_training(config, meta_predictor, predictor, train_loader, criterion, optimizer)
 
-                if config["device"] == "gpu":
-                    instances = instances.cuda()
-                    targets = targets.cuda()
-                    meta_predictor = meta_predictor.cuda()
+        is_computing_test_bounds = False
+        if config["is_bound_computed"] and epoch_idx % config["bound_computation_epoch_frequency"] == 0:
+            is_computing_test_bounds = True
 
-                optimizer.zero_grad()
-                meta_output = meta_predictor.forward(instances)
-                predictor.set_params(meta_output)
-                output, _ = predictor.forward(instances)
+        train_metrics, valid_metrics, test_metrics = compute_metrics_for_all_sets(config, meta_predictor, predictor,
+                                                                                  criterion,
+                                                                                  train_loader, valid_loader,
+                                                                                  test_loader,
+                                                                                  is_computing_test_bounds)
 
-                if config["is_dataset_balanced"] or config["task"] == "regression":
-                    loss = torch.mean(torch.mean(criterion(output, targets), dim=1) ** config["loss_exponent"])
-                else:
-                    loss = 0
-                    for batch in range(len(output)):
-                        loss += (torch.mean(criterion(output[batch, targets[batch] == 0],
-                                                      targets[batch, targets[batch] == 0])) / 2 +
-                                 torch.mean(criterion(output[batch, targets[batch] == 1],
-                                                      targets[batch, targets[batch] == 1])) / 2) ** config[
-                                    "loss_exponent"]
-                    loss /= len(output)
-                if config["msg_type"] is not None and config["msg_size"] > 0:
-                    loss += message_penalty_function(meta_predictor.get_message(), config["msg_penalty_coef"])
-                loss.backward()
-                optimizer.step()
+        log_epoch_info_in_terminal(config, train_metrics, valid_metrics, test_metrics, train_var, valid_var,
+                                   test_var, start_time, epoch_idx, is_computing_test_bounds)
 
-        train_accuracy, train_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
-                                                                         train_loader)
-        valid_accuracy, valid_loss, _ = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor, criterion,
-                                                                         valid_loader)
-        test_accuracy, test_loss, bounds = compute_accuracy_loss_and_bounds(config, meta_predictor, predictor,
-                                                                            criterion, test_loader)
-        new_history_values = {
-            TRAIN_ACCURACY: train_accuracy, TRAIN_LOSS: train_loss, VALID_ACCURACY: valid_accuracy,
-            VALID_LOSS: valid_loss, TEST_ACCURACY: test_accuracy, TEST_LOSS: test_loss, **bounds
-        }
-        add_new_values_to_history(history, new_history_values)
-
-        rolling_val_perf = torch.mean(torch.tensor(history[valid_metric][-min(100, epoch_idx + 1):]))
-
+        new_history_values = train_metrics | valid_metrics | test_metrics
+        update_history(history, new_history_values)
         if config["is_using_wandb"]:
             log_history_in_wandb(history)
 
-        epo = "0" * (epoch_idx + 1 < 100) + "0" * (epoch_idx + 1 < 10) + str(epoch_idx + 1)
+        rolling_val_perf = compute_rolling_performance(history, validation_metric, epoch_idx)
 
-        if config["is_bound_computed"]:
-            bound_info_to_log = (
-                f" - bounds: (lin: {bounds[LINEAR_BOUND]:.2f}), (hyp: {bounds[HPARAM_BOUND]:.2f})"
-                f", (kl: {bounds[KL_BOUND]:.2f}), (marchand: {bounds[MARCHAND_BOUND]:.2f})")
-        else:
-            bound_info_to_log = ""
-
-        time_info_to_log = f" - time: {round(time() - start_time)}s"
-        if config["task"] == "classification":
-            EpochLogger.log(
-                f"epoch {epo} - train_acc: {train_accuracy:.3f} - val_acc: {valid_accuracy:.3f}"
-                f" - {TEST_ACCURACY}: {test_accuracy:.3f}"
-                f"{bound_info_to_log}{time_info_to_log}")
-        elif config["task"] == "regression":
-            EpochLogger.log(
-                f"Epoch {epo} - Train R2: {1 - train_loss / tr_var:.4f} - Val R2: {1 - valid_loss / vd_var:.4f}"
-                f" - Test R2: {1 - test_loss / te_var:.4f}"
-                f"{bound_info_to_log}{time_info_to_log}")
-        else:
-            raise NotImplementedError(f"The task '{config['task']}' is not supported.")
-
-        scheduler.step(rolling_val_perf)
-
-        has_significant_improvement_being_done_in_validation = rolling_val_perf > best_rolling_val_acc + config[
-            "early_stopping_tolerance"]
-        if has_significant_improvement_being_done_in_validation:
+        has_done_significant_improvement = rolling_val_perf > best_rolling_val_acc + config["early_stopping_tolerance"]
+        if has_done_significant_improvement:
             best_epoch = epoch_idx
             best_rolling_val_acc = copy(rolling_val_perf)
 
-        has_no_learning_being_made = train_accuracy < 0.525 and epoch_idx > 50
-        has_no_improvement_for_a_while = epoch_idx - best_epoch > config["early_stopping_patience"]
-        if has_no_learning_being_made or has_no_improvement_for_a_while:
+        if is_stopping_training(config, train_metrics, epoch_idx, best_epoch):
             logger.info("The early stopping stopped the training.")
             break
 
+        scheduler.step(rolling_val_perf)
+
     if config["is_media_computed"]:
-        if config["n_features"] == 2 and config["is_using_wandb"]:
-            show_decision_boundaries(meta_predictor, config["dataset"], test_loader, predictor, wandb, config["device"])
-        if config["dataset"] in ["mnist", "cifar100_binary"]:
-            show_performance_matrix(meta_predictor, predictor, config["dataset"], datasets, classes_name, idx,
-                                    config["n_dataset"], config["is_using_wandb"], wandb, config["batch_size"],
-                                    config["are_test_classes_shared_with_train"], config["device"])
+        classes_name = create_datasets_labels(config)
+        compute_medias(config, meta_predictor, test_loader, predictor, train_idx, valid_idx, test_idx, datasets,
+                       classes_name)
 
-    if config["is_using_wandb"]:
-        if is_sending_wandb_last_run_alert and config["is_wandb_alert_activated"]:
-            wandb.alert(title="✅ Done", text="The experiment is over.")
-        wandb.finish()
 
-    return history, best_epoch
+def compute_rolling_performance(history: dict[str, list], metric: str, epoch_idx: int) -> torch.Tensor:
+    return torch.mean(torch.tensor(history[metric][-min(100, epoch_idx + 1):]))

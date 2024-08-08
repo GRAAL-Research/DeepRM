@@ -1,73 +1,72 @@
 import math
 
 import numpy as np
-import torch
 from torch.utils.data import Subset, DataLoader
 
 
-def train_valid_loaders(dataset, batch_size, splits, are_test_classes_shared_with_train, shuffle=True, seed=42) -> (
-        tuple)[DataLoader, DataLoader, DataLoader, np.ndarray, np.ndarray, np.ndarray, list]:
-    """
-    Divides a dataset into a training set and a validation set, both in a Pytorch DataLoader form.
-    Args:
-        dataset (torch.utils.data.Dataset): Dataset
-        batch_size (int): Desired batch-size for the DataLoader
-        splits (list of float): Desired proportion of training, validation and test example must sum to 1).
-        are_test_classes_shared_with_train ():
-        shuffle (bool): Whether the examples are shuffled before train/validation split.
-        seed (int): A random seed.
-    Returns:
-        Tuple (training DataLoader, validation DataLoader, test DataLoader, float, float, float, list).
-    """
-    assert sum(splits) == 1, 'The sum of splits must be 1.'
-    num_data = len(dataset)
-    indices = np.arange(num_data)
+def train_valid_and_test_indices(datasets: np.ndarray, splits: list[float], are_test_classes_shared_with_train: bool,
+                                 seed: int, is_shuffling=True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    assert sum(splits) == 1, "The sum of splits must be 1."
+
+    n_datasets = len(datasets)
+    datasets_indices = np.arange(n_datasets)
     if not are_test_classes_shared_with_train:
-        num_classes = int((1 + math.sqrt(1 + 4 * int(num_data))) / 2)
+        num_classes = int((1 + math.sqrt(1 + 4 * int(n_datasets))) / 2)
         test_idx = []
-        curr_class = -1
-        while len(test_idx) / num_data < splits[2]:
-            curr_class += 1
-            test_idx += extract_class(num_classes, curr_class)
+        current_class = 0
+        while len(test_idx) / n_datasets < splits[2]:
+            test_idx += extract_class(num_classes, current_class)
+            current_class += 1
         other_idx = []
-        for idx in indices:
+        for idx in datasets_indices:
             if idx not in test_idx:
                 other_idx.append(idx)
-        if shuffle:
+        if is_shuffling:
             np.random.seed(seed)
             np.random.shuffle(other_idx)
         split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * len(other_idx))
-        train_idx, valid_idx = other_idx[:split_1], other_idx[split_1:]
-    else:
-        if shuffle:
-            np.random.seed(seed)
-            np.random.shuffle(indices)
-        if len(dataset) > 3:
-            split_1 = math.floor(splits[0] * num_data)
-            split_2 = math.floor(splits[1] * num_data) + split_1
-            train_idx, valid_idx, test_idx = indices[:split_1], indices[split_1:split_2], indices[split_2:]
-        else:
-            split_1 = math.floor(splits[0] / (1 - splits[2]) * num_data)
-            train_idx, valid_idx, test_idx = indices[:split_1], indices[split_1:], np.arange(len(dataset[1]))
+        train_idx = other_idx[:split_1]
+        valid_idx = other_idx[split_1:]
 
-    train_var = np.var((dataset[train_idx, int(dataset.shape[1] / 2):, -1] + 1) / 2)
-    valid_var = np.var((dataset[valid_idx, int(dataset.shape[1] / 2):, -1] + 1) / 2)
-    test_var = np.var((dataset[test_idx, int(dataset.shape[1] / 2):, -1] + 1) / 2)
-    train_dataset = Subset(dataset, train_idx)
-    valid_dataset = Subset(dataset, valid_idx)
-    test_dataset = Subset(dataset, test_idx)
+        return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    idx = [train_idx, valid_idx, test_idx]
+    if is_shuffling:
+        np.random.seed(seed)
+        np.random.shuffle(datasets_indices)
 
-    return train_loader, valid_loader, test_loader, train_var, valid_var, test_var, idx
+    if n_datasets > 3:
+        split_1 = math.floor(splits[0] * n_datasets)
+        split_2 = math.floor(splits[1] * n_datasets) + split_1
+        train_idx = datasets_indices[:split_1]
+        valid_idx = datasets_indices[split_1:split_2]
+        test_idx = datasets_indices[split_2:]
+        return train_idx, valid_idx, test_idx
+
+    split_1 = math.floor(splits[0] / (1 - splits[2]) * n_datasets)
+    train_idx = datasets_indices[:split_1]
+    valid_idx = datasets_indices[split_1:]
+    test_idx = np.arange(len(datasets[1]))
+
+    return train_idx, valid_idx, test_idx
 
 
-def extract_class(num_classes, curr_class):
-    starting_point = num_classes * curr_class
-    data_number = list(np.arange(starting_point, starting_point + num_classes - curr_class - 1))
-    for i in range(1, num_classes - curr_class):
+def create_data_loader(datasets: np.ndarray, batch_size: int, indices: np.ndarray) -> DataLoader:
+    subset = Subset(datasets, indices)
+    return DataLoader(subset, batch_size=batch_size, shuffle=False)
+
+
+def compute_variances(datasets: np.ndarray, train_idx,
+                      valid_idx, test_idx) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    train_var = np.var((datasets[train_idx, int(datasets.shape[1] / 2):, -1] + 1) / 2)
+    valid_var = np.var((datasets[valid_idx, int(datasets.shape[1] / 2):, -1] + 1) / 2)
+    test_var = np.var((datasets[test_idx, int(datasets.shape[1] / 2):, -1] + 1) / 2)
+
+    return train_var, valid_var, test_var
+
+
+def extract_class(num_classes: int, current_class: int) -> list:
+    starting_point = num_classes * current_class
+    data_number = list(np.arange(starting_point, starting_point + num_classes - current_class - 1))
+    for i in range(1, num_classes - current_class):
         data_number.append(starting_point + (num_classes - 1) * i)
     return data_number

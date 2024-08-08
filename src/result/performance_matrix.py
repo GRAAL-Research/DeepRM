@@ -84,6 +84,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         are_test_classes_shared_with_train:
         device (str): "gpu", or "cpu"; whether to use the gpu.
     """
+
     n_classes = int((1 + (1 + n_datasets * 4) ** 0.5) / 2)
     meta_pred.eval()
     with torch.no_grad():

@@ -1,21 +1,36 @@
 import random
+from enum import Enum
 from pathlib import Path
 
 import numpy as np
 import torch
 
-TRAIN_ACCURACY = "train_acc"
-TRAIN_LOSS = "train_loss"
 
-VALID_ACCURACY = "valid_acc"
-VALID_LOSS = "valid_loss"
-TEST_ACCURACY = "test_acc"
-TEST_LOSS = "test_loss"
+class SetType(Enum):
+    TRAIN = "train"
+    VALID = "valid"
+    TEST = "test"
 
-LINEAR_BOUND = "bound_lin"
-HPARAM_BOUND = "bound_hyp"
-KL_BOUND = "bound_kl"
-MARCHAND_BOUND = "bound_mrch"
+
+class Metric(Enum):
+    ACCURACY = "acc"
+    LOSS = "loss"
+    LINEAR_BOUND = "bound_lin"
+    HPARAM_BOUND = "bound_hyp"
+    KL_BOUND = "bound_kl"
+    MARCHAND_BOUND = "bound_mrch"
+
+
+def get_metric_name(set_type: SetType, metric_name: Metric) -> str:
+    return f"{set_type.value}_{metric_name.value}"
+
+
+TRAIN_ACCURACY = get_metric_name(SetType.TRAIN, Metric.ACCURACY)
+TRAIN_LOSS = get_metric_name(SetType.TRAIN, Metric.LOSS)
+VALID_ACCURACY = get_metric_name(SetType.VALID, Metric.ACCURACY)
+VALID_LOSS = get_metric_name(SetType.VALID, Metric.LOSS)
+TEST_ACCURACY = get_metric_name(SetType.TEST, Metric.ACCURACY)
+TEST_LOSS = get_metric_name(SetType.TEST, Metric.LOSS)
 
 FIGURE_BASE_PATH = Path(__file__).parent.parent.parent / "figures"
 

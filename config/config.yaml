@@ -2,7 +2,8 @@ dataset_config_path: dataset/mnist.yaml
 log_config_path: log/on.yaml
 training_config_path: training/gpu.yaml
 
-is_bound_computed: False
+is_bound_computed: True
+bound_computation_epoch_frequency: 30
 is_media_computed: True
 
 msg_type: cnt
