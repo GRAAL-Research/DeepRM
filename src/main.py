@@ -11,7 +11,6 @@ from src.utils.utils import set_random_seed, create_run_name
 
 def main(config_combinations: list[dict]) -> None:
     n_runs = len(config_combinations)
-    is_sending_wandb_last_run_alert = False
 
     for run_idx, config in enumerate(config_combinations):
         logger.info(f"Launching run {run_idx + 1}/{n_runs} : {config}")
@@ -32,10 +31,10 @@ def main(config_combinations: list[dict]) -> None:
         train_meta_predictor(config)
 
         is_the_last_run = run_idx + 1 == n_runs
-        if is_the_last_run and config["is_using_wandb"]:
-            if is_sending_wandb_last_run_alert and config["is_wandb_alert_activated"]:
-                wandb.alert(title="✅ Done", text="The experiment is over.")
+        if config["is_using_wandb"]:
             wandb.finish()
+            if is_the_last_run and config["is_wandb_alert_activated"]:
+                wandb.alert(title="✅ Done", text="The experiment is over.")
 
         if config["is_saving_completed_runs_locally"]:
             label_run_config_as_completed(config)
