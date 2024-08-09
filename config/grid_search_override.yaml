@@ -1,19 +1,11 @@
-project_name: [message-module-exp7-mnist]
-run_name_content: [[msg_size, lr, batch_size, pred_hidden_sizes,
-                    data_encoder_name, tfm_input_dim, tfm_n_heads,
-                    tfm_mlp_dim, tfm_drop_out, tfm_output_dim, tfm_n_encoders]]
+project_name: [hyperparam_grid_cifar100_4] # moon
+run_name_content: [[lr, msg_type, msg_size, module_1_dim, pred_hidden_sizes, has_skip_connection]]
 
-batch_size: [25, 45]
-lr: [1e-2, 1e-3, 1e-4]
+lr: [1e-3, 1e-4]
+msg_type: [dsc, cnt]
+msg_size: [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+module_1_dim: [[50], [100], [1000], [100, 100], [1000, 1000]]
+pred_hidden_sizes: [[10], [20]]
 
-data_encoder_name: [transformer]  # conv_one_by_one, kme, concatenator, fs_pool, transformer
-tfm_input_dim: [256, 1024]
-tfm_n_heads: [1, 4, 16, 32, 64]
-tfm_mlp_dim: [50, 200, 500]
-tfm_drop_out: [0]
-tfm_output_dim: [10, 25]
-
-module_1_dim: [[500]] # [[50], [100], [500], [1000]]
-msg_size: ${module_1_dim[0]}
-module_2_dim: ${module_1_dim}
-pred_hidden_sizes: [[3], [10], [50, 50]]
+has_skip_connection: [False, True]
+has_batch_norm: [True]

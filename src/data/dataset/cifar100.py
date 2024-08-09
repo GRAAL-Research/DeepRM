@@ -8,6 +8,7 @@ from torchvision.datasets.cifar import CIFAR100
 from torchvision.transforms import ToTensor
 from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
+import math
 
 from src.config.utils import load_yaml_file_content, CONFIG_BASE_PATH
 
@@ -63,40 +64,54 @@ def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
         (config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] + config["target_size"]))
 
     n_instance_per_class_per_dataset = config["n_instances_per_dataset"] // 2
-    binary_dataset_idx = 0
     target_starting_idx = -config["target_size"]
 
-    for first_class in range(n_classes):
-        for second_class in range(n_classes):
-            if binary_dataset_idx == config["n_dataset"]:
+    n_train_datasets = math.floor(config["n_dataset"] * config["splits"][0])
+    n_valid_datasets = math.floor(config["n_dataset"] * config["splits"][1])
+    n_test_datasets = math.floor(config["n_dataset"] * config["splits"][2])
+
+    n_train_classes = round(n_train_datasets ** 0.5) + 1
+    n_valid_classes = round(n_valid_datasets ** 0.5) + n_train_classes + 1
+    n_test_classes = round(n_test_datasets ** 0.5) + n_valid_classes + 1
+
+    indices = np.arange(n_test_classes)
+    np.random.shuffle(indices)
+    train_idx, valid_idx, test_idx = (indices[:n_train_classes], indices[n_train_classes:n_valid_classes],
+                                      indices[n_valid_classes:])
+    idxs = [train_idx, valid_idx, test_idx]
+    n_datasets = [n_train_datasets, n_train_datasets + n_valid_datasets, n_train_datasets + n_valid_datasets + n_test_datasets]
+    binary_dataset_idx = 0
+    for index in [0, 1, 2]:
+        for first_class in idxs[index]:
+            for second_class in idxs[index]:
+                if first_class == second_class:
+                    continue
+
+                idx = np.arange(len(dataset))
+                np.random.shuffle(idx)
+                dataset = dataset[idx]
+                first_class_filter = dataset[:, target_starting_idx] == first_class
+                first_class_x = dataset[first_class_filter, :target_starting_idx]
+
+                second_class_filter = dataset[:, target_starting_idx] == second_class
+                second_class_x = dataset[second_class_filter, :target_starting_idx]
+
+                x = torch.vstack((first_class_x[:n_instance_per_class_per_dataset],
+                                  second_class_x[:n_instance_per_class_per_dataset]))
+                y = torch.ones((config["n_instances_per_dataset"], 1))
+                y[:n_instance_per_class_per_dataset] -= 2
+
+                binary_dataset = torch.hstack((x, y))
+                if config["shuffle_each_dataset_samples"]:
+                    random_indices = torch.randperm(config["n_instances_per_dataset"])
+                    binary_dataset = binary_dataset[random_indices]
+
+                binary_datasets[binary_dataset_idx] = binary_dataset
+                binary_dataset_idx += 1
+                if binary_dataset_idx == n_datasets[index]:
+                    break
+            if binary_dataset_idx == n_datasets[index]:
                 break
-            if first_class == second_class:
-                continue
-
-            idx = np.arange(len(dataset))
-            np.random.shuffle(idx)
-            dataset = dataset[idx]
-            first_class_filter = dataset[:, target_starting_idx] == first_class
-            first_class_x = dataset[first_class_filter, :target_starting_idx]
-
-            second_class_filter = dataset[:, target_starting_idx] == second_class
-            second_class_x = dataset[second_class_filter, :target_starting_idx]
-
-            x = torch.vstack((first_class_x[:n_instance_per_class_per_dataset],
-                              second_class_x[:n_instance_per_class_per_dataset]))
-            y = torch.ones((config["n_instances_per_dataset"], 1))
-            y[:n_instance_per_class_per_dataset] -= 2
-
-            binary_dataset = torch.hstack((x, y))
-            if config["shuffle_each_dataset_samples"]:
-                random_indices = torch.randperm(config["n_instances_per_dataset"])
-                binary_dataset = binary_dataset[random_indices]
-
-            binary_datasets[binary_dataset_idx] = binary_dataset
-            binary_dataset_idx += 1
-
-        if binary_dataset_idx == config["n_dataset"]:
-            break
 
     return binary_datasets
 
@@ -109,6 +124,7 @@ def obtain_cifar100_dataset(config: dict) -> torch.Tensor:
 
 
 def create_train_set(config: dict) -> torch.Tensor:
+    print(CIFAR100_BASE_PATH)
     train_set = torchvision.datasets.CIFAR100(root=str(CIFAR100_BASE_PATH), train=True, download=True)
     train_set = apply_transforms_to_dataset(config, train_set)
     n_instances_in_cifar100_train_set = train_set.data.shape[0]

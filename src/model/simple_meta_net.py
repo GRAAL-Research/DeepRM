@@ -32,9 +32,9 @@ class SimpleMetaNet(nn.Module):
                             config["init_scheme"], config["msg_type"])
 
         self.cas = nn.ModuleList([Attention(config) for _ in range(self.compression_set_size)])
-        self.kme_2 = KME(config, hidden_dims=config["kme_dim"])
+        self.kme_2 = KME(config, hidden_dims=config["module_1_dim"])
 
-        self.module_2 = MLP(self.compute_module_2_input_dim(), config["module_2_dim"] + [self.output_dim],
+        self.module_2 = MLP(self.compute_module_2_input_dim(), config["module_1_dim"] + [self.output_dim],
                             config["device"], config["has_skip_connection"], config["has_batch_norm"],
                             config["batch_norm_min_dim"], config["init_scheme"], has_msg_as_input=True)
 
@@ -110,8 +110,8 @@ class SimpleMetaNet(nn.Module):
 
         return x_masked
 
-    def forward_module_2(self, msg_module_output: torch.Tensor | None,
-                         compression_module_output: torch.Tensor | None) -> torch.Tensor:
+    def forward_module_2(self, msg_module_output: torch.Tensor = None,
+                         compression_module_output: torch.Tensor = None) -> torch.Tensor:
 
         if msg_module_output is not None and compression_module_output is not None:
             merged_msg_and_compression_output = torch.hstack((msg_module_output, compression_module_output))
