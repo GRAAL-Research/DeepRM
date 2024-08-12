@@ -1,11 +1,11 @@
 project_name: [hyperparam_grid_cifar100_4] # moon
 run_name_content: [[lr, msg_type, msg_size, module_1_dim, pred_hidden_sizes, has_skip_connection]]
 
-lr: [1e-3, 1e-4]
-msg_type: [dsc, cnt]
-msg_size: [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
-module_1_dim: [[50], [100], [1000], [100, 100], [1000, 1000]]
-pred_hidden_sizes: [[10], [20]]
+lr: [1e-2]
+msg_type: [cnt]
+msg_size: [64]
+module_1_dim: [[500, 500]]
+pred_hidden_sizes: [[30]]
 
-has_skip_connection: [False, True]
+has_skip_connection: [True]
 has_batch_norm: [True]

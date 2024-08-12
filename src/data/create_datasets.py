@@ -2,7 +2,8 @@ import numpy as np
 import math
 
 from src.data.dataset.blob import generate_blob_datasets
-from src.data.dataset.mnist import load_mnist
+from src.data.dataset.mnist_binary import load_mnist_binary
+from src.data.dataset.mnist_multi import load_mnist_multi
 from src.data.dataset.cifar100 import load_cifar100
 from src.data.dataset.moon import generate_moon_datasets
 from src.data.dataset.moon_and_blob import generate_moon_and_blob_datasets
@@ -22,8 +23,11 @@ def create_datasets(config: dict) -> np.ndarray:
         assert config["n_features"] == 2
         return generate_moon_and_blob_datasets(config)
 
-    elif config["dataset"] == "mnist":
-        return load_mnist(config)
+    elif config["dataset"] == "mnist_binary":
+        return load_mnist_binary(config)
+
+    elif config["dataset"] == "mnist_multi":
+        return load_mnist_multi(config)
 
     elif config["dataset"] == "cifar100_binary":
         return load_cifar100(config)

@@ -23,6 +23,18 @@ def linear_loss(output, targets):
     return tot
 
 
+def linear_loss_multi(output, targets):
+    """
+    Computes the linear loss.
+    Args:
+        output (torch.tensor of size (batch_size, n_instances_per_dataset)): The output (0 or 1) of the predictor;
+        targets (torch.tensor of size (batch_size, n_instances_per_dataset)): The labels (0 or 1);
+    Return:
+        Float, the total linear loss incurred.
+    """
+    return torch.mean(output * targets)
+
+
 def l1(x, c):
     """
     Computes the l1 loss, given inputs and a regularization parameter.

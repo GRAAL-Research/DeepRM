@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from src.bound.compute_bound import compute_bounds
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
-from src.model.utils.loss import linear_loss
+from src.model.utils.loss import linear_loss, linear_loss_multi
 from src.utils.utils import SetType, \
     get_metric_name, Metric
 
@@ -46,7 +46,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
             n_batches += 1
 
             instances = instances.float()
-            targets = (instances[:, :, -1] + 1) / 2
+            targets = (instances[:, :, -config["target_size"]:] + 1) / 2
             targets = targets.float()
 
             if config["device"] == "gpu":
@@ -61,9 +61,16 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
             summed_losses_per_batch.append(torch.sum(loss).cpu())
 
             if config["task"] == "classification":
-                acc = n_instances_per_class_per_dataset * linear_loss(output[1],
-                                                                      targets[:,
-                                                                      n_instances_per_class_per_dataset:] * 2 - 1)
+                if config["target_size"] == 1:
+                    acc = n_instances_per_class_per_dataset * linear_loss(output[1],
+                                                                          targets[:,
+                                                                          n_instances_per_class_per_dataset:] * 2 - 1)
+                else:
+                    acc = n_instances_per_class_per_dataset * linear_loss_multi(output[1],
+                                                                                targets[:,
+                                                                                n_instances_per_class_per_dataset:])
+                #print(acc)
+                #print(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
                 tot_acc.append(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
                 if are_bounds_computed:
                     for dataset_idx in range(len(instances)):

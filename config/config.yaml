@@ -1,6 +1,6 @@
 dataset_config_path: dataset/cifar100_binary.yaml
-log_config_path: log/on.yaml
-training_config_path: training/gpu.yaml
+log_config_path: log/off.yaml
+training_config_path: training/cpu.yaml
 
 is_bound_computed: True
 bound_computation_epoch_frequency: 10

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torchvision
 from torchvision import transforms as transforms
 from torchvision.datasets.mnist import MNIST
@@ -19,7 +20,7 @@ MNIST_CACHE_BASE_PATH = MNIST_BASE_PATH / "cache"
 NUMPY_FILE_EXTENSION = ".npy"
 
 
-def load_mnist(config: dict) -> np.ndarray:
+def load_mnist_multi(config: dict) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config)
 
     if expected_datasets_cache_path.exists():
@@ -39,7 +40,7 @@ def create_datasets_cache_path(config: dict) -> Path:
 
 
 def create_and_store_mnist_datasets(config: dict) -> np.ndarray:
-    dataset = obtain_mnist_dataset(config)
+    dataset = create_train_set(config)
     datasets = create_mnist_binary_datasets(config, dataset)
     store_mnist_datasets(config, datasets)
 
@@ -52,55 +53,26 @@ def store_mnist_datasets(config: dict, datasets: np.ndarray) -> None:
 
 
 def create_mnist_binary_datasets(config: dict, dataset) -> np.ndarray:
-    max_digits = 10
-    maximum_of_datasets = max_digits * (max_digits - 1)
-    assertion_msg = f"Given {max_digits} digits, we can't create more than {maximum_of_datasets} MNIST binary datasets."
-    assert config["n_dataset"] <= maximum_of_datasets, assertion_msg
-    n_digits = (1 + math.sqrt(1 + 4 * int(config["n_dataset"]))) / 2
-    assert n_digits.is_integer(), \
-        f"A round number of classes should be deduced from given number of datasets."
-    n_digits = int(n_digits)
-    assert config["n_instances_per_dataset"] % 2 == 0, "The number of instances per dataset must be even."
-
-    binary_datasets = np.zeros(
-        (config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] + config["target_size"]))
-
-    n_instance_per_class_per_dataset = config["n_instances_per_dataset"] // 2
-    binary_dataset_idx = 0
-    target_starting_idx = -config["target_size"]
-
-    for first_class in range(n_digits):
-        for second_class in range(n_digits):
-            if binary_dataset_idx == config["n_dataset"]:
-                break
-            if first_class == second_class:
-                continue
-
-            idx = np.arange(len(dataset))
-            np.random.shuffle(idx)
-            dataset = dataset[idx]
-            first_class_filter = dataset[:, target_starting_idx] == first_class
-            first_class_x = dataset[first_class_filter, :target_starting_idx]
-
-            second_class_filter = dataset[:, target_starting_idx] == second_class
-            second_class_x = dataset[second_class_filter, :target_starting_idx]
-
-            x = torch.vstack((first_class_x[:n_instance_per_class_per_dataset],
-                              second_class_x[:n_instance_per_class_per_dataset]))
-            y = torch.ones((config["n_instances_per_dataset"], 1))
-            y[:n_instance_per_class_per_dataset] -= 2
-
-            binary_dataset = torch.hstack((x, y))
-            if config["shuffle_each_dataset_samples"]:
-                random_indices = torch.randperm(config["n_instances_per_dataset"])
-                binary_dataset = binary_dataset[random_indices]
-
-            binary_datasets[binary_dataset_idx] = binary_dataset
-            binary_dataset_idx += 1
-
+    binary_datasets = np.zeros((config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] +
+                                config["target_size"]))
+    dataset = dataset[:config["n_instances_per_dataset"]]
+    dataset = torch.hstack((dataset[:, :-1], F.one_hot(dataset[:, -1]) * 2 - 1))
+    for binary_dataset_idx in range(config["n_dataset"]):
         if binary_dataset_idx == config["n_dataset"]:
             break
-
+        idx = np.arange(len(dataset))
+        np.random.shuffle(idx)
+        dataset = dataset[idx]
+        dataset_shuffled = dataset.clone()
+        for i in range(config["n_pixels_to_permute"]):
+            first_pixel_location = np.random.randint(low=0, high=config["n_features"])
+            second_pixel_location = np.random.randint(low=0, high=config["n_features"])
+            first_pixel = dataset_shuffled[:, first_pixel_location].clone()
+            second_pixel = dataset_shuffled[:, second_pixel_location].clone()
+            dataset_shuffled[:, second_pixel_location] = first_pixel
+            dataset_shuffled[:, first_pixel_location] = second_pixel
+        binary_datasets[binary_dataset_idx] = dataset_shuffled
+        binary_dataset_idx += 1
     return binary_datasets
 
 
@@ -112,7 +84,7 @@ def obtain_mnist_dataset(config: dict) -> torch.Tensor:
 
 
 def create_train_set(config: dict) -> torch.Tensor:
-    train_set = torchvision.datasets.MNIST(root=str(DATA_BASE_PATH), train=True, download=True)
+    train_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=True, download=True)
     train_set = apply_transforms_to_dataset(config, train_set)
     n_instances_in_mnist_train_set = train_set.data.shape[0]
     data = train_set.data.reshape((n_instances_in_mnist_train_set, config["n_features"]))
@@ -122,7 +94,7 @@ def create_train_set(config: dict) -> torch.Tensor:
 
 
 def create_test_set(config: dict) -> torch.Tensor:
-    test_set = torchvision.datasets.MNIST(root=str(DATA_BASE_PATH), train=False, download=True)
+    test_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=False, download=True)
     test_set = apply_transforms_to_dataset(config, test_set)
     n_instances_in_mnist_test_set = test_set.data.shape[0]
 
