@@ -69,8 +69,6 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
                     acc = n_instances_per_class_per_dataset * linear_loss_multi(output[1],
                                                                                 targets[:,
                                                                                 n_instances_per_class_per_dataset:])
-                #print(acc)
-                #print(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
                 tot_acc.append(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
                 if are_bounds_computed:
                     for dataset_idx in range(len(instances)):

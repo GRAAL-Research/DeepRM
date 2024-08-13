@@ -32,7 +32,7 @@ def linear_loss_multi(output, targets):
     Return:
         Float, the total linear loss incurred.
     """
-    return torch.mean(output * targets)
+    return torch.mean(torch.sum(output * targets, dim=-1))
 
 
 def l1(x, c):
