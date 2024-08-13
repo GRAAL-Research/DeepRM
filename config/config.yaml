@@ -1,4 +1,4 @@
-dataset_config_path: dataset/cifar100_binary.yaml
+dataset_config_path: dataset/mnist_multi.yaml
 log_config_path: log/off.yaml
 training_config_path: training/cpu.yaml
 
