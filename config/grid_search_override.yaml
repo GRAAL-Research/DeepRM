@@ -1,4 +1,4 @@
-project_name: [hyperparam_grid_cifar100_5] # moon
+project_name: [hyperparam_grid_cifar100_6] # moon
 run_name_content: [[lr, msg_type, msg_size, module_1_dim, pred_hidden_sizes, has_skip_connection]]
 
 lr: [1e-3, 1e-4]
