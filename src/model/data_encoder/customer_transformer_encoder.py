@@ -7,7 +7,7 @@ from src.model.data_encoder.data_encoder import DataEncoder
 class CustomTransformerEncoder(DataEncoder):
     def __init__(self, config):
         super().__init__()
-        self.output_dim = config["tfm_output_dim"] * config["n_instances_per_dataset"] // 2
+        self.output_dim = config["tfm_output_dim"]
 
         self.input_projection_layer = nn.Linear(config["n_features"] + 1, config["tfm_input_dim"])
         encoder_layer = nn.TransformerEncoderLayer(config["tfm_input_dim"], config["tfm_n_heads"],
@@ -24,7 +24,7 @@ class CustomTransformerEncoder(DataEncoder):
         outputs = self.transformer_encoder(outputs)
         outputs = self.output_projection_layer(outputs)
 
-        return outputs.reshape(len(outputs), -1)
+        return outputs.mean(dim=1)
 
     def get_output_dimension(self) -> int:
         return self.output_dim
