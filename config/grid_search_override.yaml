@@ -1,17 +1,18 @@
-project_name: [message-module-exp7-mnist]
+project_name: [message-module-exp9-mnist]
 run_name_content: [[msg_size, lr, batch_size, pred_hidden_sizes,
                     data_encoder_name, tfm_input_dim, tfm_n_heads,
                     tfm_mlp_dim, tfm_drop_out, tfm_output_dim, tfm_n_encoders]]
 
-batch_size: [25, 45]
+batch_size: [5, 25, 45]
 lr: [1e-2, 1e-3, 1e-4]
 
 data_encoder_name: [transformer]  # conv_one_by_one, kme, concatenator, fs_pool, transformer
-tfm_input_dim: [256, 1024]
-tfm_n_heads: [1, 4, 16, 32, 64]
-tfm_mlp_dim: [10]
-tfm_drop_out: [0]
-tfm_output_dim: [10, 25]
+tfm_input_dim: [32, 64, 256, 1024]
+tfm_n_heads: [1, 2, 4]
+tfm_mlp_dim: [10, 50, 200, 500]
+tfm_drop_out: [0]  # Maybe use 0.1
+tfm_output_dim: [5, 10, 25]
+tfm_n_encoders: [1, 2, 3, 5]
 
 module_1_dim: [[500]] # [[50], [100], [500], [1000]]
 msg_size: ${module_1_dim[0]}

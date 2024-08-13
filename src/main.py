@@ -1,3 +1,4 @@
+import torch
 import wandb
 from loguru import logger
 
@@ -42,6 +43,9 @@ def main(config_combinations: list[dict]) -> None:
 
 if __name__ == "__main__":
     try:
+        device = torch.device("cuda:1")
+        torch.cuda.set_device(device)
+
         DefaultLogger.apply_format()
         loaded_config = create_config()
         config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
