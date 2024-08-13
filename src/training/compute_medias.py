@@ -9,8 +9,7 @@ from src.result.performance_matrix import show_performance_matrix
 
 
 def compute_medias(config: dict, meta_predictor: SimpleMetaNet, test_loader: DataLoader, predictor: Predictor,
-                   train_idx: np.ndarray, valid_idx: np.ndarray, test_idx: np.ndarray, datasets: np.ndarray,
-                   classes_name) -> None:
+                   datasets: np.ndarray, classes_name) -> None:
     if config["n_features"] == 2 and config["is_using_wandb"]:
         show_decision_boundaries(meta_predictor, config["dataset"], test_loader, predictor, wandb, config["device"])
         
