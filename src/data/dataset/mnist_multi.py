@@ -58,7 +58,6 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
                                 config["target_size"]))
     train_dataset = torch.hstack((train_dataset[:, :-1], F.one_hot(train_dataset[:, -1]) * 2 - 1))
     test_dataset = torch.hstack((test_dataset[:, :-1], F.one_hot(test_dataset[:, -1]) * 2 - 1))
-    print(config["n_dataset"])
     n_swap = 10
     n_partition = len(train_dataset) // config["n_instances_per_dataset"]
     for num_swap in range(n_swap):
@@ -88,9 +87,9 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
     binary_datasets[np.arange(len(train_idx))] = binary_datasets[train_idx]
     for binary_dataset_idx in range(int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])),
                                     config["n_dataset"]):
-        idx = np.arange(len(test_dataset))
+        idx = np.arange(len(train_dataset))
         np.random.shuffle(idx)
-        test_dataset_reduced = test_dataset[idx[:config["n_instances_per_dataset"]]]
+        test_dataset_reduced = train_dataset[idx[:config["n_instances_per_dataset"]]]
 
         pixels_idx = np.arange(config["n_features"])
         np.random.shuffle(pixels_idx)
