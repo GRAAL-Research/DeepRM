@@ -6,7 +6,6 @@ criterion: bce_loss
 is_dataset_balanced: True
 splits: [0.55, 0.20, 0.25]
 shuffle_each_dataset_samples: True
-are_test_classes_shared_with_train: True
 
 is_blob_identical: False
 is_moon_identical: False
