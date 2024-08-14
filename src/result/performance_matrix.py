@@ -22,7 +22,7 @@ def highlight_cell(x, y, ax=None, label='none', **kwargs):
     return rect
 
 
-def compute_acc(n_classes, idx, m, inputs, outputs, accs, are_test_classes_shared_with_train):
+def compute_acc(n_classes, idx, m, inputs, outputs, accs):
     t_v_e_matrix = np.ones((n_classes, n_classes), dtype=str)
     k = 0
     train_acc, train_cnt = 0, 0
@@ -51,7 +51,7 @@ def compute_acc(n_classes, idx, m, inputs, outputs, accs, are_test_classes_share
                     valid_cnt += 1
                 elif k in idx[2]:
                     t_v_e_matrix[i, j] = "e"
-                    if i > n_test or j > n_test or are_test_classes_shared_with_train:
+                    if i > n_test or j > n_test:
                         test_with_acc += accs[i, j]
                         test_with_cnt += 1
                     else:
@@ -61,8 +61,7 @@ def compute_acc(n_classes, idx, m, inputs, outputs, accs, are_test_classes_share
     train_acc /= train_cnt
     valid_acc /= valid_cnt
     test_with_acc /= test_with_cnt
-    if not are_test_classes_shared_with_train:
-        test_without_acc /= test_without_cnt
+    test_without_acc /= test_without_cnt
     return train_acc, valid_acc, test_with_acc, test_without_acc, t_v_e_matrix
 
 

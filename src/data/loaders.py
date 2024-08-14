@@ -7,9 +7,9 @@ from torch.utils.data import Subset, DataLoader
 def train_valid_and_test_indices(datasets: np.ndarray, splits: list[float]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     assert sum(splits) == 1, 'The sum of splits must be 1.'
     n_datasets = len(datasets)
-    train_datasets = math.floor(num_data * splits[0])
-    valid_datasets = math.floor(num_data * splits[1]) + train_datasets
-    test_datasets = math.floor(num_data * splits[2]) + valid_datasets
+    train_datasets = math.floor(n_datasets * splits[0])
+    valid_datasets = math.floor(n_datasets * splits[1]) + train_datasets
+    test_datasets = math.floor(n_datasets * splits[2]) + valid_datasets
 
     train_idx = list(np.arange(0, train_datasets))
     valid_idx = list(np.arange(train_datasets, valid_datasets))
