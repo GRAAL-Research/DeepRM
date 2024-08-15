@@ -10,7 +10,7 @@ class Attention(nn.Module):
     def __init__(self, config: dict) -> None:
         super(Attention, self).__init__()
         self.temperature = config["attention_temperature"]
-        self.keys = MLP(config["n_features"] + 1, config["attention_dim"], config["device"],
+        self.keys = MLP(config["n_features"] + config["target_size"], config["attention_dim"], config["device"],
                         config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
                         config["init_scheme"], "cnt")
         self.queries = self.create_queries(config)
