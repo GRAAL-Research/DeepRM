@@ -33,7 +33,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
     for bnd_type in bnds_type:
         if msg_type == "cnt":  # The bounds are calculated differently, depending on the message type
             tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
-            meta_output = meta_pred.forward(inputs, n_noisy_messages=n_sample)
+            meta_output = meta_pred.forward(inputs, n_noisy_messages=n_sample, test=True)
             for sample in range(n_sample):
                 outp = meta_output[sample]
                 pred.set_params(outp)
@@ -41,8 +41,11 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 tot_acc += m * linear_loss(output[1], targets * 2 - 1)
             tot_acc /= n_sample  # An average accuracy is computed...
             r = m - tot_acc
-            kl = torch.mean(
-                torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut, lighter)
+            if meta_pred.get_message().ndim == 0:
+                kl = 0
+            else:
+                kl = torch.mean(
+                    torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut)
             if bnd_type == 'kl':
                 epsilon = (kl + np.log(2 * np.sqrt(m - n_z) / zeta(n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')

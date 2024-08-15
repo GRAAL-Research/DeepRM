@@ -32,7 +32,7 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
             if str(device) == "gpu":
                 inputs, meta_pred = inputs.cuda(), meta_pred.cuda()
             m = int(len(inputs[0]) / 2)
-            meta_outpt = meta_pred.forward(inputs[:, :m])
+            meta_outpt = meta_pred.forward(inputs[:, :m], test=True)
             for j in range(len(inputs)):
                 if i < max_number_vis:
                     plt.figure().clear()
@@ -89,8 +89,8 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
 
                     if meta_pred.compression_set_size > 0:
                         meta_pred.compute_compression_set(inputs[:, :m])
-                        plt.scatter(x[meta_pred.msk[j].cpu(), 0].cpu(),
-                                    x[meta_pred.msk[j].cpu(), 1].cpu(), c="black", s=120, marker="*")
+                        plt.scatter(x[0, meta_pred.msk[j].cpu(), 0].cpu(),
+                                    x[0, meta_pred.msk[j].cpu(), 1].cpu(), c="black", s=120, marker="*")
                     if dataset == "blob":
                         plt.xlim(-20, 20)
                         plt.ylim(-20, 20)

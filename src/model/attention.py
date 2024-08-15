@@ -11,15 +11,15 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
         self.temperature = config["attention_temperature"]
         self.keys = MLP(config["n_features"] + 1, config["attention_dim"], config["device"],
-                        config["has_skip_connection"], config["has_batch_norm"], config["init_scheme"], "cnt")
+                        config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
+                        config["init_scheme"], "cnt")
         self.queries = self.create_queries(config)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        q = self.queries.forward(x)
+        q = torch.unsqueeze(self.queries.forward(x), 1)
         k = self.keys.forward(x)
-
         qkt = q.matmul(k.transpose(-2, -1))
-        max_qkt_value = qkt.max(dim=-1).values
+        max_qkt_value = torch.unsqueeze(qkt.max(dim=-1).values, dim=2)
         scaled_qkt = self.temperature * qkt / max_qkt_value
 
         return torch.softmax(scaled_qkt, dim=-1)
