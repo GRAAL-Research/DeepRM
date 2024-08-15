@@ -66,7 +66,7 @@ def compute_acc(n_classes, idx, m, inputs, outputs, accs):
 
 
 def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, dataset, classes_name, idx, n_datasets,
-                            is_using_wandb, wandb, batch_size, are_test_classes_shared_with_train, device):
+                            is_using_wandb, wandb, batch_size, device):
     """
     Builds a visual depiction of the decision boundary of the predictor for tackling a given problem.
     Args:
@@ -80,7 +80,6 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         n_datasets:
         is_using_wandb (bool): whether to use wandb;
         wandb (package): the weights and biases package;
-        are_test_classes_shared_with_train:
         device (str): "gpu", or "cpu"; whether to use the gpu.
     """
 
@@ -102,7 +101,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
             _, output = pred.forward(inputs[first:last, m:])
             outputs[first:last] = output
         train_acc, valid_acc, test_with_acc, test_without_acc, t_v_e_matrix = \
-            compute_acc(n_classes, idx, m, inputs, outputs, accs, are_test_classes_shared_with_train)
+            compute_acc(n_classes, idx, m, inputs, outputs, accs)
 
         plt.figure().clear()
         plt.close()
@@ -151,16 +150,9 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         plt.tight_layout()
         cbar = ax.figure.colorbar(im, ax=ax)
         cbar.ax.set_ylabel("Accuracy", rotation=-90, va="bottom")
-        if are_test_classes_shared_with_train:
-            ax.set_title(
-                f"Performance matrix for the {dataset_name} dataset\nTrain acc.: {round(train_acc, 3)} \nValid acc.: "
-                f"{round(valid_acc, 3)} \nTest acc.: {round(test_with_acc, 3)}", fontsize=10)
-        else:
-            ax.set_title(
-                f"Performance matrix for the {dataset_name} dataset\nTrain acc.: {round(train_acc, 3)} \nValid acc.: "
-                f"{round(valid_acc, 3)} \nTest acc. (shared): {round(test_with_acc, 3)} \nTest acc. (not shared): "
-                f"{round(test_without_acc, 3)}", fontsize=10)
-
+        ax.set_title(
+            f"Performance matrix for the {dataset_name} dataset\nTrain acc.: {round(train_acc, 3)} \nValid acc.: "
+            f"{round(valid_acc, 3)} \nTest acc.: {round(test_with_acc, 3)}", fontsize=10)
     plt.tight_layout()
     if not FIGURE_BASE_PATH.exists():
         FIGURE_BASE_PATH.mkdir()
