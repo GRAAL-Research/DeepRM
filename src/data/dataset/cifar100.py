@@ -84,6 +84,8 @@ def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
     for index in [0, 1, 2]:
         for first_class in set_indices[index]:
             for second_class in set_indices[index]:
+                if binary_dataset_idx == n_datasets[index]:
+                    break
                 if first_class == second_class:
                     continue
 
@@ -108,8 +110,7 @@ def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
 
                 binary_datasets[binary_dataset_idx] = binary_dataset
                 binary_dataset_idx += 1
-                if binary_dataset_idx == n_datasets[index]:
-                    break
+
             if binary_dataset_idx == n_datasets[index]:
                 break
 
