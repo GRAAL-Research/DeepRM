@@ -9,8 +9,8 @@ def train_valid_and_test_indices(datasets: np.ndarray, splits: list[float]) -> t
     assert sum(splits) == 1, 'The sum of splits must be 1.'
     n_datasets = len(datasets)
     n_train_datasets = math.floor(n_datasets * splits[0])
-    n_valid_datasets = math.floor(n_datasets * splits[1]) + train_datasets
-    n_test_datasets = math.floor(n_datasets * splits[2]) + valid_datasets
+    n_valid_datasets = math.floor(n_datasets * splits[1]) + n_train_datasets
+    n_test_datasets = math.floor(n_datasets * splits[2]) + n_train_datasets
 
     train_idx = np.arange(0, n_train_datasets)
     valid_idx = np.arange(n_train_datasets, n_valid_datasets)
