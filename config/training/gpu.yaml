@@ -1,4 +1,4 @@
 device: gpu
 max_epoch: 1000
-batch_size: 10
+batch_size: 200
 seed: 0
