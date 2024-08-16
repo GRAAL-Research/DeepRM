@@ -37,7 +37,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
             tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
             meta_output = meta_pred.forward(inputs, n_noisy_messages=n_sample, test=True)
             for sample in range(n_sample):
-                outp = meta_output[sample]
+                outp = meta_output[[sample]]
                 pred.set_params(outp)
                 output = pred.forward(inputs)
                 if targets.shape[-1] == 1:

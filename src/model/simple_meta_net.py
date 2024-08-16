@@ -83,7 +83,7 @@ class SimpleMetaNet(nn.Module):
 
         elif n_noisy_messages > 0:
             noisy_messages = [self.create_noisy_message(message) for _ in range(n_noisy_messages)]
-            return torch.stack(noisy_messages).squeeze(0)
+            return torch.stack(noisy_messages).squeeze(1)
 
         raise ValueError(f"The number of noisy messages must be greater or equal to 0.")
 
@@ -119,8 +119,6 @@ class SimpleMetaNet(nn.Module):
                          n_noisy_messages: int = 0) -> torch.Tensor:
 
         if msg_module_output is not None and compression_module_output is not None:
-            if len(msg_module_output.shape) > len(compression_module_output.shape):
-                compression_module_output = torch.unsqueeze(compression_module_output, dim=1)
             merged_msg_and_compression_output = torch.cat((msg_module_output, compression_module_output),
                                                           dim=msg_module_output.ndim - 1)
             return self.module_2.forward(merged_msg_and_compression_output)
@@ -129,8 +127,6 @@ class SimpleMetaNet(nn.Module):
             return self.module_2.forward(msg_module_output)
 
         if compression_module_output is not None:
-            if n_noisy_messages > 0:
-                compression_module_output = torch.unsqueeze(compression_module_output, dim=1)
             return self.module_2.forward(compression_module_output)
 
         raise ValueError(f"The message module and the compression module are both disabled.")

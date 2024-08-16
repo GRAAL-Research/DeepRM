@@ -17,7 +17,7 @@ module_1_dim: [[500]]
 module_2_dim: ${module_1_dim}
 kme_dim: ${module_1_dim}
 fs_pool_dim: ${module_1_dim}
-attention_dim: [100]
+attention_dim: [[100]]
 
 msg_type: [dsc, cnt]
 msg_size: [0, 1, 2, 4, 6, 8, 10, 15, 20, 25, 50, 100]
