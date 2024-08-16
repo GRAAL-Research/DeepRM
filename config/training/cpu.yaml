@@ -1,4 +1,4 @@
 device: cpu
-max_epoch: 200
+max_epoch: 2000
 batch_size: 100
 seed: 0
