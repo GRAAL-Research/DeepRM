@@ -9,7 +9,7 @@ class CustomTransformerEncoder(DataEncoder):
         super().__init__()
         self.output_dim = config["tfm_output_dim"] * config["n_instances_per_dataset"] // 2
 
-        self.input_projection_layer = nn.Linear(config["n_features"] + 1, config["tfm_input_dim"])
+        self.input_projection_layer = nn.Linear(config["n_features"] + config["target_size"], config["tfm_input_dim"])
         encoder_layer = nn.TransformerEncoderLayer(config["tfm_input_dim"], config["tfm_n_heads"],
                                                    config["tfm_mlp_dim"], dropout=config["tfm_drop_out"],
                                                    batch_first=True)

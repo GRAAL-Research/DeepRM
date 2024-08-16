@@ -1,14 +1,27 @@
-project_name: [hyperparam_grid_cifar100_4] # moon
-run_name_content: [[lr, msg_type, msg_size, module_1_dim, pred_hidden_sizes, has_skip_connection]]
+project_name: [examples_selection_on_mnist_multi]
+run_name_content: [[lr, msg_type, msg_size, compression_set_size, pred_hidden_sizes]]
 
-lr: [1e-3]
-msg_type: [dsc]
-msg_size: [1000]
-kme_dim: [[1000, 1000]]
-module_1_dim: [[1000, 1000]]
-module_2_dim: [[1000, 1000]]
-pred_hidden_sizes: [[380]]
-n_pixels_to_permute: [100, 200, 300]
+batch_size: [20]
+lr: [1e-4, 1e-3]
 
-has_skip_connection: [True]
-has_batch_norm: [True]
+data_encoder_name: [kme]
+
+tfm_input_dim: [1024]
+tfm_n_heads: [4]
+tfm_mlp_dim: [10]
+tfm_drop_out: [0]  # Maybe use 0.1
+tfm_output_dim: [10]
+tfm_n_encoders: [5]
+
+module_1_dim: [[500]]
+module_2_dim: ${module_1_dim}
+kme_dim: ${module_1_dim}
+fs_pool_dim: ${module_1_dim}
+attention_dim: [[100]]
+
+msg_type: [dsc, cnt]
+msg_size: [0, 1, 2, 4, 6, 8, 10, 15, 20, 25, 50, 100]
+compression_set_size: [0, 1, 2, 4, 6, 8, 10, 15, 20, 25, 50]
+pred_hidden_sizes: [[10], [20], [50]]
+
+

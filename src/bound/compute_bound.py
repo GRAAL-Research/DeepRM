@@ -6,7 +6,7 @@ import torch
 from src.bound.utils import zeta, kl_inv, log_binomial_coefficient, sup_bin
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
-from src.model.utils.loss import linear_loss
+from src.model.utils.loss import linear_loss, linear_loss_multi
 
 
 def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, delta, a, b, inputs, targets,
@@ -31,18 +31,26 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
     n_sigma = msg_size
     n_sample, best_bnd, n_grid, best_bnds = 2, 0, 11, []
     for bnd_type in bnds_type:
-        if msg_type == "cnt":  # The bounds are calculated differently, depending on the message type
+        if m - n_z <= 0:
+            best_bnd = 0
+        elif msg_type == "cnt":  # The bounds are calculated differently, depending on the message type
             tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
-            meta_output = meta_pred.forward(inputs, n_noisy_messages=n_sample)
+            meta_output = meta_pred.forward(inputs, n_noisy_messages=n_sample, test=True)
             for sample in range(n_sample):
-                outp = meta_output[sample]
+                outp = meta_output[[sample]]
                 pred.set_params(outp)
                 output = pred.forward(inputs)
-                tot_acc += m * linear_loss(output[1], targets * 2 - 1)
+                if targets.shape[-1] == 1:
+                    tot_acc += m * linear_loss(output[1], targets * 2 - 1)
+                else:
+                    tot_acc += m * linear_loss_multi(output[1], targets)
             tot_acc /= n_sample  # An average accuracy is computed...
             r = m - tot_acc
-            kl = torch.mean(
-                torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut, lighter)
+            if meta_pred.get_message().ndim == 0:
+                kl = 0
+            else:
+                kl = torch.mean(
+                    torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut)
             if bnd_type == 'kl':
                 epsilon = (kl + np.log(2 * np.sqrt(m - n_z) / zeta(n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
