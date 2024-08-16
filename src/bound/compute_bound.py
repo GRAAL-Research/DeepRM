@@ -6,7 +6,7 @@ import torch
 from src.bound.utils import zeta, kl_inv, log_binomial_coefficient, sup_bin
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
-from src.model.utils.loss import linear_loss
+from src.model.utils.loss import linear_loss, linear_loss_multi
 
 
 def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, delta, a, b, inputs, targets,
@@ -40,7 +40,10 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 outp = meta_output[sample]
                 pred.set_params(outp)
                 output = pred.forward(inputs)
-                tot_acc += m * linear_loss(output[1], targets * 2 - 1)
+                if targets.shape[-1] == 1:
+                    tot_acc += m * linear_loss(output[1], targets * 2 - 1)
+                else:
+                    tot_acc += m * linear_loss_multi(output[1], targets)
             tot_acc /= n_sample  # An average accuracy is computed...
             r = m - tot_acc
             if meta_pred.get_message().ndim == 0:

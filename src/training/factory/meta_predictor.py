@@ -1,5 +1,3 @@
-from torch import nn
-
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 

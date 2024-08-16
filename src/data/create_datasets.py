@@ -1,5 +1,4 @@
 import numpy as np
-import math
 
 from src.data.dataset.blob import generate_blob_datasets
 from src.data.dataset.mnist_binary import load_mnist_binary
