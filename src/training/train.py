@@ -34,9 +34,7 @@ def train_meta_predictor(config: dict) -> None:
     validation_metric = VALID_ACCURACY if config["task"] == "classification" else VALID_LOSS
 
     train_idx, valid_idx, test_idx = train_valid_and_test_indices(datasets,
-                                                                  config["splits"],
-                                                                  config["are_test_classes_shared_with_train"],
-                                                                  config["seed"])
+                                                                  config["splits"])
     train_loader = create_data_loader(datasets, config["batch_size"], train_idx)
     valid_loader = create_data_loader(datasets, config["batch_size"], valid_idx)
     test_loader = create_data_loader(datasets, config["batch_size"], test_idx)
@@ -82,9 +80,7 @@ def train_meta_predictor(config: dict) -> None:
         scheduler.step(rolling_val_perf)
 
     if config["is_media_computed"]:
-        classes_name = create_datasets_labels(config)
-        compute_medias(config, meta_predictor, test_loader, predictor, train_idx, valid_idx, test_idx, datasets,
-                       classes_name)
+        compute_medias(config, meta_predictor, test_loader, predictor)
 
 
 def compute_rolling_performance(history: dict[str, list], metric: str, epoch_idx: int) -> torch.Tensor:

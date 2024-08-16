@@ -1,49 +1,49 @@
-dataset_config_path: dataset/mnist.yaml
+dataset_config_path: dataset/cifar100_binary.yaml
 log_config_path: log/on.yaml
 training_config_path: training/gpu.yaml
 
 is_bound_computed: True
-bound_computation_epoch_frequency: 30
+bound_computation_epoch_frequency: 10
 is_media_computed: True
 
 msg_type: cnt
-msg_size: 100
-msg_penalty: l1
+msg_size: 10
+msg_penalty: l2
 msg_penalty_coef: 0
 is_using_a_random_msg: False
 
 data_encoder_name: kme
 kme_dim: [100]
-fs_pool_dim: [1000]
+fs_pool_dim: [100]
 conv_one_by_one_n_filters: 3
 tfm_input_dim: 64
 tfm_n_heads: 1
-tfm_mlp_dim: 50
+tfm_mlp_dim: 51
 tfm_n_encoders: 1
 tfm_drop_out: 0
 tfm_output_dim: 10
 
 compression_set_size: 0
-attention_dim: [100]
-attention_temperature: 20
+attention_dim: [1]
+attention_temperature: 0
 attention_pooling_type: kme
 
 module_1_dim: [100]
 module_2_dim: [100]
 meta_pred: simple_net
-pred_hidden_sizes: [3]
+pred_hidden_sizes: [10]
 
-has_skip_connection: True
-has_batch_norm: True
-batch_norm_min_dim: 20
+has_skip_connection: False
+has_batch_norm: False
+batch_norm_min_dim: 0
 
 optimizer: adam
-lr: 1e-2
-early_stopping_patience: 75
+lr: 1e-3
+early_stopping_patience: 40
 early_stopping_tolerance: 1e-2
 
 scheduler: plateau
-scheduler_patience: 25
+scheduler_patience: 20
 scheduler_factor: 0.5
 scheduler_threshold: 1e-2
 

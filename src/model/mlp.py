@@ -12,7 +12,7 @@ from src.model.utils.sign_straight_through import SignStraightThrough
 class MLP(nn.Module):
     def __init__(self, input_dim: int, hidden_dims: list[int], device: str, has_skip_connection: bool,
                  has_batch_norm: bool, batch_norm_min_dim: int, init_scheme: str = None,
-                 msg_type: str | None = None, has_msg_as_input: bool = False) -> None:
+                 msg_type: str = None, has_msg_as_input: bool = False) -> None:
         super(MLP, self).__init__()
         self.has_skip_connection = has_skip_connection
 
@@ -55,7 +55,7 @@ class MLP(nn.Module):
         return modules
 
     @staticmethod
-    def create_activation_function(is_last_layer: bool, msg_type: str | None) -> nn.Module:
+    def create_activation_function(is_last_layer: bool, msg_type: str = None) -> nn.Module:
         if not is_last_layer:
             return nn.ReLU()
         elif msg_type is None:

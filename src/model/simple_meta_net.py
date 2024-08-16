@@ -110,8 +110,8 @@ class SimpleMetaNet(nn.Module):
 
         return x_masked
 
-    def forward_module_2(self, msg_module_output: torch.Tensor | None,
-                         compression_module_output: torch.Tensor | None) -> torch.Tensor:
+    def forward_module_2(self, msg_module_output: torch.Tensor = None,
+                         compression_module_output: torch.Tensor = None) -> torch.Tensor:
 
         if msg_module_output is not None and compression_module_output is not None:
             merged_msg_and_compression_output = torch.hstack((msg_module_output, compression_module_output))
