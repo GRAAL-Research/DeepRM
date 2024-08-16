@@ -4,7 +4,6 @@ from pathlib import Path
 SEPARATOR = "\t"
 CACHE_PATH = Path(__file__).parent / "completed_runs_cache"
 
-print(CACHE_PATH)
 def is_run_already_completed(config: dict) -> bool:
     file_path = CACHE_PATH / f"{config['project_name']}.json"
     if file_path.exists():
