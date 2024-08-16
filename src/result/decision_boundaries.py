@@ -32,7 +32,7 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
             if str(device) == "gpu":
                 inputs, meta_pred = inputs.cuda(), meta_pred.cuda()
             m = int(len(inputs[0]) / 2)
-            meta_outpt = meta_pred.forward(inputs[:, :m], test=True)
+            meta_outpt = meta_pred.forward(inputs[:, :m], is_in_test_mode=True)
             for j in range(len(inputs)):
                 if i < max_number_vis:
                     plt.figure().clear()
