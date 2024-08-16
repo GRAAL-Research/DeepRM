@@ -20,7 +20,7 @@ class SimpleMetaNet(nn.Module):
         self.batch_size = config["batch_size"]
         self.device = config["device"]
         self.is_using_a_random_msg = config["is_using_a_random_msg"]
-        self.test = None
+        self.is_in_test_mode = False
 
         self.n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
         self.module_1_dim = config["module_1_dim"] + [config["msg_size"]]
@@ -54,8 +54,8 @@ class SimpleMetaNet(nn.Module):
 
         return mod_2_input_dim
 
-    def forward(self, x: torch.Tensor, n_noisy_messages: int = 0, test: bool = False) -> torch.Tensor:
-        self.test = test
+    def forward(self, x: torch.Tensor, n_noisy_messages: int = 0, is_in_test_mode: bool = False) -> torch.Tensor:
+        self.is_in_test_mode = is_in_test_mode
         msg_module_output = None
         compression_module_output = None
 
@@ -102,7 +102,7 @@ class SimpleMetaNet(nn.Module):
         for j in range(1, len(self.cas)):
             out = self.cas[j].forward(x.clone())
             mask = torch.hstack((mask, out))
-        if self.test:
+        if self.is_in_test_mode:
             mask = F.one_hot(torch.argmax(mask, dim=2, keepdim=False), num_classes=mask.shape[2]).type(torch.float)
         x_masked = mask.matmul(x.clone())
         x_masked = self.kme_2.forward(x_masked)

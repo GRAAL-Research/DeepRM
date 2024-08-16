@@ -78,12 +78,13 @@ def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
     np.random.shuffle(indices)
     train_idx, valid_idx, test_idx = (indices[:n_train_classes], indices[n_train_classes:n_valid_classes],
                                       indices[n_valid_classes:])
-    idxs = [train_idx, valid_idx, test_idx]
-    n_datasets = [n_train_datasets, n_train_datasets + n_valid_datasets, n_train_datasets + n_valid_datasets + n_test_datasets]
+    set_indices = [train_idx, valid_idx, test_idx]
+    n_datasets_per_set = [n_train_datasets, n_train_datasets + n_valid_datasets, n_train_datasets + n_valid_datasets + n_test_datasets]
     binary_dataset_idx = 0
+
     for index in [0, 1, 2]:
-        for first_class in idxs[index]:
-            for second_class in idxs[index]:
+        for first_class in set_indices[index]:
+            for second_class in set_indices[index]:
                 if first_class == second_class:
                     continue
 
@@ -108,9 +109,9 @@ def create_cifar100_binary_datasets(config: dict, dataset) -> np.ndarray:
 
                 binary_datasets[binary_dataset_idx] = binary_dataset
                 binary_dataset_idx += 1
-                if binary_dataset_idx == n_datasets[index]:
+                if binary_dataset_idx == n_datasets_per_set[index]:
                     break
-            if binary_dataset_idx == n_datasets[index]:
+            if binary_dataset_idx == n_datasets_per_set[index]:
                 break
 
     return binary_datasets
