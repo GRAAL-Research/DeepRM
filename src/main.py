@@ -27,7 +27,6 @@ def main(config_combinations: list[dict]) -> None:
             wandb.init(name=run_name, project=config["project_name"], config=config)
 
         set_random_seed(config["seed"])
-
         train_meta_predictor(config)
 
         is_the_last_run = run_idx + 1 == n_runs
@@ -41,11 +40,7 @@ def main(config_combinations: list[dict]) -> None:
 
 
 if __name__ == "__main__":
-    try:
-        DefaultLogger.apply_format()
-        loaded_config = create_config()
-        config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
-        main(config_combinations)
-    except Exception as error:
-        wandb.alert(title="❌ Error", text="The experiment failed.")
-        raise error
+    DefaultLogger.apply_format()
+    loaded_config = create_config()
+    config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
+    main(config_combinations)
