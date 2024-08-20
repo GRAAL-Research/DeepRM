@@ -15,7 +15,7 @@ def launch_epoch_training(config: dict, meta_predictor: SimpleMetaNet, predictor
     with (torch.enable_grad()):
         for instances in train_loader:
             instances = instances.float()[:, n_instances_per_class_per_dataset:]
-            targets = (instances[:, :, -1] + 1) / 2
+            targets = (instances[:, :, -config["target_size"]:] + 1) / 2
             instances = instances.float()
             targets = targets.float()
 

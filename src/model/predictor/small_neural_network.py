@@ -75,6 +75,4 @@ class SmallNeuralNetwork(Predictor):
 
             else:
                 x = layer(x)
-
-        output = x.transpose(-2, -1).squeeze(dim=-2)
-        return self._process_output(output)
+        return self._process_output(x)

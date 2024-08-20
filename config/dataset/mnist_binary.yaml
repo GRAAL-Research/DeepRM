@@ -1,4 +1,4 @@
-dataset: mnist
+dataset: mnist_binary
 
 task: classification
 target_size: 1

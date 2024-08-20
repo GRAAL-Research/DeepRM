@@ -1,6 +1,6 @@
+import wandb
 from loguru import logger
 
-import wandb
 from src.config.config import create_config
 from src.config.grid_search_config import create_config_combinations_sorted_by_dataset
 from src.training.train import train_meta_predictor

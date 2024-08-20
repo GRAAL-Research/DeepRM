@@ -1,5 +1,6 @@
 import torch
 from torch import nn as nn
+import torch.nn.functional as F
 
 from src.model.attention import Attention
 from src.model.data_encoder.create_data_encoder import create_data_compressor_1
@@ -19,6 +20,7 @@ class SimpleMetaNet(nn.Module):
         self.batch_size = config["batch_size"]
         self.device = config["device"]
         self.is_using_a_random_msg = config["is_using_a_random_msg"]
+        self.is_in_test_mode = False
 
         self.n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
         self.module_1_dim = config["module_1_dim"] + [config["msg_size"]]
@@ -45,14 +47,15 @@ class SimpleMetaNet(nn.Module):
         mod_2_input_dim = 0
 
         if self.compression_set_size > 0:
-            mod_2_input_dim += self.data_compressor_1.get_output_dimension()
+            mod_2_input_dim += self.kme_2.get_output_dimension()
 
         if self.msg_type is not None and self.msg_size > 0:
             mod_2_input_dim += self.module_1_dim[-1]
 
         return mod_2_input_dim
 
-    def forward(self, x: torch.Tensor, n_noisy_messages: int = 0) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, n_noisy_messages: int = 0, is_in_test_mode: bool = False) -> torch.Tensor:
+        self.is_in_test_mode = is_in_test_mode
         msg_module_output = None
         compression_module_output = None
 
@@ -63,7 +66,7 @@ class SimpleMetaNet(nn.Module):
         if self.compression_set_size > 0:
             compression_module_output = self.forward_compression_module(x, n_noisy_messages)
 
-        return self.forward_module_2(msg_module_output, compression_module_output)
+        return self.forward_module_2(msg_module_output, compression_module_output, n_noisy_messages)
 
     def forward_msg_module(self, x: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:
         if self.is_using_a_random_msg:
@@ -80,7 +83,7 @@ class SimpleMetaNet(nn.Module):
 
         elif n_noisy_messages > 0:
             noisy_messages = [self.create_noisy_message(message) for _ in range(n_noisy_messages)]
-            return torch.stack(noisy_messages).squeeze(0)
+            return torch.stack(noisy_messages).squeeze(1)
 
         raise ValueError(f"The number of noisy messages must be greater or equal to 0.")
 
@@ -99,7 +102,8 @@ class SimpleMetaNet(nn.Module):
         for j in range(1, len(self.cas)):
             out = self.cas[j].forward(x.clone())
             mask = torch.hstack((mask, out))
-
+        if self.is_in_test_mode:
+            mask = F.one_hot(torch.argmax(mask, dim=2, keepdim=False), num_classes=mask.shape[2]).type(torch.float)
         x_masked = mask.matmul(x.clone())
         x_masked = self.kme_2.forward(x_masked)
 
@@ -111,10 +115,12 @@ class SimpleMetaNet(nn.Module):
         return x_masked
 
     def forward_module_2(self, msg_module_output: torch.Tensor = None,
-                         compression_module_output: torch.Tensor = None) -> torch.Tensor:
+                         compression_module_output: torch.Tensor = None,
+                         n_noisy_messages: int = 0) -> torch.Tensor:
 
         if msg_module_output is not None and compression_module_output is not None:
-            merged_msg_and_compression_output = torch.hstack((msg_module_output, compression_module_output))
+            merged_msg_and_compression_output = torch.cat((msg_module_output, compression_module_output),
+                                                          dim=msg_module_output.ndim - 1)
             return self.module_2.forward(merged_msg_and_compression_output)
 
         if msg_module_output is not None:

@@ -8,7 +8,7 @@ class Predictor(nn.Module, ABC):
     @abstractmethod
     def __init__(self, config: dict):
         super().__init__()
-        self.task = config["task"]
+        self.criterion = config["criterion"]
 
     @abstractmethod
     def set_params(self, params: torch.Tensor) -> None:
@@ -24,9 +24,12 @@ class Predictor(nn.Module, ABC):
         ...
 
     def _process_output(self, output: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        if self.task == "classification":
+        if self.criterion == "bce_loss":
             return torch.sigmoid(output), torch.sign(output)
-        elif self.task == "regression":
+        elif self.criterion == "ce_loss":
+            return torch.nn.Softmax(dim=2)(output), torch.nn.functional.one_hot(torch.argmax(output, dim=-1),
+                                                                           num_classes=output.shape[-1])
+        elif self.criterion == "mse_loss":
             return torch.relu(output), output
 
         raise ValueError(f"Unsupported task: {self.task}")
