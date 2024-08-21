@@ -75,8 +75,15 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                                                 np.log(delta / n_grid)) / (m - n_z))) / (1 - math.e ** (-c)))
                     if bound > best_bnd:
                         best_bnd = bound
-            elif 'marchand' in bnd_type:  # The marchand bound cannot be computed with continuous messages
-                best_bnd = 0
+            elif bnd_type == 'marchand_approx':  # The Marchand-Shaw-Taylor approximation
+                best_bnd = math.exp((-1 / (m - r - n_z)) * (
+                        log_binomial_coefficient(m - n_z, r) -
+                        np.log(zeta(n_z)) -
+                        np.log(delta)))
+            elif bnd_type == 'marchand':
+                best_bnd = 1 - sup_bin(int(min(r, m - n_z)), int(m - n_z),
+                                       # The test-set bound for sample compression
+                                       delta * zeta(n_z) / math.exp(log_binomial_coefficient(m, n_z)))
         elif msg_type == "dsc":
             p_sigma = 2 ** (-n_sigma)  # Since the message is a binary vector, we consider a uniform distribution
             #   on its various possibilities (prob = 2 ** -number of possibilities)
@@ -109,16 +116,14 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                                  )
                     if bound > best_bnd:
                         best_bnd = bound
-            elif bnd_type == 'marchand':
-                best_bnd = 1 - sup_bin(int(min(r, m - n_z)), int(m - n_z),  # The test-set bound for sample compression
-                                       delta * p_sigma * zeta(n_z) / math.exp(log_binomial_coefficient(m, n_z)))
             elif bnd_type == 'marchand_approx':  # The Marchand-Shaw-Taylor approximation
                 best_bnd = math.exp((-1 / (m - r - n_z)) * (
                         log_binomial_coefficient(m - n_z, r) -
                         np.log(p_sigma) -
                         np.log(zeta(n_z)) -
-                        np.log(delta)
-                )
-                                    )
+                        np.log(delta)))
+            elif bnd_type == 'marchand':
+                best_bnd = 1 - sup_bin(int(min(r, m - n_z)), int(m - n_z),  # The test-set bound for sample compression
+                                       delta * p_sigma * zeta(n_z) / math.exp(log_binomial_coefficient(m, n_z)))
         best_bnds.append(best_bnd)
     return best_bnds
