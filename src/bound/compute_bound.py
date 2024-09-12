@@ -3,7 +3,7 @@ import math
 import numpy as np
 import torch
 
-from src.bound.utils import zeta, kl_inv, log_binomial_coefficient, sup_bin
+from src.bound.utils import kl_inv, log_binomial_coefficient, sup_bin
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss, linear_loss_multi
@@ -52,7 +52,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 kl = torch.mean(
                     torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut)
             if bnd_type == 'kl':
-                epsilon = (kl + np.log(2 * np.sqrt(m - n_z) / zeta(n_z) / delta)) / (m - n_z)
+                epsilon = (kl + np.log(2 * np.sqrt(m - n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
             elif bnd_type == 'linear':
                 grid_start = -5
@@ -60,7 +60,6 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                     lambd = beta / m ** 0.5
                     bound = 1 - ((r / (m - n_z)) + lambd * (b - a) ** 2 / (8 * (m - n_z)) +
                                  (kl -
-                                  np.log(zeta(n_z)) -
                                   np.log(delta / n_grid)) / lambd
                                  ).item()
                     if bound > best_bnd:
@@ -71,25 +70,23 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                     c = beta / m ** 0.5
                     bound = 1 - ((1 - math.exp(-c * (r / (m - n_z)) -
                                                (kl -
-                                                np.log(zeta(n_z)) -
                                                 np.log(delta / n_grid)) / (m - n_z))) / (1 - math.e ** (-c)))
                     if bound > best_bnd:
                         best_bnd = bound
             elif bnd_type == 'marchand_approx':  # The Marchand-Shaw-Taylor approximation
                 best_bnd = math.exp((-1 / (int(m / 2) - int(r / 2) - n_z)) * (
                         log_binomial_coefficient(int(m / 2) - n_z, int(r / 2)) -
-                        np.log(zeta(n_z)) -
                         np.log(delta)))
             elif bnd_type == 'marchand':
                 best_bnd = 1 - sup_bin(int(min(int(r / 2), int(m / 2) - n_z)), int(int(m / 2) - n_z),
                                        # The test-set bound for sample compression
-                                       delta * zeta(n_z) / math.exp(log_binomial_coefficient(int(m / 2), n_z)))
+                                       delta / math.exp(log_binomial_coefficient(int(m / 2), n_z)))
         elif msg_type == "dsc":
             p_sigma = 2 ** (-n_sigma)  # Since the message is a binary vector, we consider a uniform distribution
             #   on its various possibilities (prob = 2 ** -number of possibilities)
             if bnd_type == 'kl':
                 epsilon = (log_binomial_coefficient(m, n_z) +
-                           np.log(2 * np.sqrt(m - n_z) / zeta(n_z) / p_sigma / delta)) / (m - n_z)
+                           np.log(2 * np.sqrt(m - n_z) / p_sigma / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min(1, r / (m - n_z)), epsilon, 'MAX')
             elif bnd_type == 'linear':
                 grid_start = -5
@@ -98,7 +95,6 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                     bound = 1 - ((r / (m - n_z)) + lambd * (b - a) ** 2 / 8 +
                                  (log_binomial_coefficient(m, n_z) -
                                   np.log(p_sigma) -
-                                  np.log(zeta(n_z)) -
                                   np.log(delta / n_grid)) / (lambd * (m - n_z))
                                  )
                     if bound > best_bnd:
@@ -110,7 +106,6 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                     bound = 1 - ((1 - math.exp(-c * (r / (m - n_z)) -
                                                (log_binomial_coefficient(m, n_z) -
                                                 np.log(p_sigma) -
-                                                np.log(zeta(n_z)) -
                                                 np.log(delta / n_grid)) / (m - n_z)))
                                  / (1 - math.exp(-c))
                                  )
@@ -120,10 +115,9 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 best_bnd = math.exp((-1 / (m - r - n_z)) * (
                         log_binomial_coefficient(m - n_z, r) -
                         np.log(p_sigma) -
-                        np.log(zeta(n_z)) -
                         np.log(delta)))
             elif bnd_type == 'marchand':
                 best_bnd = 1 - sup_bin(int(min(r, m - n_z)), int(m - n_z),  # The test-set bound for sample compression
-                                       delta * p_sigma * zeta(n_z) / math.exp(log_binomial_coefficient(m, n_z)))
+                                       delta * p_sigma / math.exp(log_binomial_coefficient(m, n_z)))
         best_bnds.append(best_bnd)
     return best_bnds

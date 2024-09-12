@@ -1,4 +1,3 @@
-import numpy as np
 import wandb
 from torch.utils.data import DataLoader
 
