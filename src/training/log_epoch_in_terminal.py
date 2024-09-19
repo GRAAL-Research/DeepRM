@@ -3,7 +3,8 @@ import time
 import numpy as np
 
 from src.utils.epoch_logger import EpochLogger
-from src.utils.utils import Metric, TRAIN_ACCURACY, VALID_ACCURACY, TEST_ACCURACY, TRAIN_LOSS, VALID_LOSS, TEST_LOSS
+from src.utils.utils import (Metric, TRAIN_ACCURACY_STD, VALID_ACCURACY_STD, TEST_ACCURACY_STD, TRAIN_ACCURACY_MEAN,
+                             VALID_ACCURACY_MEAN, TEST_ACCURACY_MEAN, TRAIN_LOSS, VALID_LOSS, TEST_LOSS)
 
 
 def log_epoch_info_in_terminal(config: dict, train_metrics: dict[str, np.ndarray], valid_metrics: dict[str, np.ndarray],
@@ -14,10 +15,10 @@ def log_epoch_info_in_terminal(config: dict, train_metrics: dict[str, np.ndarray
 
     if are_test_bounds_computed:
         bound_info_to_log = (
-            f" - bounds: (lin: {test_metrics[Metric.LINEAR_BOUND.value]:.2f}), "
-            f"(hyp: {test_metrics[Metric.HPARAM_BOUND.value]:.2f}), "
-            f"(kl: {test_metrics[Metric.KL_BOUND.value]:.2f}), "
-            f"(marchand: {test_metrics[Metric.MARCHAND_BOUND.value]:.2f})")
+            f" - bounds: (lin: {test_metrics[Metric.LINEAR_BOUND_MEAN.value]:.2f}), "
+            f"(hyp: {test_metrics[Metric.HPARAM_BOUND_MEAN.value]:.2f}), "
+            f"(kl: {test_metrics[Metric.KL_BOUND_MEAN.value]:.2f}), "
+            f"(marchand: {test_metrics[Metric.MARCHAND_BOUND_MEAN.value]:.2f})")
     else:
         bound_info_to_log = ""
 
@@ -25,8 +26,8 @@ def log_epoch_info_in_terminal(config: dict, train_metrics: dict[str, np.ndarray
 
     if config["task"] == "classification":
         EpochLogger.log(
-            f"epoch {formated_epoch_idx} - train_acc: {train_metrics[TRAIN_ACCURACY]:.3f} - val_acc: {valid_metrics[VALID_ACCURACY]:.3f}"
-            f" - {TEST_ACCURACY}: {test_metrics[TEST_ACCURACY]:.3f}"
+            f"epoch {formated_epoch_idx} - train_acc: {train_metrics[TRAIN_ACCURACY_MEAN]:.3f} - val_acc: {valid_metrics[VALID_ACCURACY_MEAN]:.3f}"
+            f" - {TEST_ACCURACY_MEAN}: {test_metrics[TEST_ACCURACY_MEAN]:.3f}"
             f"{time_info_to_log}{bound_info_to_log}")
     elif config["task"] == "regression":
         EpochLogger.log(

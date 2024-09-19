@@ -13,23 +13,31 @@ class SetType(Enum):
 
 
 class Metric(Enum):
-    ACCURACY = "acc"
+    ACCURACY_MEAN = "acc"
+    ACCURACY_STD = "std"
     LOSS = "loss"
-    LINEAR_BOUND = "bound_lin"
-    HPARAM_BOUND = "bound_hyp"
-    KL_BOUND = "bound_kl"
-    MARCHAND_BOUND = "bound_mrch"
+    LINEAR_BOUND_MEAN = "bound_lin_mean"
+    HPARAM_BOUND_MEAN = "bound_hyp_mean"
+    KL_BOUND_MEAN = "bound_kl_mean"
+    MARCHAND_BOUND_MEAN = "bound_mrch_mean"
+    LINEAR_BOUND_STD = "bound_lin_std"
+    HPARAM_BOUND_STD = "bound_hyp_std"
+    KL_BOUND_STD = "bound_kl_std"
+    MARCHAND_BOUND_STD = "bound_mrch_std"
 
 
 def get_metric_name(set_type: SetType, metric_name: Metric) -> str:
     return f"{set_type.value}_{metric_name.value}"
 
 
-TRAIN_ACCURACY = get_metric_name(SetType.TRAIN, Metric.ACCURACY)
+TRAIN_ACCURACY_MEAN = get_metric_name(SetType.TRAIN, Metric.ACCURACY_MEAN)
+TRAIN_ACCURACY_STD = get_metric_name(SetType.TRAIN, Metric.ACCURACY_STD)
 TRAIN_LOSS = get_metric_name(SetType.TRAIN, Metric.LOSS)
-VALID_ACCURACY = get_metric_name(SetType.VALID, Metric.ACCURACY)
+VALID_ACCURACY_MEAN = get_metric_name(SetType.VALID, Metric.ACCURACY_MEAN)
+VALID_ACCURACY_STD = get_metric_name(SetType.VALID, Metric.ACCURACY_STD)
 VALID_LOSS = get_metric_name(SetType.VALID, Metric.LOSS)
-TEST_ACCURACY = get_metric_name(SetType.TEST, Metric.ACCURACY)
+TEST_ACCURACY_MEAN = get_metric_name(SetType.TEST, Metric.ACCURACY_MEAN)
+TEST_ACCURACY_STD = get_metric_name(SetType.TEST, Metric.ACCURACY_STD)
 TEST_LOSS = get_metric_name(SetType.TEST, Metric.LOSS)
 
 FIGURE_BASE_PATH = Path(__file__).parent.parent.parent / "figures"

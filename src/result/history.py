@@ -1,12 +1,17 @@
 import wandb
 
-from src.utils.utils import TEST_ACCURACY, TRAIN_ACCURACY, VALID_ACCURACY, TEST_LOSS, TRAIN_LOSS, VALID_LOSS, Metric
+from src.utils.utils import (TEST_ACCURACY_MEAN, TRAIN_ACCURACY_MEAN, VALID_ACCURACY_MEAN, TEST_ACCURACY_STD,
+                             TRAIN_ACCURACY_STD, VALID_ACCURACY_STD, TEST_LOSS, TRAIN_LOSS, VALID_LOSS, Metric)
 
 
 def create_history() -> dict[str, list]:
-    return {TRAIN_LOSS: [], VALID_LOSS: [], TEST_LOSS: [], TRAIN_ACCURACY: [],
-            VALID_ACCURACY: [], TEST_ACCURACY: [], Metric.LINEAR_BOUND.value: [],
-            Metric.HPARAM_BOUND.value: [], Metric.KL_BOUND.value: [], Metric.MARCHAND_BOUND.value: []}
+    return {TRAIN_LOSS: [], VALID_LOSS: [], TEST_LOSS: [], TRAIN_ACCURACY_MEAN: [],
+            VALID_ACCURACY_MEAN: [], TEST_ACCURACY_MEAN: [], TRAIN_ACCURACY_STD: [],
+            VALID_ACCURACY_STD: [], TEST_ACCURACY_STD: [], Metric.LINEAR_BOUND_MEAN.value: [],
+            Metric.HPARAM_BOUND_MEAN.value: [], Metric.KL_BOUND_MEAN.value: [], Metric.MARCHAND_BOUND_MEAN.value: [],
+            Metric.LINEAR_BOUND_STD.value: [],
+            Metric.HPARAM_BOUND_STD.value: [], Metric.KL_BOUND_STD.value: [], Metric.MARCHAND_BOUND_STD.value: []
+            }
 
 
 def update_history(history: dict[str, list], new_values: dict) -> None:

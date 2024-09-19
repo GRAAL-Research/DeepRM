@@ -17,7 +17,7 @@ from src.training.factory.optimizer import create_optimizer
 from src.training.factory.scheduler import create_scheduler
 from src.training.launch_epoch_training import launch_epoch_training
 from src.training.log_epoch_in_terminal import log_epoch_info_in_terminal
-from src.utils.utils import VALID_ACCURACY, VALID_LOSS
+from src.utils.utils import VALID_ACCURACY_MEAN, VALID_LOSS
 
 
 def train_meta_predictor(config: dict) -> None:
@@ -30,7 +30,7 @@ def train_meta_predictor(config: dict) -> None:
     optimizer = create_optimizer(config, meta_predictor)
     scheduler = create_scheduler(config, optimizer)
 
-    validation_metric = VALID_ACCURACY if config["task"] == "classification" else VALID_LOSS
+    validation_metric = VALID_ACCURACY_MEAN if config["task"] == "classification" else VALID_LOSS
 
     train_idx, valid_idx, test_idx = train_valid_and_test_indices(datasets,
                                                                   config["splits"])
