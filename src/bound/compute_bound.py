@@ -41,9 +41,9 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 pred.set_params(outp)
                 output = pred.forward(inputs)
                 if targets.shape[-1] == 1:
-                    tot_acc += m * linear_loss(output[1], targets * 2 - 1)
+                    tot_acc += m * torch.mean(linear_loss(output[1], targets * 2 - 1))
                 else:
-                    tot_acc += m * linear_loss_multi(output[1], targets)
+                    tot_acc += m * torch.mean(linear_loss_multi(output[1], targets))
             tot_acc /= n_sample  # An average accuracy is computed...
             r = m - tot_acc
             if meta_pred.get_message().ndim == 0:
@@ -72,13 +72,9 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                     if bound > best_bnd:
                         best_bnd = bound
             elif bnd_type == 'marchand_approx':  # The Marchand-Shaw-Taylor approximation
-                best_bnd = math.exp((-1 / (int(m / 2) - int(r / 2) - n_z)) * (
-                        log_binomial_coefficient(int(m / 2) - n_z, int(r / 2)) -
-                        np.log(delta)))
+                best_bnd = 0
             elif bnd_type == 'marchand':
-                best_bnd = 1 - sup_bin(int(min(int(r / 2), int(m / 2) - n_z)), int(int(m / 2) - n_z),
-                                       # The test-set bound for sample compression
-                                       delta / math.exp(log_binomial_coefficient(int(m / 2), n_z)))
+                best_bnd = 0
         elif msg_type == "dsc":
             p_sigma = 2 ** (-n_sigma)  # Since the message is a binary vector, we consider a uniform distribution
             #   on its various possibilities (prob = 2 ** -number of possibilities)

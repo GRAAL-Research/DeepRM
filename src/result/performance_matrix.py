@@ -39,7 +39,7 @@ def compute_acc(n_classes, idx, m, inputs, outputs, accs):
     for i in range(n_classes):
         for j in range(n_classes):
             if i != j:
-                loss = linear_loss(outputs[k], inputs[k, m:, -1])
+                loss = torch.mean(linear_loss(outputs[k], inputs[k, m:, -1]))
                 accs[i, j] = loss
                 if k in idx[0]:
                     t_v_e_matrix[i, j] = "t"

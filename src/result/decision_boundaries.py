@@ -69,7 +69,7 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
                             _, z = pred.forward(x)
 
                         targets = x[:, :, -1]
-                        acc = linear_loss(z, targets)
+                        acc = torch.mean(linear_loss(z, targets))
                         plt.scatter(x[0, x[0, :, 2] == 1, 0].cpu(), x[0, x[0, :, 2] == 1, 1].cpu(), c="r")
                         plt.scatter(x[0, x[0, :, 2] == -1, 0].cpu(), x[0, x[0, :, 2] == -1, 1].cpu(), c="b")
                         plt.text(torch.mean(x[0, :, 0].cpu()) - 9.5,

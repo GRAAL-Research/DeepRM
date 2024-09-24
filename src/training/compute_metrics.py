@@ -62,19 +62,19 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
 
             if config["task"] == "classification":
                 if config["target_size"] == 1:
-                    acc = n_instances_per_class_per_dataset * linear_loss(output[1],
+                    acc = n_instances_per_class_per_dataset * torch.mean(linear_loss(output[1],
                                                                           targets[:,
-                                                                          n_instances_per_class_per_dataset:] * 2 - 1)
+                                                                          n_instances_per_class_per_dataset:] * 2 - 1), dim=-1)
                 else:
-                    acc = n_instances_per_class_per_dataset * linear_loss_multi(output[1],
+                    acc = n_instances_per_class_per_dataset * torch.mean(linear_loss_multi(output[1],
                                                                                 targets[:,
-                                                                                n_instances_per_class_per_dataset:])
+                                                                                n_instances_per_class_per_dataset:]), dim=-1)
                 tot_acc.append(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
                 if are_bounds_computed:
                     for dataset_idx in range(len(instances)):
                         bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand"], meta_predictor, predictor,
                                                 n_instances_per_class_per_dataset,
-                                                n_instances_per_class_per_dataset - acc.item(), 0.05, 0, 1,
+                                                n_instances_per_class_per_dataset - acc[dataset_idx].item(), 0.05, 0, 1,
                                                 instances[[dataset_idx], n_instances_per_class_per_dataset:],
                                                 targets[[dataset_idx], n_instances_per_class_per_dataset:],
                                                 config["msg_size"], config["msg_type"], config["compression_set_size"])
@@ -82,24 +82,28 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
                         hyperparam_bounds.append(bounds[1])
                         kl_bounds.append(bounds[2])
                         marchand_bounds.append(bounds[3])
-
         zero = np.array(0.0)
         if config["task"] == "classification":
             mean_accuracy = np.mean(tot_acc)
+            std_accuracy = torch.std(acc / n_instances_per_class_per_dataset)
         elif config["task"] == "regression":
             mean_accuracy = zero
         else:
             raise NotImplementedError(f"The task '{config['task']}' is not supported.")
-
         mean_loss = np.sum(summed_losses_per_batch) / n_instances_seen
-
         if are_bounds_computed:
-            mean_bounds = {Metric.LINEAR_BOUND.value: np.mean(linear_bounds),
-                           Metric.HPARAM_BOUND.value: np.mean(hyperparam_bounds),
-                           Metric.KL_BOUND.value: np.mean(kl_bounds),
-                           Metric.MARCHAND_BOUND.value: np.mean(marchand_bounds)}
-            return {get_metric_name(set_type, Metric.ACCURACY): mean_accuracy,
-                    get_metric_name(set_type, Metric.LOSS): mean_loss, **mean_bounds}
+            bounds = {Metric.LINEAR_BOUND_MEAN.value: np.mean(linear_bounds),
+                      Metric.HPARAM_BOUND_MEAN.value: np.mean(hyperparam_bounds),
+                      Metric.KL_BOUND_MEAN.value: np.mean(kl_bounds),
+                      Metric.MARCHAND_BOUND_MEAN.value: np.mean(marchand_bounds),
+                      Metric.LINEAR_BOUND_STD.value: np.std(linear_bounds),
+                      Metric.HPARAM_BOUND_STD.value: np.std(hyperparam_bounds),
+                      Metric.KL_BOUND_STD.value: np.std(kl_bounds),
+                      Metric.MARCHAND_BOUND_STD.value: np.std(marchand_bounds)}
+            return {get_metric_name(set_type, Metric.ACCURACY_MEAN): mean_accuracy,
+                    get_metric_name(set_type, Metric.ACCURACY_STD): std_accuracy,
+                    get_metric_name(set_type, Metric.LOSS): mean_loss, **bounds}
 
-        return {get_metric_name(set_type, Metric.ACCURACY): mean_accuracy,
+        return {get_metric_name(set_type, Metric.ACCURACY_MEAN): mean_accuracy,
+                get_metric_name(set_type, Metric.ACCURACY_STD): std_accuracy,
                 get_metric_name(set_type, Metric.LOSS): mean_loss}
