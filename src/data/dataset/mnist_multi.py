@@ -58,15 +58,13 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
         idx = np.arange(len(train_dataset))
         np.random.shuffle(idx)
         train_dataset_shuffled = train_dataset[idx].clone()
-
-        pixels_idx = np.arange(config["n_features"])
-        np.random.shuffle(pixels_idx)
-        first_pixels_location = pixels_idx[:config["n_pixels_to_permute"] // 2]
-        second_pixels_location = pixels_idx[config["n_pixels_to_permute"] // 2:config["n_pixels_to_permute"]]
-        first_pixel = train_dataset_shuffled[:, first_pixels_location].clone()
-        second_pixel = train_dataset_shuffled[:, second_pixels_location].clone()
-        train_dataset_shuffled[:, second_pixels_location] = first_pixel
-        train_dataset_shuffled[:, first_pixels_location] = second_pixel
+        for pixel in range(config["n_pixels_to_permute"]):
+            first_pixel_location = np.random.randint(0, config["n_features"])
+            second_pixel_location = np.random.randint(0, config["n_features"])
+            first_pixel = train_dataset_shuffled[:, first_pixel_location].clone()
+            second_pixel = train_dataset_shuffled[:, second_pixel_location].clone()
+            train_dataset_shuffled[:, second_pixel_location] = first_pixel
+            train_dataset_shuffled[:, first_pixel_location] = second_pixel
         for num_partition in range(n_partition):
             if n_partition * num_swap + num_partition == int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
                 break
@@ -85,14 +83,13 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
         np.random.shuffle(idx)
         test_dataset_reduced = train_dataset[idx[:config["n_instances_per_dataset"]]]
 
-        pixels_idx = np.arange(config["n_features"])
-        np.random.shuffle(pixels_idx)
-        first_pixels_location = pixels_idx[:config["n_pixels_to_permute"] // 2]
-        second_pixels_location = pixels_idx[config["n_pixels_to_permute"] // 2:config["n_pixels_to_permute"]]
-        first_pixel = test_dataset_reduced[:, first_pixels_location].clone()
-        second_pixel = test_dataset_reduced[:, second_pixels_location].clone()
-        test_dataset_reduced[:, second_pixels_location] = first_pixel
-        test_dataset_reduced[:, first_pixels_location] = second_pixel
+        for pixel in range(config["n_pixels_to_permute"]):
+            first_pixel_location = np.random.randint(0, config["n_features"])
+            second_pixel_location = np.random.randint(0, config["n_features"])
+            first_pixel = train_dataset_shuffled[:, first_pixel_location].clone()
+            second_pixel = train_dataset_shuffled[:, second_pixel_location].clone()
+            train_dataset_shuffled[:, second_pixel_location] = first_pixel
+            train_dataset_shuffled[:, first_pixel_location] = second_pixel
         binary_datasets[binary_dataset_idx] = test_dataset_reduced
     return binary_datasets
 

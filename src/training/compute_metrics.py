@@ -74,7 +74,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
                     for dataset_idx in range(len(instances)):
                         bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand"], meta_predictor, predictor,
                                                 n_instances_per_class_per_dataset,
-                                                n_instances_per_class_per_dataset - acc[dataset_idx].item(), 0.05, 0, 1,
+                                                n_instances_per_class_per_dataset - acc[dataset_idx].item(), 0.10, 0, 1,
                                                 instances[[dataset_idx], n_instances_per_class_per_dataset:],
                                                 targets[[dataset_idx], n_instances_per_class_per_dataset:],
                                                 config["msg_size"], config["msg_type"], config["compression_set_size"])
