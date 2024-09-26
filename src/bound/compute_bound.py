@@ -29,7 +29,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
     """
     n_z = compression_set_size
     n_sigma = msg_size
-    n_sample, best_bnd, n_grid, best_bnds = 2, 0, 11, []
+    n_sample, best_bnd, grid_start, grid_stop, n_grid, best_bnds = 2, 0, -5, 5, 50, []
     for bnd_type in bnds_type:
         if m - n_z <= 0:
             best_bnd = 0
@@ -55,8 +55,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 epsilon = (kl + np.log(2 * np.sqrt(m - n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
             elif bnd_type == 'linear':
-                grid_start = -5
-                for beta in np.logspace(grid_start, grid_start + n_grid):  # Grid search for the optimal parameter
+                for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     lambd = beta / m ** 0.5
                     bound = 1 - ((r / (m - n_z)) + lambd * (b - a) ** 2 / (8 * (m - n_z)) +
                                  (kl -
@@ -65,8 +64,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                     if bound > best_bnd:
                         best_bnd = bound
             elif bnd_type == 'hyperparam':
-                grid_start = -5
-                for beta in np.logspace(grid_start, grid_start + n_grid):  # Grid search for the optimal parameter
+                for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     c = beta / m ** 0.5
                     bound = 1 - ((1 - math.exp(-c * (r / (m - n_z)) -
                                                (kl -
@@ -85,8 +83,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                            np.log(2 * np.sqrt(m - n_z) / p_sigma / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min(1, r / (m - n_z)), epsilon, 'MAX')
             elif bnd_type == 'linear':
-                grid_start = -5
-                for beta in np.logspace(grid_start, grid_start + n_grid):  # Grid search for the optimal parameter
+                for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     lambd = beta / m ** 0.5
                     bound = 1 - ((r / (m - n_z)) + lambd * (b - a) ** 2 / 8 +
                                  (log_binomial_coefficient(m, n_z) -
@@ -96,8 +93,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                     if bound > best_bnd:
                         best_bnd = bound
             elif bnd_type == 'hyperparam':
-                grid_start = -5
-                for beta in np.logspace(grid_start, grid_start + n_grid):  # Grid search for the optimal parameter
+                for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     c = beta / m ** 0.5
                     bound = 1 - ((1 - math.exp(-c * (r / (m - n_z)) -
                                                (log_binomial_coefficient(m, n_z) -
