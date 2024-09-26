@@ -86,10 +86,10 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
         for pixel in range(config["n_pixels_to_permute"]):
             first_pixel_location = np.random.randint(0, config["n_features"])
             second_pixel_location = np.random.randint(0, config["n_features"])
-            first_pixel = train_dataset_shuffled[:, first_pixel_location].clone()
-            second_pixel = train_dataset_shuffled[:, second_pixel_location].clone()
-            train_dataset_shuffled[:, second_pixel_location] = first_pixel
-            train_dataset_shuffled[:, first_pixel_location] = second_pixel
+            first_pixel = test_dataset_reduced[:, first_pixel_location].clone()
+            second_pixel = test_dataset_reduced[:, second_pixel_location].clone()
+            test_dataset_reduced[:, second_pixel_location] = first_pixel
+            test_dataset_reduced[:, first_pixel_location] = second_pixel
         binary_datasets[binary_dataset_idx] = test_dataset_reduced
     return binary_datasets
 
