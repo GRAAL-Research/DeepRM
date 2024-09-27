@@ -79,9 +79,9 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
     binary_datasets[np.arange(len(train_idx))] = binary_datasets[train_idx]
     for binary_dataset_idx in range(int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])),
                                     config["n_dataset"]):
-        idx = np.arange(len(train_dataset))
+        idx = np.arange(len(test_dataset))
         np.random.shuffle(idx)
-        test_dataset_reduced = train_dataset[idx[:config["n_instances_per_dataset"]]]
+        test_dataset_reduced = test_dataset[idx[:config["n_instances_per_dataset"]]]
 
         for pixel in range(config["n_pixels_to_permute"]):
             first_pixel_location = np.random.randint(0, config["n_features"])
