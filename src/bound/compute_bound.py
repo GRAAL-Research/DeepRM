@@ -52,7 +52,6 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
             if bnd_type == 'kl':
                 epsilon = (kl + log_binomial_coefficient(m, n_z) + np.log(kl_upper_bound(m - n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
-                print(f'kl: {best_bnd}')
             elif bnd_type == 'linear':
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     lambd = beta / m ** 0.5
@@ -70,7 +69,6 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                                                 np.log(delta / n_grid)) / (m - n_z))) / (1 - math.e ** (-c)))
                     if bound > best_bnd:
                         best_bnd = bound
-                print(f'hyp: {best_bnd}')
             elif bnd_type == 'marchand_approx':  # The Marchand-Shaw-Taylor approximation
                 best_bnd = 0
             elif bnd_type == 'marchand':
