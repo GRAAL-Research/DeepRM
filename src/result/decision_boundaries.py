@@ -74,8 +74,8 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
                         plt.scatter(x[0, x[0, :, 2] == -1, 0].cpu(), x[0, x[0, :, 2] == -1, 1].cpu(), c="b")
                         plt.text(torch.mean(x[0, :, 0].cpu()) - 9.5,
                                  torch.mean(x[0, :, 1].cpu()) - 9.2,
-                                 f"Accuracy: {round(acc.item() * 100, 2)}%",
-                                 bbox=dict(fill=True, color='white', linewidth=2))
+                                 f"Loss: {round(100 - acc.item() * 100, 2)}%",
+                                 bbox=dict(fill=True, color='white', linewidth=2), size=18)
 
                         if isinstance(pred, SmallNeuralNetwork):
                             pred.set_forward_mode(use_last_values=True)
@@ -97,6 +97,8 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
                     if dataset == "moon":
                         plt.xlim(torch.mean(x[0, :, 0].cpu()) - 10, torch.mean(x[0, :, 0].cpu()) + 10)
                         plt.ylim(torch.mean(x[0, :, 1].cpu()) - 10, torch.mean(x[0, :, 1].cpu()) + 10)
+                        plt.xticks(fontsize=15)
+                        plt.yticks(fontsize=15)
 
                     if not FIGURE_BASE_PATH.exists():
                         FIGURE_BASE_PATH.mkdir()
@@ -113,5 +115,4 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
                         image = wandb.Image(np.array(im_frame),
                                             caption=f"{decision_boundaries_folder_name}/{fig_prefix}_{i}")  # file_type="jpg"
                         examples.append(image)
-
     wandb.log({"Decision boundaries": examples})
