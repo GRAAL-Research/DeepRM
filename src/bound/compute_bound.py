@@ -29,31 +29,30 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
     """
     n_z = compression_set_size
     n_sigma = msg_size
-    n_sample, best_bnd, grid_start, grid_stop, n_grid, best_bnds = 2, 0, -5, 5, 50, []
-    for bnd_type in bnds_type:
-        if m - n_z <= 0:
-            best_bnd = 0
-        elif msg_type == "cnt":  # The bounds are calculated differently, depending on the message type
-            tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
-            meta_output = meta_pred.forward(inputs, n_noisy_messages=n_sample, is_in_test_mode=True)
-            for sample in range(n_sample):
-                outp = meta_output[[sample]]
-                pred.set_params(outp)
-                output = pred.forward(inputs)
-                if targets.shape[-1] == 1:
-                    tot_acc += m * torch.mean(linear_loss(output[1], targets * 2 - 1))
-                else:
-                    tot_acc += m * torch.mean(linear_loss_multi(output[1], targets))
-            tot_acc /= n_sample  # An average accuracy is computed...
-            r = m - tot_acc
-            if meta_pred.get_message().ndim == 0:
-                kl = 0
+    n_sample, best_bnd, grid_start, grid_stop, n_grid, best_bnds = 2000, 0, -5, 5, int(3 * m ** 0.5 / 2), []
+    if msg_type == "cnt":  # The bounds are computed differently, depending on the message type
+        tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
+        meta_output = meta_pred.forward(inputs, n_noisy_messages=n_sample, is_in_test_mode=True)
+        for sample in range(n_sample):
+            outp = meta_output[[sample]]
+            pred.set_params(outp)
+            output = pred.forward(inputs)
+            if targets.shape[-1] == 1:
+                tot_acc += m * torch.mean(linear_loss(output[1], targets * 2 - 1))
             else:
-                kl = torch.mean(
-                    torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut)
+                tot_acc += m * torch.mean(linear_loss_multi(output[1], targets))
+        tot_acc /= n_sample  # An average accuracy is computed...
+        r = m - tot_acc
+        if meta_pred.get_message().ndim == 0:
+            kl = 0
+        else:
+            kl = torch.mean(
+                torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut)
+        for bnd_type in bnds_type:
             if bnd_type == 'kl':
                 epsilon = (kl + log_binomial_coefficient(m, n_z) + np.log(kl_upper_bound(m - n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
+                print(f'kl: {best_bnd}')
             elif bnd_type == 'linear':
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     lambd = beta / m ** 0.5
@@ -71,11 +70,14 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                                                 np.log(delta / n_grid)) / (m - n_z))) / (1 - math.e ** (-c)))
                     if bound > best_bnd:
                         best_bnd = bound
+                print(f'hyp: {best_bnd}')
             elif bnd_type == 'marchand_approx':  # The Marchand-Shaw-Taylor approximation
                 best_bnd = 0
             elif bnd_type == 'marchand':
                 best_bnd = 0
-        elif msg_type == "dsc":
+            best_bnds.append(best_bnd)
+    elif msg_type == "dsc":
+        for bnd_type in bnds_type:
             p_sigma = 2 ** (-n_sigma)  # Since the message is a binary vector, we consider a uniform distribution
             #   on its various possibilities (prob = 2 ** -number of possibilities)
             if bnd_type == 'kl':
@@ -111,5 +113,5 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
             elif bnd_type == 'marchand':
                 best_bnd = 1 - sup_bin(int(min(r, m - n_z)), int(m - n_z),  # The test-set bound for sample compression
                                        delta * p_sigma / math.exp(log_binomial_coefficient(m, n_z)))
-        best_bnds.append(best_bnd)
+            best_bnds.append(best_bnd)
     return best_bnds
