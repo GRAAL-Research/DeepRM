@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-
+import numpy as np
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.training.compute_loss import compute_loss
@@ -10,25 +10,25 @@ from src.training.compute_loss import compute_loss
 def launch_epoch_training(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor, train_loader: DataLoader,
                           criterion: nn.Module, optimizer: torch.optim.Optimizer) -> Predictor:
     n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
-
+    indx_vec = np.arange(config["n_instances_per_dataset"])
     meta_predictor.train()
     with (torch.enable_grad()):
         for instances in train_loader:
-            instances = instances.float()[:, n_instances_per_class_per_dataset:]
+            np.random.shuffle(indx_vec)
+            instances = instances[:,indx_vec]
             targets = (instances[:, :, -config["target_size"]:] + 1) / 2
             instances = instances.float()
             targets = targets.float()
-
             if config["device"] == "gpu":
                 instances = instances.cuda()
                 targets = targets.cuda()
                 meta_predictor = meta_predictor.cuda()
 
             optimizer.zero_grad()
-            meta_output = meta_predictor.forward(instances)
+            meta_output = meta_predictor.forward(instances[:, :n_instances_per_class_per_dataset])
             predictor.set_params(meta_output)
-            output, _ = predictor.forward(instances)
-            loss = compute_loss(config, criterion, output, targets, meta_predictor)
+            output, _ = predictor.forward(instances[:, n_instances_per_class_per_dataset:])
+            loss = compute_loss(config, criterion, output, targets[:, n_instances_per_class_per_dataset:], meta_predictor)
             loss.backward()
             optimizer.step()
 

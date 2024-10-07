@@ -12,8 +12,11 @@ def train_valid_and_test_indices(datasets: np.ndarray, splits: list[float]) -> t
     n_valid_datasets = math.floor(n_datasets * splits[1]) + n_train_datasets
     n_test_datasets = math.floor(n_datasets * splits[2]) + n_valid_datasets
 
-    train_idx = np.arange(0, n_train_datasets)
-    valid_idx = np.arange(n_train_datasets, n_valid_datasets)
+    train_valid_idx = np.arange(0, n_valid_datasets)
+    np.random.shuffle(train_valid_idx)
+    train_idx = train_valid_idx[:n_train_datasets]
+    valid_idx = train_valid_idx[n_train_datasets:n_valid_datasets]
+
     test_idx = np.arange(n_valid_datasets, n_test_datasets)
 
     return train_idx, valid_idx, test_idx

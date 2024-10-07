@@ -62,19 +62,19 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
 
             if config["task"] == "classification":
                 if config["target_size"] == 1:
-                    acc = n_instances_per_class_per_dataset * torch.mean(linear_loss(output[1],
+                    acc = n_instances_per_class_per_dataset * linear_loss(output[1],
                                                                           targets[:,
-                                                                          n_instances_per_class_per_dataset:] * 2 - 1), dim=-1)
+                                                                          n_instances_per_class_per_dataset:] * 2 - 1)
                 else:
-                    acc = n_instances_per_class_per_dataset * torch.mean(linear_loss_multi(output[1],
+                    acc = n_instances_per_class_per_dataset * linear_loss_multi(output[1],
                                                                                 targets[:,
-                                                                                n_instances_per_class_per_dataset:]), dim=-1)
+                                                                                n_instances_per_class_per_dataset:])
                 tot_acc.append(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
                 if are_bounds_computed:
                     for dataset_idx in range(len(instances)):
                         bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand"], meta_predictor, predictor,
                                                 n_instances_per_class_per_dataset,
-                                                n_instances_per_class_per_dataset - acc[dataset_idx].item(), 0.10, 0, 1,
+                                                n_instances_per_class_per_dataset - acc.item(), 0.10, 0, 1,
                                                 instances[[dataset_idx], n_instances_per_class_per_dataset:],
                                                 targets[[dataset_idx], n_instances_per_class_per_dataset:],
                                                 config["msg_size"], config["msg_type"], config["compression_set_size"])
