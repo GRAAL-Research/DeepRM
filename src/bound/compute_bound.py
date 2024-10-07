@@ -52,13 +52,13 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 kl = torch.mean(
                     torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut)
             if bnd_type == 'kl':
-                epsilon = (kl + np.log(2 * np.sqrt(m - n_z) / delta)) / (m - n_z)
+                epsilon = (kl + log_binomial_coefficient(m, n_z) + np.log(2 * np.sqrt(m - n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
             elif bnd_type == 'linear':
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     lambd = beta / m ** 0.5
                     bound = 1 - ((r / (m - n_z)) + lambd * (b - a) ** 2 / (8 * (m - n_z)) +
-                                 (kl -
+                                 (kl + log_binomial_coefficient(m, n_z) -
                                   np.log(delta / n_grid)) / lambd
                                  ).item()
                     if bound > best_bnd:
@@ -67,7 +67,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     c = beta / m ** 0.5
                     bound = 1 - ((1 - math.exp(-c * (r / (m - n_z)) -
-                                               (kl -
+                                               (kl + log_binomial_coefficient(m, n_z) -
                                                 np.log(delta / n_grid)) / (m - n_z))) / (1 - math.e ** (-c)))
                     if bound > best_bnd:
                         best_bnd = bound
