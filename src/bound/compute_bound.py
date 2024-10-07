@@ -3,7 +3,7 @@ import math
 import numpy as np
 import torch
 
-from src.bound.utils import kl_inv, log_binomial_coefficient, sup_bin
+from src.bound.utils import kl_inv, log_binomial_coefficient, sup_bin, kl_upper_bound
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss, linear_loss_multi
@@ -52,7 +52,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 kl = torch.mean(
                     torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut)
             if bnd_type == 'kl':
-                epsilon = (kl + log_binomial_coefficient(m, n_z) + np.log(2 * np.sqrt(m - n_z) / delta)) / (m - n_z)
+                epsilon = (kl + log_binomial_coefficient(m, n_z) + np.log(kl_upper_bound(m - n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
             elif bnd_type == 'linear':
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
@@ -80,7 +80,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
             #   on its various possibilities (prob = 2 ** -number of possibilities)
             if bnd_type == 'kl':
                 epsilon = (log_binomial_coefficient(m, n_z) +
-                           np.log(2 * np.sqrt(m - n_z) / p_sigma / delta)) / (m - n_z)
+                           np.log(kl_upper_bound(m - n_z) / p_sigma / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min(1, r / (m - n_z)), epsilon, 'MAX')
             elif bnd_type == 'linear':
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter

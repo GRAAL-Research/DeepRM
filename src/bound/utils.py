@@ -1,5 +1,4 @@
 import math
-
 import numpy as np
 
 
@@ -134,3 +133,9 @@ def kl_inv(q, epsilon, mode, tol=10 ** -9, nb_iter_max=1000):
         elif mode == "MIN" and kl_bern(q, p) < epsilon:
             p_max = p
     return p
+
+def kl_upper_bound(n):
+    prob_cum = 0
+    for i in range(n + 1):
+        prob_cum += math.exp(log_prob_bin(i, n, i / n))
+    return prob_cum
