@@ -29,7 +29,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
     """
     n_z = compression_set_size
     n_sigma = msg_size
-    n_sample, best_bnd, grid_start, grid_stop, n_grid, best_bnds = 200, 0, -5, 5, int(3 * m ** 0.5 / 2), []
+    n_sample, best_bnd, grid_start, grid_stop, n_grid, best_bnds = 20, 0, -5, 5, int(3 * m ** 0.5 / 2), []
     if msg_type == "cnt":  # The bounds are computed differently, depending on the message type
         tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
         meta_output = meta_pred.forward(inputs, n_noisy_messages=n_sample, is_in_test_mode=True)

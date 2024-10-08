@@ -66,7 +66,7 @@ class SimpleMetaNet(nn.Module):
         if self.compression_set_size > 0:
             compression_module_output = self.forward_compression_module(x, n_noisy_messages)
 
-        return self.forward_module_2(msg_module_output, compression_module_output, n_noisy_messages)
+        return self.forward_module_2(msg_module_output, compression_module_output)
 
     def forward_msg_module(self, x: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:
         if self.is_using_a_random_msg:
@@ -115,8 +115,7 @@ class SimpleMetaNet(nn.Module):
         return x_masked
 
     def forward_module_2(self, msg_module_output: torch.Tensor = None,
-                         compression_module_output: torch.Tensor = None,
-                         n_noisy_messages: int = 0) -> torch.Tensor:
+                         compression_module_output: torch.Tensor = None) -> torch.Tensor:
 
         if msg_module_output is not None and compression_module_output is not None:
             merged_msg_and_compression_output = torch.cat((msg_module_output, compression_module_output),

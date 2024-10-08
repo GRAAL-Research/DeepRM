@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import torchvision
+from torchvision import transforms
 
 from src.config.utils import load_yaml_file_content, CONFIG_BASE_PATH
 
@@ -102,7 +103,8 @@ def obtain_mnist_dataset(config: dict) -> torch.Tensor:
 
 
 def create_train_set(config: dict) -> torch.Tensor:
-    train_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=True, download=True)
+    transform = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]  # transform to [-1,1]
+    train_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=True, download=True, transform=transforms.Compose(transform))
     n_instances_in_mnist_train_set = train_set.data.shape[0]
     data = train_set.data.reshape((n_instances_in_mnist_train_set, config["n_features"]))
     target = train_set.targets.reshape(n_instances_in_mnist_train_set, -1)
@@ -111,7 +113,8 @@ def create_train_set(config: dict) -> torch.Tensor:
 
 
 def create_test_set(config: dict) -> torch.Tensor:
-    test_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=False, download=True)
+    transform = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]  # transform to [-1,1]
+    test_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=False, download=True, transform=transforms.Compose(transform))
     n_instances_in_mnist_test_set = test_set.data.shape[0]
 
     return torch.hstack((test_set.data.reshape((n_instances_in_mnist_test_set, config["n_features"])),
