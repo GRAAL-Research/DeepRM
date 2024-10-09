@@ -4,7 +4,7 @@ task: classification
 target_size: 10
 criterion: ce_loss
 is_dataset_balanced: True
-splits: [0.7375, 0.20, 0.0625]
+splits: [0.8375, 0.10, 0.0625]
 shuffle_each_dataset_samples: True
 n_pixels_to_permute: 100
 
