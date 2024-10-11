@@ -15,7 +15,7 @@ MNIST_CACHE_BASE_PATH = MNIST_BASE_PATH / "cache"
 NUMPY_FILE_EXTENSION = ".npy"
 
 
-def load_mnist_multi(config: dict) -> np.ndarray:
+def load_mnist_label(config: dict) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config)
 
     if expected_datasets_cache_path.exists():
