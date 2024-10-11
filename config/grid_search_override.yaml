@@ -1,21 +1,21 @@
 project_name: [examples_selection_on_moon_9]
 run_name_content: [[lr, msg_type, msg_size, compression_set_size, pred_hidden_sizes]]
 
-batch_size: [10]
+batch_size: [5]
 lr: [1e-3]
 
 data_encoder_name: [kme]
-n_pixels_to_permute: [0]
+n_pixels_to_permute: [200]
 
 module_1_dim: [[100]]
 module_2_dim: [[100]]
 kme_dim: [[100]]
-attention_dim: [[10]]
+attention_dim: [[100]]
 
 msg_penalty: [l2]
 msg_penalty_coef: [0]
 
 msg_type: [cnt]
-msg_size: [100]
-compression_set_size: [10]
-pred_hidden_sizes: [[1000, 200, 200]]
+msg_size: [5]
+compression_set_size: [2]
+pred_hidden_sizes: [[200]]
