@@ -130,6 +130,7 @@ class SimpleMetaNet(nn.Module):
 
         raise ValueError(f"The message module and the compression module are both disabled.")
 
+
     def compute_compression_set(self, x: torch.Tensor) -> None:
         """
         Targets the examples that have the most contributed in the compression set.
