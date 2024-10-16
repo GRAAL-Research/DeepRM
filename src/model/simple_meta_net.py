@@ -29,7 +29,10 @@ class SimpleMetaNet(nn.Module):
         self.output_dim = pred_input_dim
 
         self.data_compressor_1 = create_data_compressor_1(config)
-        self.module_1 = MLP(self.data_compressor_1.get_output_dimension(), self.module_1_dim, config["device"],
+        module_1_input_dim = self.data_compressor_1.get_output_dimension()
+        if self.compression_set_size > 0:
+            module_1_input_dim += config["kme_dim"][-1]
+        self.module_1 = MLP(module_1_input_dim, self.module_1_dim, config["device"],
                             config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
                             config["init_scheme"], config["msg_type"])
 
@@ -39,6 +42,10 @@ class SimpleMetaNet(nn.Module):
         self.module_2 = MLP(self.compute_module_2_input_dim(), config["module_2_dim"] + [self.output_dim],
                             config["device"], config["has_skip_connection"], config["has_batch_norm"],
                             config["batch_norm_min_dim"], config["init_scheme"], has_msg_as_input=True)
+
+        self.default = MLP(1, [self.output_dim], config["device"], False,
+                           False, config["batch_norm_min_dim"], config["init_scheme"],
+                           None, biases=False)
 
     def get_message(self):
         return self.msg
@@ -59,20 +66,22 @@ class SimpleMetaNet(nn.Module):
         msg_module_output = None
         compression_module_output = None
 
-        if self.msg_type is not None and self.msg_size > 0:
-            msg_module_output = self.forward_msg_module(x, n_noisy_messages)
-            self.msg = msg_module_output.clone()
-
         if self.compression_set_size > 0:
             compression_module_output = self.forward_compression_module(x, n_noisy_messages)
 
+        if self.msg_size > 0:
+            msg_module_output = self.forward_msg_module(x, compression_module_output, n_noisy_messages)
+            self.msg = msg_module_output.clone()
+
         return self.forward_module_2(msg_module_output, compression_module_output)
 
-    def forward_msg_module(self, x: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:
+    def forward_msg_module(self, x: torch.Tensor, compression_module_output: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:
         if self.is_using_a_random_msg:
             return self.create_random_message(x.shape[0])
 
         x = self.data_compressor_1.forward(x)
+        if compression_module_output is not None:
+            x = torch.hstack((x, compression_module_output[:x.shape[0], :]))
         message = self.module_1.forward(x)
 
         if self.msg_type == "cnt":
@@ -117,19 +126,19 @@ class SimpleMetaNet(nn.Module):
     def forward_module_2(self, msg_module_output: torch.Tensor = None,
                          compression_module_output: torch.Tensor = None) -> torch.Tensor:
 
+        m = nn.ZeroPad2d((0, 0, 0, 0))
         if msg_module_output is not None and compression_module_output is not None:
             merged_msg_and_compression_output = torch.cat((msg_module_output, compression_module_output),
                                                           dim=msg_module_output.ndim - 1)
-            return self.module_2.forward(merged_msg_and_compression_output)
+            return m(self.module_2.forward(merged_msg_and_compression_output))# + self.default(torch.ones(1, device='cuda')).unsqueeze(-2)
 
         if msg_module_output is not None:
-            return self.module_2.forward(msg_module_output)
+            return m(self.module_2.forward(msg_module_output))# + self.default(torch.ones(1, device='cuda')).unsqueeze(-2)
 
         if compression_module_output is not None:
-            return self.module_2.forward(compression_module_output)
+            return m(self.module_2.forward(compression_module_output))# + self.default(torch.ones(1, device='cuda')).unsqueeze(-2)
 
         raise ValueError(f"The message module and the compression module are both disabled.")
-
 
     def compute_compression_set(self, x: torch.Tensor) -> None:
         """
