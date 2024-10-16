@@ -37,8 +37,8 @@ def Beta(x, y):
     return gamma(x) * gamma(y) / gamma(x + y)
 
 
-for i in range(0,10):
-    def integrand(z, y, x, alpha=1, beta=0, c=1, n=10, k_1=i, k_2_n=0, k_2_p=2):
+for i in range(1,10):
+    def integrand(z, y, x, alpha=1, beta=0, c=1, n=10, k_1=i, k_2_n=0, k_2_p=1):
         assert n >= k_1, f"n ({n}) must be superior or equal to k_1 ({k_1})."
         assert k_1 >= k_2_n, f"k_1 ({k_1}) must be superior or equal to k_2_m ({k_2_n})."
         assert (n - k_1) >= k_2_p, f"(n - k_1) ({(n - k_1)}) must be superior or equal to k_2_p ({k_2_p})."
@@ -60,6 +60,8 @@ for i in range(0,10):
     #assert 1 - 1e-6 < one < 1 + 1e-6, f"{one}"
     t = time()
     tot = tplquad(integrand, 0.5, 1, limit_x, 1, limit_mix, 1)[0]
+    tot -= tplquad(integrand, 0, 0.5, limit_1_x, 1, 0, limit_mix)[0]
+    tot += tplquad(integrand, 0, 0.5, limit_x, 1, 0, 1)[0]
     print(f"tot = {tot} for i = {i}.")
     #print(f"P( R(h_1) >= R(h_2) ) >= {round(pro * 100, 6)}% for i = {i}.")
     #print(f"Took {round(time() - t, 3)} seconds.")
