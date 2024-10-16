@@ -10,13 +10,13 @@ from src.model.utils.sign_straight_through import SignStraightThrough
 class MLP(nn.Module):
     def __init__(self, input_dim: int, hidden_dims: list[int], device: str, has_skip_connection: bool,
                  has_batch_norm: bool, batch_norm_min_dim: int, init_scheme: str = None,
-                 msg_type: str = None, has_msg_as_input: bool = False) -> None:
+                 msg_type: str = None, has_msg_as_input: bool = False, biases: bool = True) -> None:
         super(MLP, self).__init__()
         self.has_skip_connection = has_skip_connection
 
         input_and_hidden_dims = MLP.compute_input_and_hidden_dims(input_dim, hidden_dims)
         self.mlp = MLP.create_mlp(has_batch_norm, batch_norm_min_dim, msg_type,
-                                  has_msg_as_input, input_and_hidden_dims, device)
+                                  has_msg_as_input, input_and_hidden_dims, device, biases)
 
         last_layer_idx = len(self.mlp) - 1
         self.skip_position = last_layer_idx - has_batch_norm
@@ -38,11 +38,13 @@ class MLP(nn.Module):
 
     @staticmethod
     def create_mlp(has_batch_norm: bool, batch_norm_min_dim: int, msg_type: str, has_msg_as_input: bool,
-                   input_and_hidden_dims: list[int], device: str = "cpu") -> nn.ModuleList:
+                   input_and_hidden_dims: list[int], device: str = "cpu", biases: bool = True) -> nn.ModuleList:
         modules = torch.nn.ModuleList()
         for dim_idx in range(len(input_and_hidden_dims) - 1):
-            modules.append(nn.Linear(input_and_hidden_dims[dim_idx], input_and_hidden_dims[dim_idx + 1]))
-            modules.append(LazyBatchNorm(device))
+            if (has_batch_norm and batch_norm_min_dim <= input_and_hidden_dims[dim_idx] and
+                    (not has_msg_as_input or dim_idx != 0)):
+                modules.append(LazyBatchNorm(device))
+            modules.append(nn.Linear(input_and_hidden_dims[dim_idx], input_and_hidden_dims[dim_idx + 1], bias=biases))
 
             is_last_layer = dim_idx == len(input_and_hidden_dims) - 2
             activation_function = MLP.create_activation_function(is_last_layer, msg_type)

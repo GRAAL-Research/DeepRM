@@ -15,7 +15,7 @@ MNIST_CACHE_BASE_PATH = MNIST_BASE_PATH / "cache"
 NUMPY_FILE_EXTENSION = ".npy"
 
 
-def load_mnist_multi(config: dict) -> np.ndarray:
+def load_mnist_label(config: dict) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config)
 
     if expected_datasets_cache_path.exists():
@@ -60,13 +60,9 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
         idx = np.arange(len(train_dataset))
         np.random.shuffle(idx)
         train_dataset_shuffled = train_dataset[idx].clone()
-        for pixel in range(config["n_pixels_to_permute"]):
-            first_pixel_location = np.random.randint(0, config["n_features"])
-            second_pixel_location = np.random.randint(0, config["n_features"])
-            first_pixel = train_dataset_shuffled[:, first_pixel_location].clone()
-            second_pixel = train_dataset_shuffled[:, second_pixel_location].clone()
-            train_dataset_shuffled[:, second_pixel_location] = first_pixel
-            train_dataset_shuffled[:, first_pixel_location] = second_pixel
+        label_idx = np.arange(784, 794)
+        np.random.shuffle(label_idx)
+        train_dataset_shuffled[:, -10:] = train_dataset_shuffled[:, label_idx]
         for num_partition in range(n_partition):
             if n_partition * num_swap + num_partition == int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
                 stop = True
@@ -84,13 +80,9 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
         np.random.shuffle(idx)
         test_dataset_reduced = test_dataset[idx[:config["n_instances_per_dataset"]]]
 
-        for pixel in range(config["n_pixels_to_permute"]):
-            first_pixel_location = np.random.randint(0, config["n_features"])
-            second_pixel_location = np.random.randint(0, config["n_features"])
-            first_pixel = test_dataset_reduced[:, first_pixel_location].clone()
-            second_pixel = test_dataset_reduced[:, second_pixel_location].clone()
-            test_dataset_reduced[:, second_pixel_location] = first_pixel
-            test_dataset_reduced[:, first_pixel_location] = second_pixel
+        label_idx = np.arange(784, 794)
+        np.random.shuffle(label_idx)
+        test_dataset_reduced[:, -10:] = test_dataset_reduced[:, label_idx]
         binary_datasets[binary_dataset_idx] = test_dataset_reduced
     return binary_datasets
 
