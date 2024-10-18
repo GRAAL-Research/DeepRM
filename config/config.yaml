@@ -2,6 +2,7 @@ dataset_config_path: dataset/mnist_multi.yaml
 log_config_path: log/on.yaml
 training_config_path: training/gpu.yaml
 compute_prior: True
+max_prior_epoch: 10
 
 is_bound_computed: True
 bound_computation_epoch_frequency: 10
@@ -48,5 +49,5 @@ scheduler_patience: 20
 scheduler_factor: 0.5
 scheduler_threshold: 1e-2
 
-init_scheme: kaiming_unif
+init_scheme: xavier_norm
 loss_exponent: 1.0

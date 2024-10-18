@@ -48,11 +48,11 @@ def train_meta_predictor(config: dict) -> None:
 
     if config["compute_prior"]:
         prior = MLP(config["n_features"], config["pred_hidden_sizes"] + [config["target_size"]], config["device"],
-                    config["has_skip_connection"], False, config["batch_norm_min_dim"],
+                    config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
                     config["init_scheme"], None)
         prior = launch_prior_training(config, prior, train_loader, test_loader, criterion)
-        meta_predictor.get_weights_from_prior(prior)
         predictor.get_batch_norm_from_prior(prior)
+        predictor.set_prior_weights(prior)
 
     for epoch_idx in range(config["max_epoch"]):
         predictor = launch_epoch_training(config, meta_predictor, predictor, train_loader, criterion, optimizer)

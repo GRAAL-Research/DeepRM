@@ -15,6 +15,7 @@ class SmallNeuralNetwork(Predictor):
 
         self.params = torch.tensor([])
         self.batch_norm_params = []
+        self.prior = []
         self.use_last_values = False
         self.save_bn_params = False
         self.target_size = config["target_size"]
@@ -24,7 +25,7 @@ class SmallNeuralNetwork(Predictor):
         return sum(parameter.numel() for parameter in self.parameters() if parameter.requires_grad)
 
     def set_params(self, params: torch.Tensor) -> None:
-        self.params = params
+        self.params = params + self.prior
 
     def set_forward_mode(self, use_last_values: bool = False, save_bn_params: bool = False):
         self.use_last_values = use_last_values
@@ -38,6 +39,18 @@ class SmallNeuralNetwork(Predictor):
         for i in range(len(prior.mlp)):
             if isinstance(prior.mlp[i], LazyBatchNorm):
                 self.mlp.mlp[i] = prior.mlp[i]
+
+    def set_prior_weights(self, prior):
+        first, weights = True, None
+        for layer in prior.mlp:
+            if isinstance(layer, nn.Linear):
+                if first:
+                    weights = layer.weight.data.clone().reshape((-1))
+                    first = False
+                else:
+                    weights = torch.hstack((weights, layer.weight.data.clone().reshape((-1))))
+                weights = torch.hstack((weights, layer.bias.data.clone().reshape((-1))))
+        self.prior = weights.reshape((1, -1))
 
     def forward(self, instances: torch.Tensor) -> tuple:
         x = instances[:, :, :-self.target_size]
