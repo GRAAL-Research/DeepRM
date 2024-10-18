@@ -1,7 +1,8 @@
 project_name: [examples_selection_on_moon_9]
 run_name_content: [[lr, msg_type, msg_size, compression_set_size, pred_hidden_sizes]]
 
-batch_size: [5]
+compute_prior: [True]
+batch_size: [10]
 lr: [1e-3]
 
 data_encoder_name: [kme]

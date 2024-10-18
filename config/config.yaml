@@ -1,6 +1,7 @@
 dataset_config_path: dataset/mnist_multi.yaml
 log_config_path: log/on.yaml
 training_config_path: training/gpu.yaml
+compute_prior: True
 
 is_bound_computed: True
 bound_computation_epoch_frequency: 10

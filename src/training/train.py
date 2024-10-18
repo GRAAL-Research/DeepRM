@@ -7,6 +7,7 @@ from loguru import logger
 from src.data.create_datasets import create_datasets
 from src.data.loaders import train_valid_and_test_indices, create_data_loader, compute_variances
 from src.model.predictor.create_predictor import create_predictor
+from src.model.mlp import MLP
 from src.result.history import update_history, log_history_in_wandb, create_history
 from src.training.compute_medias import compute_medias
 from src.training.compute_metrics import compute_metrics_for_all_sets
@@ -16,6 +17,7 @@ from src.training.factory.meta_predictor import create_meta_predictor
 from src.training.factory.optimizer import create_optimizer
 from src.training.factory.scheduler import create_scheduler
 from src.training.launch_epoch_training import launch_epoch_training
+from src.training.launch_prior_training import launch_prior_training
 from src.training.log_epoch_in_terminal import log_epoch_info_in_terminal
 from src.utils.utils import VALID_ACCURACY_MEAN, VALID_LOSS
 
@@ -43,6 +45,14 @@ def train_meta_predictor(config: dict) -> None:
     best_epoch = 0
     history = create_history()
     start_time = time.time()
+
+    if config["compute_prior"]:
+        prior = MLP(config["n_features"], config["pred_hidden_sizes"] + [config["target_size"]], config["device"],
+                    config["has_skip_connection"], False, config["batch_norm_min_dim"],
+                    config["init_scheme"], None)
+        prior = launch_prior_training(config, prior, train_loader, test_loader, criterion)
+        meta_predictor.get_weights_from_prior(prior)
+        predictor.get_batch_norm_from_prior(prior)
 
     for epoch_idx in range(config["max_epoch"]):
         predictor = launch_epoch_training(config, meta_predictor, predictor, train_loader, criterion, optimizer)

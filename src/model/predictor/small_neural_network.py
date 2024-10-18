@@ -34,6 +34,11 @@ class SmallNeuralNetwork(Predictor):
         self.use_last_values = False
         self.save_bn_params = False
 
+    def get_batch_norm_from_prior(self, prior):
+        for i in range(len(prior.mlp)):
+            if isinstance(prior.mlp[i], LazyBatchNorm):
+                self.mlp.mlp[i] = prior.mlp[i]
+
     def forward(self, instances: torch.Tensor) -> tuple:
         x = instances[:, :, :-self.target_size]
         batch_size = len(x)

@@ -42,10 +42,19 @@ class SimpleMetaNet(nn.Module):
         self.module_2 = MLP(self.compute_module_2_input_dim(), config["module_2_dim"] + [self.output_dim],
                             config["device"], config["has_skip_connection"], config["has_batch_norm"],
                             config["batch_norm_min_dim"], config["init_scheme"], has_msg_as_input=True)
+        self.weights = 0
 
-        self.default = MLP(1, [self.output_dim], config["device"], False,
-                           False, config["batch_norm_min_dim"], config["init_scheme"],
-                           None, biases=False)
+    def get_weights_from_prior(self, new_prior):
+        first, weights = True, None
+        for layer in new_prior.mlp:
+            if isinstance(layer, nn.Linear):
+                if first:
+                    weights = layer.weight.data.clone().reshape((-1))
+                    first = False
+                else:
+                    weights = torch.hstack((weights, layer.weight.data.clone().reshape((-1))))
+                weights = torch.hstack((weights, layer.bias.data.clone().reshape((-1))))
+        self.weights = weights.reshape((1,-1))
 
     def get_message(self):
         return self.msg
@@ -126,17 +135,16 @@ class SimpleMetaNet(nn.Module):
     def forward_module_2(self, msg_module_output: torch.Tensor = None,
                          compression_module_output: torch.Tensor = None) -> torch.Tensor:
 
-        m = nn.ZeroPad2d((0, 0, 0, 0))
         if msg_module_output is not None and compression_module_output is not None:
             merged_msg_and_compression_output = torch.cat((msg_module_output, compression_module_output),
                                                           dim=msg_module_output.ndim - 1)
-            return m(self.module_2.forward(merged_msg_and_compression_output))# + self.default(torch.ones(1, device='cuda')).unsqueeze(-2)
+            return self.module_2.forward(merged_msg_and_compression_output) + self.weights
 
         if msg_module_output is not None:
-            return m(self.module_2.forward(msg_module_output))# + self.default(torch.ones(1, device='cuda')).unsqueeze(-2)
+            return self.module_2.forward(msg_module_output) + self.weights
 
         if compression_module_output is not None:
-            return m(self.module_2.forward(compression_module_output))# + self.default(torch.ones(1, device='cuda')).unsqueeze(-2)
+            return self.module_2.forward(compression_module_output) + self.weights
 
         raise ValueError(f"The message module and the compression module are both disabled.")
 
