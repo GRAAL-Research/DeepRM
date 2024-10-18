@@ -13,6 +13,10 @@ def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, te
                           criterion: nn.Module) -> MLP:
     optimizer = create_optimizer(config, prior)
     indx_vec = np.arange(config["n_instances_per_dataset"])
+    if config["target_size"] == 1:
+        output_activation = torch.nn.Sigmoid()
+    else:
+        output_activation = torch.nn.Softmax(dim=2)
     print("*** Prior training ***")
     for epoch_idx in range(config["max_prior_epoch"]):
         prior.train()
@@ -25,7 +29,7 @@ def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, te
                 feature = instances[:, :, :-config["target_size"]]
                 optimizer.zero_grad()
                 output = prior(feature)
-                loss = compute_loss(config, criterion, torch.nn.Softmax(dim=2)(output), targets, None)
+                loss = compute_loss(config, criterion, output_activation(output), targets, None)
                 loss.backward()
                 optimizer.step()
         prior.eval()

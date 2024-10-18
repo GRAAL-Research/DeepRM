@@ -23,8 +23,8 @@ def create_datasets(config: dict) -> np.ndarray:
         assert config["n_features"] == 2
         return generate_moon_and_blob_datasets(config)
 
-    elif config["dataset"] == "mnist_binary":
-        return load_mnist_binary(config)
+    elif config["dataset"] in ["mnist_17", "mnist_49", "mnist_56"]:
+        return load_mnist_binary(config, config["dataset"][-2], config["dataset"][-1])
 
     elif config["dataset"] == "mnist_multi":
         return load_mnist_multi(config)

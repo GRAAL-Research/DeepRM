@@ -62,9 +62,9 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
 
             if config["task"] == "classification":
                 if config["target_size"] == 1:
-                    acc = n_instances_per_class_per_dataset * torch.mean(linear_loss(output[1],
+                    acc = n_instances_per_class_per_dataset * linear_loss(output[1],
                                                                           targets[:,
-                                                                          n_instances_per_class_per_dataset:] * 2 - 1), dim=-1)
+                                                                          n_instances_per_class_per_dataset:] * 2 - 1)
                 else:
                     acc = n_instances_per_class_per_dataset * torch.mean(linear_loss_multi(output[1],
                                                                                 targets[:,
