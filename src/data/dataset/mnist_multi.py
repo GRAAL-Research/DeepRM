@@ -101,21 +101,26 @@ def obtain_mnist_dataset(config: dict) -> torch.Tensor:
 
     return torch.vstack((train_set, test_set))
 
-
 def create_train_set(config: dict) -> torch.Tensor:
+    assert int(config["n_features"] ** 0.5) == config["n_features"] ** 0.5
+    reshaped_size = int(config["n_features"] ** 0.5)
     transform = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]  # transform to [-1,1]
     train_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=True, download=True, transform=transforms.Compose(transform))
     n_instances_in_mnist_train_set = train_set.data.shape[0]
-    data = train_set.data.reshape((n_instances_in_mnist_train_set, config["n_features"]))
+    train_feature = torchvision.transforms.functional.resize(train_set.data, (reshaped_size, reshaped_size))
+    data = train_feature.data.reshape((n_instances_in_mnist_train_set, config["n_features"]))
     target = train_set.targets.reshape(n_instances_in_mnist_train_set, -1)
 
     return torch.hstack((data, target))
 
 
 def create_test_set(config: dict) -> torch.Tensor:
+    assert int(config["n_features"] ** 0.5) == config["n_features"] ** 0.5
+    reshaped_size = int(config["n_features"] ** 0.5)
     transform = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]  # transform to [-1,1]
     test_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=False, download=True, transform=transforms.Compose(transform))
     n_instances_in_mnist_test_set = test_set.data.shape[0]
-
-    return torch.hstack((test_set.data.reshape((n_instances_in_mnist_test_set, config["n_features"])),
-                         test_set.targets.reshape(n_instances_in_mnist_test_set, -1)))
+    test_feature = torchvision.transforms.functional.resize(test_set.data, (reshaped_size, reshaped_size))
+    data = test_feature.data.reshape((n_instances_in_mnist_test_set, config["n_features"]))
+    target = test_set.targets.reshape(n_instances_in_mnist_test_set, -1)
+    return torch.hstack((data, target))
