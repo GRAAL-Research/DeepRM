@@ -13,6 +13,7 @@ def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, te
                           criterion: nn.Module) -> MLP:
     optimizer = create_optimizer(config, prior)
     indx_vec = np.arange(config["n_instances_per_dataset"])
+    print("*** Prior training ***")
     for epoch_idx in range(config["max_prior_epoch"]):
         prior.train()
         for instances in train_loader:
@@ -51,6 +52,6 @@ def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, te
             else:
                 acc = torch.mean(linear_loss_multi(output, targets), dim=-1)
             tot_acc.append(torch.mean(acc).item())
-        print(f"Epoch #{epoch_idx + 1}: {round(np.mean(tot_acc), 4)}% accuracy")
-
+        print(f"Epoch #{epoch_idx + 1}: {round(np.mean(tot_acc), 4)}% test accuracy")
+    print("\n*** Posterior training ***")
     return prior

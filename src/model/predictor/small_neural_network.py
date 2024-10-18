@@ -15,7 +15,8 @@ class SmallNeuralNetwork(Predictor):
 
         self.params = torch.tensor([])
         self.batch_norm_params = []
-        self.prior = []
+        self.prior = 0
+        self.posterior_handicap = config["posterior_handicap"]
         self.use_last_values = False
         self.save_bn_params = False
         self.target_size = config["target_size"]
@@ -25,7 +26,7 @@ class SmallNeuralNetwork(Predictor):
         return sum(parameter.numel() for parameter in self.parameters() if parameter.requires_grad)
 
     def set_params(self, params: torch.Tensor) -> None:
-        self.params = params + self.prior
+        self.params = params * self.posterior_handicap + self.prior
 
     def set_forward_mode(self, use_last_values: bool = False, save_bn_params: bool = False):
         self.use_last_values = use_last_values

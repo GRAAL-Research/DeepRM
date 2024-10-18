@@ -128,7 +128,7 @@ class SimpleMetaNet(nn.Module):
             return self.module_2.forward(merged_msg_and_compression_output)
 
         if msg_module_output is not None:
-            return self.module_2.forward(msg_module_output) * 0.0000000001
+            return self.module_2.forward(msg_module_output)
 
         if compression_module_output is not None:
             return self.module_2.forward(compression_module_output)
