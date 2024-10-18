@@ -16,7 +16,7 @@ class SmallNeuralNetwork(Predictor):
         self.params = torch.tensor([])
         self.batch_norm_params = []
         self.prior = 0
-        self.posterior_handicap = config["posterior_handicap"]
+        self.posterior_handicap = config["posterior_handicap"] if config["compute_prior"] else 1
         self.use_last_values = False
         self.save_bn_params = False
         self.target_size = config["target_size"]
