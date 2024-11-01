@@ -7,7 +7,7 @@ from src.training.factory.message_penalty import create_message_penalty_function
 def compute_loss(config: dict, criterion: nn.Module, output: torch.Tensor, targets: torch.Tensor,
                  meta_predictor) -> torch.Tensor:
     if config["is_dataset_balanced"] or config["task"] == "regression":
-        loss = torch.mean(torch.mean(criterion(output, targets), dim=0) ** config["loss_exponent"])
+        loss = torch.mean(torch.mean(criterion(output, targets), dim=1) ** config["loss_exponent"])
     else:
         loss = 0
         for batch in range(len(output)):

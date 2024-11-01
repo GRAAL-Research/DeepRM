@@ -1,8 +1,8 @@
 dataset_config_path: dataset/mnist_17.yaml
 log_config_path: log/off.yaml
 training_config_path: training/gpu.yaml
-compute_prior: True
-max_prior_epoch: 1
+compute_prior: False
+max_prior_epoch: 40
 posterior_handicap: 0.1
 
 is_bound_computed: True
@@ -50,5 +50,5 @@ scheduler_patience: 20
 scheduler_factor: 0.5
 scheduler_threshold: 1e-2
 
-init_scheme: kaiming_norm
+init_scheme: kaiming_unif
 loss_exponent: 1.0
