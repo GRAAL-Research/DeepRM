@@ -14,7 +14,7 @@ def create_datasets_labels(config: dict) -> list:
         assert config["n_features"] == 2
         return ["-1", "+1"]
 
-    elif config["dataset"] == "mnist_binary":
+    elif "mnist" in config["dataset"]:
         return ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"][
                :int((1 + math.sqrt(1 + 4 * int(config["n_dataset"]))) / 2)]
 

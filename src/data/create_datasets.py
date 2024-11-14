@@ -5,6 +5,7 @@ from src.data.dataset.mnist_binary import load_mnist_binary
 from src.data.dataset.mnist_multi import load_mnist_multi
 from src.data.dataset.mnist_label import load_mnist_label
 from src.data.dataset.cifar100 import load_cifar100
+from src.data.dataset.mnist import load_mnist
 from src.data.dataset.moon import generate_moon_datasets
 from src.data.dataset.moon_and_blob import generate_moon_and_blob_datasets
 from src.data.dataset.mtpl import load_MTPL
@@ -34,6 +35,9 @@ def create_datasets(config: dict) -> np.ndarray:
 
     elif config["dataset"] == "cifar100_binary":
         return load_cifar100(config)
+
+    elif config["dataset"] == "mnist":
+        return load_mnist(config)
 
     elif config["dataset"] in ["MTPL2_frequency", "MTPL2_severity", "MTPL2_pure"]:
         return load_MTPL(config["dataset"][6:], config["n_dataset"], config["n_instances_per_dataset"])

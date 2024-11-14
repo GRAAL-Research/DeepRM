@@ -6,6 +6,7 @@ from loguru import logger
 
 from src.data.create_datasets import create_datasets
 from src.data.loaders import train_valid_and_test_indices, create_data_loader, compute_variances
+from src.data.create_datasets_labels import create_datasets_labels
 from src.model.predictor.create_predictor import create_predictor
 from src.model.mlp import MLP
 from src.result.history import update_history, log_history_in_wandb, create_history
@@ -26,6 +27,7 @@ def train_meta_predictor(config: dict) -> None:
     torch.autograd.set_detect_anomaly(True)
 
     datasets = create_datasets(config)
+    classes_name = create_datasets_labels(config)
     predictor = create_predictor(config)
     meta_predictor = create_meta_predictor(config, predictor)
     criterion = create_criterion(config)
@@ -34,8 +36,9 @@ def train_meta_predictor(config: dict) -> None:
 
     validation_metric = VALID_ACCURACY_MEAN if config["task"] == "classification" else VALID_LOSS
 
-    train_idx, valid_idx, test_idx = train_valid_and_test_indices(datasets,
-                                                                  config["splits"])
+    train_idx, valid_idx, test_idx = train_valid_and_test_indices(datasets, config["splits"],
+                                                                  config["are_test_classes_shared_with_train"],
+                                                                  config["seed"])
     train_loader = create_data_loader(datasets, config["batch_size"], train_idx)
     valid_loader = create_data_loader(datasets, config["batch_size"], valid_idx)
     test_loader = create_data_loader(datasets, config["batch_size"], test_idx)
@@ -89,7 +92,8 @@ def train_meta_predictor(config: dict) -> None:
         scheduler.step(rolling_val_perf)
 
     if config["is_media_computed"]:
-        compute_medias(config, meta_predictor, test_loader, predictor)
+        compute_medias(config, meta_predictor, test_loader, predictor, train_idx, valid_idx, test_idx, datasets,
+                       classes_name)
 
 
 def compute_rolling_performance(history: dict[str, list], metric: str, epoch_idx: int) -> torch.Tensor:
