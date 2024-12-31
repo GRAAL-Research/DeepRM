@@ -29,6 +29,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
     """
     n_z = compression_set_size
     n_sigma = msg_size
+    msg_std = meta_pred.msg_std
     n_sample, best_bnd, grid_start, grid_stop, n_grid, best_bnds = 20, 0, -5, 5, int(3 * m ** 0.5 / 2), []
     if msg_type == "cnt":  # The bounds are computed differently, depending on the message type
         tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
@@ -46,8 +47,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
         if meta_pred.get_message().ndim == 0:
             kl = 0
         else:
-            kl = torch.mean(
-                torch.sum(meta_pred.get_message() ** 2, dim=1))  # ... as well as an avg KL value (shortcut)
+            kl = torch.mean(torch.sum(meta_pred.get_message() ** 2, dim=1)) / (2 * msg_std)  # ... as well as avg KL val. (shortcut)
         for bnd_type in bnds_type:
             if bnd_type == 'kl':
                 epsilon = (kl + log_binomial_coefficient(m, n_z) + np.log(kl_upper_bound(m - n_z) / delta)) / (m - n_z)

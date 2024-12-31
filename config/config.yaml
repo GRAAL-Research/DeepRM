@@ -10,6 +10,7 @@ bound_computation_epoch_frequency: 10
 is_media_computed: True
 
 msg_type: dsc
+msg_std: 1
 msg_size: 10
 msg_penalty: l2
 msg_penalty_coef: 0

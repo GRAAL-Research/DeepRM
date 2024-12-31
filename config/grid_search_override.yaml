@@ -1,8 +1,9 @@
-project_name: [examples_selection_on_moon_9]
-run_name_content: [[lr, msg_type, msg_size, compression_set_size, pred_hidden_sizes]]
+project_name: [testing_mnist_2]
+run_name_content: [[lr, module_1_dim, msg_type, msg_size, compression_set_size, pred_hidden_sizes, seed, msg_std]]
 
 batch_size: [20]
 lr: [1e-3]
+seed: [0]
 
 data_encoder_name: [kme]
 n_pixels_to_permute: [600]
@@ -16,6 +17,7 @@ msg_penalty: [l2]
 msg_penalty_coef: [0]
 
 msg_type: [cnt]
+msg_std: [1e-1, 1e-2, 1e-3]
 msg_size: [10]
 compression_set_size: [0]
 pred_hidden_sizes: [[5]]

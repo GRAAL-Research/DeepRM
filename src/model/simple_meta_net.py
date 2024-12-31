@@ -16,6 +16,7 @@ class SimpleMetaNet(nn.Module):
         super().__init__()
         self.compression_set_size = config["compression_set_size"]
         self.msg_type = config["msg_type"]
+        self.msg_std = config["msg_std"]
         self.msg_size = config["msg_size"]
         self.batch_size = config["batch_size"]
         self.device = config["device"]
@@ -98,9 +99,8 @@ class SimpleMetaNet(nn.Module):
             random_message = random_message.cuda()
         return random_message
 
-    @staticmethod
-    def create_noisy_message(x: torch.Tensor) -> torch.Tensor:
-        return torch.normal(x, 1)
+    def create_noisy_message(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.normal(x, self.msg_std)
 
     def forward_compression_module(self, x: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:
         mask = self.cas[0].forward(x.clone())
