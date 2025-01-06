@@ -4,13 +4,13 @@ import numpy as np
 from torch.utils.data import Subset, DataLoader
 
 
-def train_valid_and_test_indices(datasets: np.ndarray, splits: list[float], are_test_classes_shared_with_train: bool,
+def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[float], are_test_classes_shared_with_train: bool,
                                  seed: int, is_shuffling=True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     assert sum(splits) == 1, "The sum of splits must be 1."
 
     n_datasets = len(datasets)
     datasets_indices = np.arange(n_datasets)
-    if not are_test_classes_shared_with_train:
+    if not are_test_classes_shared_with_train and dataset == "mnist":
         num_classes = int((1 + math.sqrt(1 + 4 * int(n_datasets))) / 2)
         test_idx = []
         current_class = 0

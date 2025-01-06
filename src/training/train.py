@@ -36,7 +36,7 @@ def train_meta_predictor(config: dict) -> None:
 
     validation_metric = VALID_ACCURACY_MEAN if config["task"] == "classification" else VALID_LOSS
 
-    train_idx, valid_idx, test_idx = train_valid_and_test_indices(datasets, config["splits"],
+    train_idx, valid_idx, test_idx = train_valid_and_test_indices(config["dataset"], datasets, config["splits"],
                                                                   config["are_test_classes_shared_with_train"],
                                                                   config["seed"])
     train_loader = create_data_loader(datasets, config["batch_size"], train_idx)
