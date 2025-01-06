@@ -1,4 +1,4 @@
-dataset_config_path: dataset/mnist.yaml
+dataset_config_path: dataset/mnist_multi.yaml
 log_config_path: log/on.yaml
 training_config_path: training/gpu.yaml
 compute_prior: False
@@ -7,6 +7,7 @@ posterior_handicap: 0.1
 
 is_bound_computed: True
 bound_computation_epoch_frequency: 10
+are_test_classes_shared_with_train: False
 is_media_computed: True
 
 msg_type: dsc
