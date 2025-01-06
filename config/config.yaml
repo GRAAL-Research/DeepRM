@@ -7,6 +7,7 @@ posterior_handicap: 0.1
 
 is_bound_computed: True
 bound_computation_epoch_frequency: 10
+are_test_classes_shared_with_train: False
 is_media_computed: True
 
 msg_type: dsc
@@ -35,6 +36,8 @@ attention_pooling_type: kme
 module_1_dim: [100]
 module_2_dim: [100]
 meta_pred: simple_net
+predictor: ConvNet
+pred_filter_sizes: [10, 20]
 pred_hidden_sizes: [10]
 
 has_skip_connection: True

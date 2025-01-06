@@ -10,4 +10,5 @@ are_test_classes_shared_with_train: False
 
 n_dataset: 240
 n_instances_per_dataset: 400
-n_features: 675
+input_shape: [3, 15, 15]  # [3, 32, 32], [3, 15, 15]
+n_features: 675  # 3072, 675

@@ -6,7 +6,6 @@ from matplotlib import pyplot as plt
 
 from src.model.predictor.linear_classifier import LinearClassifier
 from src.model.predictor.predictor import Predictor
-from src.model.predictor.small_neural_network import SmallNeuralNetwork
 from src.model.simple_meta_net import SimpleMetaNet
 from src.model.utils.loss import linear_loss
 from src.utils.utils import FIGURE_BASE_PATH
@@ -47,7 +46,7 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
                         py = [-(-20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1],
                               -(20 * meta_output[0, 0] + meta_output[0, 2]) / meta_output[0, 1]]
                         plt.plot(px, py)  # With a linea classifier, only a line needs to be drawn
-                    if isinstance(pred, SmallNeuralNetwork):
+                    else:
                         # With small nn: we plot the decision boundary by colouring each decision zone by its prediction
                         h = .05  # step size in the mesh
                         x_min, x_max = x[0, :, 0].cpu().min() - 10, x[0, :, 0].cpu().max() + 10
@@ -61,12 +60,9 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
                             mesh = mesh.cuda()
                         pred.set_params(meta_output)
 
-                        if isinstance(pred, SmallNeuralNetwork):
-                            pred.set_forward_mode(save_bn_params=True)
-                            _, z = pred.forward(x)
-                            pred.reset_forward_mode()
-                        else:
-                            _, z = pred.forward(x)
+                        pred.set_forward_mode(save_bn_params=True)
+                        _, z = pred.forward(x)
+                        pred.reset_forward_mode()
 
                         targets = x[:, :, -1]
                         acc = torch.mean(linear_loss(z, targets))
@@ -77,12 +73,9 @@ def show_decision_boundaries(meta_pred: SimpleMetaNet, dataset, data_loader, pre
                                  f"Loss: {round(100 - acc.item() * 100, 2)}%",
                                  bbox=dict(fill=True, color='white', linewidth=2), size=18)
 
-                        if isinstance(pred, SmallNeuralNetwork):
-                            pred.set_forward_mode(use_last_values=True)
-                            _, z = pred.forward(mesh)
-                            pred.reset_forward_mode()
-                        else:
-                            _, z = pred.forward(mesh)
+                        pred.set_forward_mode(use_last_values=True)
+                        _, z = pred.forward(mesh)
+                        pred.reset_forward_mode()
 
                         z = z.reshape(xx.shape).cpu()
                         plt.contourf(xx, yy, z, cmap=plt.cm.Paired, alpha=0.6)

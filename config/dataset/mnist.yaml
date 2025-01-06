@@ -10,4 +10,5 @@ are_test_classes_shared_with_train: False
 
 n_dataset: 90
 n_instances_per_dataset: 1000
+input_shape: [1, 28, 28]
 n_features: 784
