@@ -1,4 +1,6 @@
 import math
+import itertools as it
+from os.path import split
 
 import numpy as np
 from torch.utils.data import Subset, DataLoader
@@ -30,7 +32,14 @@ def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[flo
 
         return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
 
-    if is_shuffling:
+    if not are_test_classes_shared_with_train and dataset == "cifar100":
+        np.random.seed(0)
+        used_idx = np.array(range(len(datasets)))
+        np.random.shuffle(used_idx)
+        split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * 100)
+        return np.array(used_idx[:split_1]), np.array(used_idx[split_1:100]), np.array(used_idx[100:150])
+
+    if is_shuffling and dataset != "mnist_multi":
         np.random.seed(seed)
         np.random.shuffle(datasets_indices)
 
@@ -50,9 +59,19 @@ def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[flo
     return train_idx, valid_idx, test_idx
 
 
-def create_data_loader(datasets: np.ndarray, batch_size: int, indices: np.ndarray) -> DataLoader:
+def create_data_loader(dataset: str, type: str, datasets: np.ndarray, batch_size: int, indices: np.ndarray) -> DataLoader:
+    if dataset == 'cifar100':
+        if type in ['train', 'valid']:
+            datasets = datasets[:, list(range(0, 500)) + list(range(600, 1100))]
+            idx = list(range(1000))
+        elif type == 'test':
+            datasets = datasets[:, list(range(500, 600)) + list(range(1100, 1200))]
+            idx = list(range(200))
+        for i in range(len(datasets)):
+            np.random.shuffle(idx)
+            datasets[i] = datasets[i, idx]
     subset = Subset(datasets, indices)
-    return DataLoader(subset, batch_size=batch_size, shuffle=False)
+    return DataLoader(subset, batch_size=batch_size, shuffle=True)
 
 
 def compute_variances(datasets: np.ndarray, train_idx,

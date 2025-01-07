@@ -21,7 +21,7 @@ def create_datasets_labels(config: dict) -> list:
     elif config["dataset"] == "mnist_multi":
         return ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
-    elif config["dataset"] == "cifar100_binary":
+    elif config["dataset"] == "cifar100":
         return ["beaver", "dolphin", "otter", "seal", "whale",
                 "aquarium" "fish", "flatfish", "ray", "shark", "trout",
                 "orchids", "poppies", "roses", "sunflowers", "tulips",
@@ -41,8 +41,7 @@ def create_datasets_labels(config: dict) -> list:
                 "hamster", "mouse", "rabbit", "shrew", "squirrel",
                 "maple", "oak", "palm", "pine", "willow",
                 "bicycle", "bus", "motorcycle", "pickup truck", "train",
-                "lawn-mower", "rocket", "streetcar", "tank", "tractor"][:int((1 + math.sqrt(1 + 4 *
-                                                                         int(config["n_dataset"]))) / 2)]
+                "lawn-mower", "rocket", "streetcar", "tank", "tractor"]
 
     elif config["dataset"] in ["MTPL2_frequency", "MTPL2_severity", "MTPL2_pure"]:
         return []

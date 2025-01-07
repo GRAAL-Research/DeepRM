@@ -39,9 +39,9 @@ def train_meta_predictor(config: dict) -> None:
     train_idx, valid_idx, test_idx = train_valid_and_test_indices(config["dataset"], datasets, config["splits"],
                                                                   config["are_test_classes_shared_with_train"],
                                                                   config["seed"])
-    train_loader = create_data_loader(datasets, config["batch_size"], train_idx)
-    valid_loader = create_data_loader(datasets, config["batch_size"], valid_idx)
-    test_loader = create_data_loader(datasets, config["batch_size"], test_idx)
+    train_loader = create_data_loader(config["dataset"], "train", datasets, config["batch_size"], train_idx)
+    valid_loader = create_data_loader(config["dataset"], "valid", datasets, config["batch_size"], valid_idx)
+    test_loader = create_data_loader(config["dataset"], "test", datasets, config["batch_size"], test_idx)
     train_var, valid_var, test_var = compute_variances(datasets, train_idx, valid_idx, test_idx)
 
     best_rolling_val_acc = 0

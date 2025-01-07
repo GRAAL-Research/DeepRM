@@ -33,7 +33,7 @@ def create_datasets(config: dict) -> np.ndarray:
     elif config["dataset"] == "mnist_label":
         return load_mnist_label(config)
 
-    elif config["dataset"] == "cifar100_binary":
+    elif config["dataset"] == "cifar100":
         return load_cifar100(config)
 
     elif config["dataset"] == "mnist":

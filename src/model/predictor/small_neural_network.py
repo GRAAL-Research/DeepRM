@@ -115,7 +115,11 @@ class ConvNet(Predictor):
         self.n_filt2 = int(config["pred_filter_sizes"][1])
         self.input_shape = config["input_shape"]
         self.color_channels = config["input_shape"][0]
-        conv_feat_size = self.n_filt2 * 4 * 4
+        if config["dataset"] == 'mnist':
+            conv_feat_size = 320
+        elif config["dataset"] == 'cifar100':
+            conv_feat_size = 500
+
         self.architecture_sizes = [conv_feat_size] + config["pred_hidden_sizes"] + [config["target_size"]]
 
         self.conv1 = nn.Conv2d(self.color_channels, self.n_filt1, kernel_size=5)
@@ -170,15 +174,10 @@ class ConvNet(Predictor):
 
     def forward(self, instances: torch.Tensor) -> tuple:
         x = instances[:, :, :-self.target_size]
+        x = x.reshape([x.shape[0], x.shape[1]]+self.input_shape)
         batch_size = len(x)
-
         if not self.use_last_values:
             self.batch_norm_params = []
-
-        params_low_idx = 0
-        params_high_idx = 0
-        linear_layer_idx = 0
-        x = x.reshape([x.shape[0], x.shape[1]]+self.input_shape)
 
         rslts = []
         for dataset_idx in range(len(x)):
@@ -194,7 +193,9 @@ class ConvNet(Predictor):
             x_processed = x_processed.view(x_processed.size(0), -1)
             rslts.append(x_processed)
         x = torch.stack(rslts)
-
+        params_low_idx = self.num_conv1_weight_params + self.num_conv1_bias_params + self.num_conv2_weight_params + self.num_conv2_bias_params
+        params_high_idx = self.num_conv1_weight_params + self.num_conv1_bias_params + self.num_conv2_weight_params + self.num_conv2_bias_params
+        linear_layer_idx = 0
         for layer in self.mlp.get_modules():
             if isinstance(layer, nn.Linear):
                 current_linear_layer_dim = self.architecture_sizes[linear_layer_idx]

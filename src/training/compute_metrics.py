@@ -33,7 +33,6 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
     marchand_bounds = []
 
     meta_predictor.eval()
-    n_instances_per_class_per_dataset = meta_predictor.n_instances_per_class_per_dataset
     with torch.no_grad():
         n_instances_seen = 0
         n_batches = 0
@@ -42,6 +41,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
         for instances in data_loader:
             n_datasets = len(instances)
             n_instance_per_dataset = len(instances[0])
+            n_instances_per_class_per_dataset = n_instance_per_dataset // 2
             n_instances_seen += n_datasets * n_instance_per_dataset // 2
             n_batches += 1
 
