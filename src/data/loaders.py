@@ -14,22 +14,22 @@ def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[flo
     datasets_indices = np.arange(n_datasets)
     if not are_test_classes_shared_with_train and dataset == "mnist":
         num_classes = int((1 + math.sqrt(1 + 4 * int(n_datasets))) / 2)
+        valid_idx = []
         test_idx = []
         current_class = 0
         while len(test_idx) / n_datasets < splits[2]:
             test_idx += extract_class(num_classes, current_class)
             current_class += 1
+        valid_idx += extract_class(num_classes, current_class)
         other_idx = []
         for idx in datasets_indices:
-            if idx not in test_idx:
-                other_idx.append(idx)
+            if idx not in valid_idx:
+                if idx not in test_idx:
+                    other_idx.append(idx)
         if is_shuffling:
             np.random.seed(seed)
             np.random.shuffle(other_idx)
-        split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * len(other_idx))
-        train_idx = other_idx[:split_1]
-        valid_idx = other_idx[split_1:]
-
+        train_idx = other_idx
         return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
 
     if not are_test_classes_shared_with_train and dataset == "cifar100":
