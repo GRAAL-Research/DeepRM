@@ -9,8 +9,10 @@ def create_history() -> dict[str, list]:
             VALID_ACCURACY_MEAN: [], TEST_ACCURACY_MEAN: [], TRAIN_ACCURACY_STD: [],
             VALID_ACCURACY_STD: [], TEST_ACCURACY_STD: [], Metric.LINEAR_BOUND_MEAN.value: [],
             Metric.HPARAM_BOUND_MEAN.value: [], Metric.KL_BOUND_MEAN.value: [], Metric.MARCHAND_BOUND_MEAN.value: [],
+            Metric.KL_DISINTEGRATED_BOUND_MEAN.value: [],
             Metric.LINEAR_BOUND_STD.value: [],
-            Metric.HPARAM_BOUND_STD.value: [], Metric.KL_BOUND_STD.value: [], Metric.MARCHAND_BOUND_STD.value: []
+            Metric.HPARAM_BOUND_STD.value: [], Metric.KL_BOUND_STD.value: [], Metric.MARCHAND_BOUND_STD.value: [],
+            Metric.KL_DISINTEGRATED_BOUND_STD.value: [],
             }
 
 

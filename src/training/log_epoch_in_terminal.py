@@ -3,8 +3,8 @@ import time
 import numpy as np
 
 from src.utils.epoch_logger import EpochLogger
-from src.utils.utils import (Metric, TRAIN_ACCURACY_STD, VALID_ACCURACY_STD, TEST_ACCURACY_STD, TRAIN_ACCURACY_MEAN,
-                             VALID_ACCURACY_MEAN, TEST_ACCURACY_MEAN, TRAIN_LOSS, VALID_LOSS, TEST_LOSS)
+from src.utils.utils import (Metric, TRAIN_ACCURACY_MEAN, VALID_ACCURACY_MEAN, TEST_ACCURACY_MEAN, TRAIN_LOSS,
+                             VALID_LOSS, TEST_LOSS)
 
 
 def log_epoch_info_in_terminal(config: dict, train_metrics: dict[str, np.ndarray], valid_metrics: dict[str, np.ndarray],
@@ -18,6 +18,7 @@ def log_epoch_info_in_terminal(config: dict, train_metrics: dict[str, np.ndarray
             f" - bounds: (lin: {test_metrics[Metric.LINEAR_BOUND_MEAN.value]:.2f}), "
             f"(hyp: {test_metrics[Metric.HPARAM_BOUND_MEAN.value]:.2f}), "
             f"(kl: {test_metrics[Metric.KL_BOUND_MEAN.value]:.2f}), "
+            f"(kl_disintegrated: {test_metrics[Metric.KL_DISINTEGRATED_BOUND_MEAN.value]:.2f}), "
             f"(marchand: {test_metrics[Metric.MARCHAND_BOUND_MEAN.value]:.2f})")
     else:
         bound_info_to_log = ""

@@ -30,7 +30,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
     n_z = compression_set_size
     n_sigma = msg_size
     msg_std = meta_pred.msg_std
-    n_sample, best_bnd, grid_start, grid_stop, n_grid, best_bnds = 20, 0, -5, 5, int(3 * m ** 0.5 / 2), []
+    n_sample, best_bnd, grid_start, grid_stop, n_grid, best_bnds = 50, 0, -5, 5, int(3 * m ** 0.5 / 2), []
     if msg_type == "cnt":  # The bounds are computed differently, depending on the message type
         tot_acc, k = 0, 0  # A Monte-Carlo sampling of messages must be done
         meta_output = meta_pred.forward(inputs, n_noisy_messages=n_sample, is_in_test_mode=True)
@@ -73,6 +73,9 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 best_bnd = 0
             elif bnd_type == 'marchand':
                 best_bnd = 0
+            elif bnd_type == 'kl_dis':
+                epsilon = (2 * kl + log_binomial_coefficient(m, n_z) + np.log(kl_upper_bound(m - n_z)) + 3 * np.log(2 / delta)) / (m - n_z)
+                best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
             best_bnds.append(best_bnd)
     elif msg_type == "dsc":
         for bnd_type in bnds_type:
@@ -111,5 +114,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
             elif bnd_type == 'marchand':
                 best_bnd = 1 - sup_bin(int(min(r, m - n_z)), int(m - n_z),  # The test-set bound for sample compression
                                        delta * p_sigma / math.exp(log_binomial_coefficient(m, n_z)))
+            elif bnd_type == 'kl_dis':
+                best_bnd = 0
             best_bnds.append(best_bnd)
     return best_bnds

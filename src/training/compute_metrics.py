@@ -31,6 +31,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
     hyperparam_bounds = []
     kl_bounds = []
     marchand_bounds = []
+    kl_dis_bounds = []
 
     meta_predictor.eval()
     with torch.no_grad():
@@ -72,7 +73,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
                 tot_acc.append(torch.mean(acc / n_instances_per_class_per_dataset).cpu())
                 if are_bounds_computed:
                     for dataset_idx in range(len(instances)):
-                        bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand"], meta_predictor, predictor,
+                        bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand", "kl_dis"], meta_predictor, predictor,
                                                 n_instances_per_class_per_dataset,
                                                 n_instances_per_class_per_dataset - acc[dataset_idx].item(), 0.10, 0, 1,
                                                 instances[[dataset_idx], n_instances_per_class_per_dataset:],
@@ -82,6 +83,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
                         hyperparam_bounds.append(bounds[1])
                         kl_bounds.append(bounds[2])
                         marchand_bounds.append(bounds[3])
+                        kl_dis_bounds.append(bounds[4])
         zero = np.array(0.0)
         if config["task"] == "classification":
             mean_accuracy = np.mean(tot_acc)
@@ -95,10 +97,13 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
             bounds = {Metric.LINEAR_BOUND_MEAN.value: np.mean(linear_bounds),
                       Metric.HPARAM_BOUND_MEAN.value: np.mean(hyperparam_bounds),
                       Metric.KL_BOUND_MEAN.value: np.mean(kl_bounds),
+                      Metric.KL_DISINTEGRATED_BOUND_MEAN.value: np.mean(kl_dis_bounds),
                       Metric.MARCHAND_BOUND_MEAN.value: np.mean(marchand_bounds),
+
                       Metric.LINEAR_BOUND_STD.value: np.std(linear_bounds),
                       Metric.HPARAM_BOUND_STD.value: np.std(hyperparam_bounds),
                       Metric.KL_BOUND_STD.value: np.std(kl_bounds),
+                      Metric.KL_DISINTEGRATED_BOUND_STD.value: np.std(kl_dis_bounds),
                       Metric.MARCHAND_BOUND_STD.value: np.std(marchand_bounds)}
             return {get_metric_name(set_type, Metric.ACCURACY_MEAN): mean_accuracy,
                     get_metric_name(set_type, Metric.ACCURACY_STD): std_accuracy,

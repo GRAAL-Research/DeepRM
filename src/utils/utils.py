@@ -16,14 +16,18 @@ class Metric(Enum):
     ACCURACY_MEAN = "acc"
     ACCURACY_STD = "std"
     LOSS = "loss"
+
     LINEAR_BOUND_MEAN = "bound_lin_mean"
     HPARAM_BOUND_MEAN = "bound_hyp_mean"
     KL_BOUND_MEAN = "bound_kl_mean"
     MARCHAND_BOUND_MEAN = "bound_mrch_mean"
+    KL_DISINTEGRATED_BOUND_MEAN = "bound_disintegrated_kl_mean"
+
     LINEAR_BOUND_STD = "bound_lin_std"
     HPARAM_BOUND_STD = "bound_hyp_std"
     KL_BOUND_STD = "bound_kl_std"
     MARCHAND_BOUND_STD = "bound_mrch_std"
+    KL_DISINTEGRATED_BOUND_STD = "bound_disintegrated_kl_std"
 
 
 def get_metric_name(set_type: SetType, metric_name: Metric) -> str:
