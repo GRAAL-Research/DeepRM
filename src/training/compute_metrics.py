@@ -17,7 +17,7 @@ def compute_metrics_for_all_sets(config: dict, meta_predictor: SimpleMetaNet, pr
     train_metrics = compute_metrics(config, meta_predictor, predictor, criterion, train_loader, False,
                                     set_type=SetType.TRAIN)
     valid_metrics = compute_metrics(config, meta_predictor, predictor, criterion, valid_loader,
-                                    False, set_type=SetType.VALID)
+                                    is_computing_test_bounds, set_type=SetType.VALID)
 
     test_metrics = compute_metrics(config, meta_predictor, predictor, criterion, test_loader,
                                    is_computing_test_bounds, set_type=SetType.TEST)
@@ -94,17 +94,30 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
             raise NotImplementedError(f"The task '{config['task']}' is not supported.")
         mean_loss = np.sum(summed_losses_per_batch) / n_instances_seen
         if are_bounds_computed:
-            bounds = {Metric.LINEAR_BOUND_MEAN.value: np.mean(linear_bounds),
-                      Metric.HPARAM_BOUND_MEAN.value: np.mean(hyperparam_bounds),
-                      Metric.KL_BOUND_MEAN.value: np.mean(kl_bounds),
-                      Metric.KL_DISINTEGRATED_BOUND_MEAN.value: np.mean(kl_dis_bounds),
-                      Metric.MARCHAND_BOUND_MEAN.value: np.mean(marchand_bounds),
+            if set_type is SetType.VALID:
+                bounds = {Metric.VALID_LINEAR_BOUND_MEAN.value: np.mean(linear_bounds),
+                          Metric.VALID_HPARAM_BOUND_MEAN.value: np.mean(hyperparam_bounds),
+                          Metric.VALID_KL_BOUND_MEAN.value: np.mean(kl_bounds),
+                          Metric.VALID_KL_DISINTEGRATED_BOUND_MEAN.value: np.mean(kl_dis_bounds),
+                          Metric.VALID_MARCHAND_BOUND_MEAN.value: np.mean(marchand_bounds),
 
-                      Metric.LINEAR_BOUND_STD.value: np.std(linear_bounds),
-                      Metric.HPARAM_BOUND_STD.value: np.std(hyperparam_bounds),
-                      Metric.KL_BOUND_STD.value: np.std(kl_bounds),
-                      Metric.KL_DISINTEGRATED_BOUND_STD.value: np.std(kl_dis_bounds),
-                      Metric.MARCHAND_BOUND_STD.value: np.std(marchand_bounds)}
+                          Metric.VALID_LINEAR_BOUND_STD.value: np.std(linear_bounds),
+                          Metric.VALID_HPARAM_BOUND_STD.value: np.std(hyperparam_bounds),
+                          Metric.VALID_KL_BOUND_STD.value: np.std(kl_bounds),
+                          Metric.VALID_KL_DISINTEGRATED_BOUND_STD.value: np.std(kl_dis_bounds),
+                          Metric.VALID_MARCHAND_BOUND_STD.value: np.std(marchand_bounds)}
+            elif set_type is SetType.TEST:
+                bounds = {Metric.TEST_LINEAR_BOUND_MEAN.value: np.mean(linear_bounds),
+                          Metric.TEST_HPARAM_BOUND_MEAN.value: np.mean(hyperparam_bounds),
+                          Metric.TEST_KL_BOUND_MEAN.value: np.mean(kl_bounds),
+                          Metric.TEST_KL_DISINTEGRATED_BOUND_MEAN.value: np.mean(kl_dis_bounds),
+                          Metric.TEST_MARCHAND_BOUND_MEAN.value: np.mean(marchand_bounds),
+
+                          Metric.TEST_LINEAR_BOUND_STD.value: np.std(linear_bounds),
+                          Metric.TEST_HPARAM_BOUND_STD.value: np.std(hyperparam_bounds),
+                          Metric.TEST_KL_BOUND_STD.value: np.std(kl_bounds),
+                          Metric.TEST_KL_DISINTEGRATED_BOUND_STD.value: np.std(kl_dis_bounds),
+                          Metric.TEST_MARCHAND_BOUND_STD.value: np.std(marchand_bounds)}
             return {get_metric_name(set_type, Metric.ACCURACY_MEAN): mean_accuracy,
                     get_metric_name(set_type, Metric.ACCURACY_STD): std_accuracy,
                     get_metric_name(set_type, Metric.LOSS): mean_loss, **bounds}

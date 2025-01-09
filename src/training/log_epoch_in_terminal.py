@@ -15,11 +15,11 @@ def log_epoch_info_in_terminal(config: dict, train_metrics: dict[str, np.ndarray
 
     if are_test_bounds_computed:
         bound_info_to_log = (
-            f" - bounds: (lin: {test_metrics[Metric.LINEAR_BOUND_MEAN.value]:.2f}), "
-            f"(hyp: {test_metrics[Metric.HPARAM_BOUND_MEAN.value]:.2f}), "
-            f"(kl: {test_metrics[Metric.KL_BOUND_MEAN.value]:.2f}), "
-            f"(kl_disintegrated: {test_metrics[Metric.KL_DISINTEGRATED_BOUND_MEAN.value]:.2f}), "
-            f"(marchand: {test_metrics[Metric.MARCHAND_BOUND_MEAN.value]:.2f})")
+            f" - bounds: (lin: {test_metrics[Metric.TEST_LINEAR_BOUND_MEAN.value]:.2f}), "
+            f"(hyp: {test_metrics[Metric.TEST_HPARAM_BOUND_MEAN.value]:.2f}), "
+            f"(kl: {test_metrics[Metric.TEST_KL_BOUND_MEAN.value]:.2f}), "
+            f"(kl_disintegrated: {test_metrics[Metric.TEST_KL_DISINTEGRATED_BOUND_MEAN.value]:.2f}), "
+            f"(marchand: {test_metrics[Metric.TEST_MARCHAND_BOUND_MEAN.value]:.2f})")
     else:
         bound_info_to_log = ""
 

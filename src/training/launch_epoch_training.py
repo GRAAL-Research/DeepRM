@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-import numpy as np
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.training.compute_loss import compute_loss

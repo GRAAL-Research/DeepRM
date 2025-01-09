@@ -17,17 +17,29 @@ class Metric(Enum):
     ACCURACY_STD = "std"
     LOSS = "loss"
 
-    LINEAR_BOUND_MEAN = "bound_lin_mean"
-    HPARAM_BOUND_MEAN = "bound_hyp_mean"
-    KL_BOUND_MEAN = "bound_kl_mean"
-    MARCHAND_BOUND_MEAN = "bound_mrch_mean"
-    KL_DISINTEGRATED_BOUND_MEAN = "bound_disintegrated_kl_mean"
+    VALID_LINEAR_BOUND_MEAN = "valid_bound_lin_mean"
+    VALID_HPARAM_BOUND_MEAN = "valid_bound_hyp_mean"
+    VALID_KL_BOUND_MEAN = "valid_bound_kl_mean"
+    VALID_MARCHAND_BOUND_MEAN = "valid_bound_mrch_mean"
+    VALID_KL_DISINTEGRATED_BOUND_MEAN = "valid_bound_disintegrated_kl_mean"
 
-    LINEAR_BOUND_STD = "bound_lin_std"
-    HPARAM_BOUND_STD = "bound_hyp_std"
-    KL_BOUND_STD = "bound_kl_std"
-    MARCHAND_BOUND_STD = "bound_mrch_std"
-    KL_DISINTEGRATED_BOUND_STD = "bound_disintegrated_kl_std"
+    VALID_LINEAR_BOUND_STD = "valid_bound_lin_std"
+    VALID_HPARAM_BOUND_STD = "valid_bound_hyp_std"
+    VALID_KL_BOUND_STD = "valid_bound_kl_std"
+    VALID_MARCHAND_BOUND_STD = "valid_bound_mrch_std"
+    VALID_KL_DISINTEGRATED_BOUND_STD = "valid_bound_disintegrated_kl_std"
+
+    TEST_LINEAR_BOUND_MEAN = "test_bound_lin_mean"
+    TEST_HPARAM_BOUND_MEAN = "test_bound_hyp_mean"
+    TEST_KL_BOUND_MEAN = "test_bound_kl_mean"
+    TEST_MARCHAND_BOUND_MEAN = "test_bound_mrch_mean"
+    TEST_KL_DISINTEGRATED_BOUND_MEAN = "test_bound_disintegrated_kl_mean"
+
+    TEST_LINEAR_BOUND_STD = "test_bound_lin_std"
+    TEST_HPARAM_BOUND_STD = "test_bound_hyp_std"
+    TEST_KL_BOUND_STD = "test_bound_kl_std"
+    TEST_MARCHAND_BOUND_STD = "test_bound_mrch_std"
+    TEST_KL_DISINTEGRATED_BOUND_STD = "test_bound_disintegrated_kl_std"
 
 
 def get_metric_name(set_type: SetType, metric_name: Metric) -> str:
