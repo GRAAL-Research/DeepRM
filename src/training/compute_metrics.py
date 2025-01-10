@@ -41,6 +41,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
         summed_support_losses_per_batch = []
         tot_acc = []
         for instances in data_loader:
+            instances = instances[0]
             n_datasets = len(instances)
             n_instance_per_dataset = len(instances[0])
             n_instances_per_class_per_dataset = n_instance_per_dataset // 2

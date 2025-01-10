@@ -18,7 +18,7 @@ class SimpleMetaNet(nn.Module):
         self.msg_type = config["msg_type"]
         self.msg_std = config["msg_std"]
         self.msg_size = config["msg_size"]
-        self.batch_size = config["batch_size"]
+        self.meta_batch_size = config["meta_batch_size"]
         self.device = config["device"]
         self.is_using_a_random_msg = config["is_using_a_random_msg"]
         self.is_in_test_mode = False
@@ -93,8 +93,8 @@ class SimpleMetaNet(nn.Module):
 
         raise ValueError(f"The number of noisy messages must be greater or equal to 0.")
 
-    def create_random_message(self, batch_size: int) -> torch.Tensor:
-        random_message = torch.rand((batch_size, self.msg_size))
+    def create_random_message(self, meta_batch_size: int) -> torch.Tensor:
+        random_message = torch.rand((meta_batch_size, self.msg_size))
         if self.device == "gpu":
             random_message = random_message.cuda()
         return random_message

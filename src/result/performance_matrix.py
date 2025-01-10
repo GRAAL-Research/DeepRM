@@ -67,7 +67,7 @@ def compute_acc(n_classes, idx, m, inputs, outputs, accs, are_test_classes_share
 
 
 def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, dataset, classes_name, idx, n_datasets,
-                            is_using_wandb, wandb, batch_size, are_test_classes_shared_with_train, device):
+                            is_using_wandb, wandb, meta_batch_size, are_test_classes_shared_with_train, device):
     """
     Builds a visual depiction of the decision boundary of the predictor for tackling a given problem.
     Args:
@@ -95,9 +95,9 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         outputs = torch.zeros((n_datasets, m))
         if str(device) == "gpu":
             inputs, meta_pred, outputs = inputs.cuda(), meta_pred.cuda(), outputs.cuda()
-        for i in range(math.ceil(len(inputs) / batch_size)):
-            first = i * batch_size
-            last = min((i + 1) * batch_size, len(inputs))
+        for i in range(math.ceil(len(inputs) / meta_batch_size)):
+            first = i * meta_batch_size
+            last = min((i + 1) * meta_batch_size, len(inputs))
             meta_output = meta_pred.forward(inputs[first:last, :m])
             pred.set_params(meta_output)
             _, output = pred.forward(inputs[first:last, m:])
@@ -111,7 +111,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         plt.clf()
         if dataset_name == "mnist":
             fig, ax = plt.subplots()
-        elif dataset_name == "cifar100_binary":
+        elif dataset_name == "cifar100":
             fig, ax = plt.subplots(figsize=(40, 40))
         im = ax.imshow(np.transpose(accs), cmap="Greys")
 
@@ -124,7 +124,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
 
         # Loop over data dimensions and create text annotations.
         tr_in_legend, vd_in_legend, te_in_legend = False, False, False
-        linewidth = 5 * (dataset_name == "cifar100_binary") + 2 * (dataset_name == "mnist")
+        linewidth = 5 * (dataset_name == "cifar100") + 2 * (dataset_name == "mnist")
         min_accs = np.min(accs)
         for i in range(len(classes_name)):
             for j in range(len(classes_name)):

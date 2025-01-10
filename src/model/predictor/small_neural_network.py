@@ -58,7 +58,7 @@ class FCNet(Predictor):
 
     def forward(self, instances: torch.Tensor) -> tuple:
         x = instances[:, :, :-self.target_size]
-        batch_size = len(x)
+        meta_batch_size = len(x)
 
         if not self.use_last_values:
             self.batch_norm_params = []
@@ -72,7 +72,7 @@ class FCNet(Predictor):
                 new_linear_layer_dim = self.architecture_sizes[linear_layer_idx + 1]
 
                 params_high_idx += current_linear_layer_dim * new_linear_layer_dim
-                weights = self.params[:, params_low_idx: params_high_idx].reshape(batch_size,
+                weights = self.params[:, params_low_idx: params_high_idx].reshape(meta_batch_size,
                                                                                   new_linear_layer_dim,
                                                                                   current_linear_layer_dim)
 
@@ -101,10 +101,10 @@ class FCNet(Predictor):
 
 def get_size_of_conv_output(input_shape, conv_func):
     # generate dummy input sample and forward to get shape after conv layers
-    batch_size = 1
-    input = Variable(torch.rand(batch_size, *input_shape))
+    meta_batch_size = 1
+    input = Variable(torch.rand(meta_batch_size, *input_shape))
     output_feat = conv_func(input)
-    conv_out_size = output_feat.data.view(batch_size, -1).size(1)
+    conv_out_size = output_feat.data.view(meta_batch_size, -1).size(1)
     return conv_out_size
 
 
@@ -175,7 +175,7 @@ class ConvNet(Predictor):
     def forward(self, instances: torch.Tensor) -> tuple:
         x = instances[:, :, :-self.target_size]
         x = x.reshape([x.shape[0], x.shape[1]]+self.input_shape)
-        batch_size = len(x)
+        meta_batch_size = len(x)
         if not self.use_last_values:
             self.batch_norm_params = []
 
@@ -201,7 +201,7 @@ class ConvNet(Predictor):
                 current_linear_layer_dim = self.architecture_sizes[linear_layer_idx]
                 new_linear_layer_dim = self.architecture_sizes[linear_layer_idx + 1]
                 params_high_idx += current_linear_layer_dim * new_linear_layer_dim
-                weights = self.params[:, params_low_idx: params_high_idx].reshape(batch_size,
+                weights = self.params[:, params_low_idx: params_high_idx].reshape(meta_batch_size,
                                                                                   new_linear_layer_dim,
                                                                                   current_linear_layer_dim)
 

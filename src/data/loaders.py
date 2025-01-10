@@ -1,6 +1,5 @@
 import math
-import itertools as it
-from os.path import split
+import torch
 
 import numpy as np
 from torch.utils.data import Subset, DataLoader
@@ -59,7 +58,7 @@ def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[flo
     return train_idx, valid_idx, test_idx
 
 
-def create_data_loader(dataset: str, type: str, datasets: np.ndarray, batch_size: int, indices: np.ndarray) -> DataLoader:
+def create_data_loader(dataset: str, type: str, datasets: np.ndarray, meta_batch_size: int, indices: np.ndarray) -> DataLoader:
     if dataset == 'cifar100':
         if type in ['train', 'valid']:
             datasets = datasets[:, list(range(0, 500)) + list(range(600, 1100))]
@@ -71,7 +70,7 @@ def create_data_loader(dataset: str, type: str, datasets: np.ndarray, batch_size
             np.random.shuffle(idx)
             datasets[i] = datasets[i, idx]
     subset = Subset(datasets, indices)
-    return DataLoader(subset, batch_size=batch_size, shuffle=True)
+    return DataLoader(subset, batch_size=meta_batch_size, shuffle=True, collate_fn=collate_fn_padd)
 
 
 def compute_variances(datasets: np.ndarray, train_idx,
