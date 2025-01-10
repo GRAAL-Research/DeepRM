@@ -8,6 +8,6 @@ splits: [0.55, 0.20, 0.25]
 shuffle_each_dataset_samples: True
 
 n_dataset: 90
-n_instances_per_dataset: 1000
+n_instances_per_dataset: 14000
 input_shape: [1, 28, 28]
 n_features: 784

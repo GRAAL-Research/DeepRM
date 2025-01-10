@@ -23,7 +23,7 @@ def load_mnist(config: dict) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config)
 
     if expected_datasets_cache_path.exists():
-        return np.load(expected_datasets_cache_path)
+        return np.load(expected_datasets_cache_path, allow_pickle=True)
 
     return create_and_store_mnist_datasets(config)
 
@@ -39,8 +39,8 @@ def create_datasets_cache_path(config: dict) -> Path:
 
 
 def create_and_store_mnist_datasets(config: dict) -> np.ndarray:
-    dataset = obtain_mnist_dataset(config)
-    datasets = create_mnist_binary_datasets(config, dataset)
+    train, test = obtain_mnist_dataset(config)
+    datasets = create_mnist_binary_datasets(config, train, test)
     store_mnist_datasets(config, datasets)
 
     return datasets
@@ -51,7 +51,7 @@ def store_mnist_datasets(config: dict, datasets: np.ndarray) -> None:
     np.save(create_datasets_cache_path(config), datasets)
 
 
-def create_mnist_binary_datasets(config: dict, dataset) -> np.ndarray:
+def create_mnist_binary_datasets(config: dict, train, test) -> np.ndarray:
     max_digits = 10
     maximum_of_datasets = max_digits * (max_digits - 1)
     assertion_msg = f"Given {max_digits} digits, we can't create more than {maximum_of_datasets} MNIST binary datasets."
@@ -62,40 +62,50 @@ def create_mnist_binary_datasets(config: dict, dataset) -> np.ndarray:
     n_digits = int(n_digits)
     assert config["n_instances_per_dataset"] % 2 == 0, "The number of instances per dataset must be even."
 
-    binary_datasets = np.zeros(
-        (config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] + config["target_size"]))
+    binary_datasets = []
 
-    n_instance_per_class_per_dataset = config["n_instances_per_dataset"] // 2
     binary_dataset_idx = 0
     target_starting_idx = -config["target_size"]
 
     for first_class in range(n_digits):
         for second_class in range(n_digits):
-            if binary_dataset_idx == config["n_dataset"]:
+            if len(binary_datasets) == config["n_dataset"]:
                 break
             if first_class == second_class:
                 continue
 
-            idx = np.arange(len(dataset))
+            idx = np.arange(len(train))
             np.random.shuffle(idx)
-            dataset = dataset[idx]
-            first_class_filter = dataset[:, target_starting_idx] == first_class
-            first_class_x = dataset[first_class_filter, :target_starting_idx]
+            train = train[idx]
 
-            second_class_filter = dataset[:, target_starting_idx] == second_class
-            second_class_x = dataset[second_class_filter, :target_starting_idx]
+            idx = np.arange(len(test))
+            np.random.shuffle(idx)
+            test = test[idx]
 
-            x = torch.vstack((first_class_x[:n_instance_per_class_per_dataset],
-                              second_class_x[:n_instance_per_class_per_dataset]))
-            y = torch.ones((config["n_instances_per_dataset"], 1))
-            y[:n_instance_per_class_per_dataset] -= 2
+            if first_class in [0,1] or second_class in [0,1]:
+                first_class_filter = test[:, target_starting_idx] == first_class
+                first_class_x = test[first_class_filter, :target_starting_idx]
+
+                second_class_filter = test[:, target_starting_idx] == second_class
+                second_class_x = test[second_class_filter, :target_starting_idx]
+            else:
+                first_class_filter = train[:, target_starting_idx] == first_class
+                first_class_x = train[first_class_filter, :target_starting_idx]
+
+                second_class_filter = train[:, target_starting_idx] == second_class
+                second_class_x = train[second_class_filter, :target_starting_idx]
+
+            x = torch.vstack((first_class_x[:int(config["n_instances_per_dataset"] / 2)],
+                              second_class_x[:int(config["n_instances_per_dataset"] / 2)]))
+            y = torch.ones((len(x), 1))
+            y[:min(len(first_class_x), int(config["n_instances_per_dataset"] / 2))] -= 2
 
             binary_dataset = torch.hstack((x, y))
             if config["shuffle_each_dataset_samples"]:
-                random_indices = torch.randperm(config["n_instances_per_dataset"])
+                random_indices = torch.randperm(len(x))
                 binary_dataset = binary_dataset[random_indices]
 
-            binary_datasets[binary_dataset_idx] = binary_dataset
+            binary_datasets.append(binary_dataset)
             binary_dataset_idx += 1
 
         if binary_dataset_idx == config["n_dataset"]:
@@ -108,7 +118,7 @@ def obtain_mnist_dataset(config: dict) -> torch.Tensor:
     train_set = create_train_set(config)
     test_set = create_test_set(config)
 
-    return torch.vstack((train_set, test_set))
+    return train_set, test_set
 
 
 def create_train_set(config: dict) -> torch.Tensor:

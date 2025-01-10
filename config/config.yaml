@@ -1,4 +1,4 @@
-dataset_config_path: dataset/mnist_multi.yaml
+dataset_config_path: dataset/mnist.yaml
 log_config_path: log/on.yaml
 training_config_path: training/gpu.yaml
 compute_prior: False
@@ -36,7 +36,7 @@ attention_pooling_type: kme
 module_1_dim: [100]
 module_2_dim: [100]
 meta_pred: simple_net
-predictor: ConvNet
+predictor: FCNet
 pred_filter_sizes: [10, 20]
 pred_hidden_sizes: [10]
 

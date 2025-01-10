@@ -1,4 +1,4 @@
-project_name: [testing_mnist_2]
+project_name: [mnist_2]
 run_name_content: [[lr, module_1_dim, msg_type, msg_size, compression_set_size, pred_hidden_sizes, seed, msg_std]]
 
 batch_size: [100000]
@@ -7,19 +7,19 @@ lr: [1e-3]
 seed: [0]
 
 data_encoder_name: [kme]
-n_pixels_to_permute: [300]
+n_pixels_to_permute: [0]
 
 module_1_dim: [[500, 500]]
 module_2_dim: [[500, 500]]
-kme_dim: [[500, 10]]
+kme_dim: [[500, 500]]
 attention_dim: [[200]]
 
 msg_penalty: [l2]
 msg_penalty_coef: [0]
 
-msg_type: [cnt]
+msg_type: [dsc, cnt]
 msg_std: [1]
-msg_size: [2]
-compression_set_size: [0]
+msg_size: [0, 1, 2, 4, 8, 16, 32]
+compression_set_size: [0, 1, 2, 4, 6, 8, 12]
 pred_filter_sizes: [[10, 20]]
 pred_hidden_sizes: [[200, 200]]
