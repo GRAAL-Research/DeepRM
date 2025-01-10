@@ -15,14 +15,12 @@ def linear_loss(output, targets):
         if torch.sum(targets == 1) > 0:
             tot_i = torch.mean(((output[i, targets[i] == 1] * targets[i, targets[i] == 1]) + 1) / 4)
         else:
-            print(targets)
-            tot_i = torch.tensor(0.5)
+            tot_i = 0.5
             print("This batch contains only examples from a single class.")
         if torch.sum(targets == -1) > 0:
             tot_i += torch.mean(((output[i, targets[i] == -1] * targets[i, targets[i] == -1]) + 1) / 4)
         else:
-            print(targets)
-            tot_i += torch.tensor(0.5)
+            tot_i += 0.5
             print("This batch contains only examples from a single class.")
         tot.append(tot_i.item())
     return torch.tensor(tot)
