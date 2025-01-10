@@ -75,9 +75,17 @@ def create_data_loader(dataset: str, type: str, datasets: np.ndarray, meta_batch
 
 def compute_variances(datasets: np.ndarray, train_idx,
                       valid_idx, test_idx) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    train_var = np.var((datasets[train_idx, int(datasets.shape[1] / 2):, -1] + 1) / 2)
-    valid_var = np.var((datasets[valid_idx, int(datasets.shape[1] / 2):, -1] + 1) / 2)
-    test_var = np.var((datasets[test_idx, int(datasets.shape[1] / 2):, -1] + 1) / 2)
+    train_labels, valid_labels, test_labels = [], [], []
+    for i in range(len(datasets)):
+        if i in train_idx:
+            train_labels.append(datasets[i][:, -1])
+        elif i in valid_idx:
+            valid_labels.append(datasets[i][:, -1])
+        elif i in test_idx:
+            test_labels.append(datasets[i][:, -1])
+    train_var = torch.var(torch.hstack(train_labels)).item()
+    valid_var = torch.var(torch.hstack(valid_labels)).item()
+    test_var = torch.var(torch.hstack(test_labels)).item()
 
     return train_var, valid_var, test_var
 
@@ -88,3 +96,21 @@ def extract_class(num_classes: int, current_class: int) -> list:
     for i in range(1, num_classes - current_class):
         data_number.append(starting_point + (num_classes - 1) * i)
     return data_number
+
+
+def collate_fn_padd(batch):
+    '''
+    Padds batch of variable length
+
+    note: it converts things ToTensor manually here since the ToTensor transform
+    assume it takes in images rather than arbitrary tensors.
+    '''
+    device = "cuda:0"
+    ## get sequence lengths
+    lengths = torch.tensor([ t.shape[0] for t in batch ]).to(device)
+    ## padd
+    batch = [ torch.Tensor(t).to(device) for t in batch ]
+    batch = torch.nn.utils.rnn.pad_sequence(batch)
+    ## compute mask
+    mask = (batch != 0).to(device)
+    return torch.transpose(batch, 0, 1), lengths, mask
