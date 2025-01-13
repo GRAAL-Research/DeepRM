@@ -4,10 +4,10 @@ task: classification
 target_size: 1
 criterion: bce_loss
 is_dataset_balanced: True
-splits: [0.55, 0.20, 0.25]
+splits: [0.46, 0.16, 0.38]
 shuffle_each_dataset_samples: True
 
 n_dataset: 90
-n_instances_per_dataset: 14000
+n_instances_per_dataset: 2000
 input_shape: [1, 28, 28]
 n_features: 784

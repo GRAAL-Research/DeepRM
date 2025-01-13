@@ -1,4 +1,4 @@
-project_name: [mnist_2]
+project_name: [test]
 run_name_content: [[lr, module_1_dim, msg_type, msg_size, compression_set_size, pred_hidden_sizes, seed, msg_std]]
 
 batch_size: [100000]

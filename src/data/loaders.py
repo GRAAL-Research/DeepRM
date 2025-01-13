@@ -58,17 +58,7 @@ def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[flo
     return train_idx, valid_idx, test_idx
 
 
-def create_data_loader(dataset: str, type: str, datasets: np.ndarray, meta_batch_size: int, indices: np.ndarray) -> DataLoader:
-    if dataset == 'cifar100':
-        if type in ['train', 'valid']:
-            datasets = datasets[:, list(range(0, 500)) + list(range(600, 1100))]
-            idx = list(range(1000))
-        elif type == 'test':
-            datasets = datasets[:, list(range(500, 600)) + list(range(1100, 1200))]
-            idx = list(range(200))
-        for i in range(len(datasets)):
-            np.random.shuffle(idx)
-            datasets[i] = datasets[i, idx]
+def create_data_loader(datasets: np.ndarray, meta_batch_size: int, indices: np.ndarray) -> DataLoader:
     subset = Subset(datasets, indices)
     return DataLoader(subset, batch_size=meta_batch_size, shuffle=True, collate_fn=collate_fn_padd)
 

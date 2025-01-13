@@ -1,9 +1,11 @@
 import math
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import torch
 import torchvision
+from torch import Tensor
 from torchvision import transforms as transforms
 from torchvision.datasets.mnist import MNIST
 from torchvision.transforms import ToTensor
@@ -19,7 +21,7 @@ MNIST_CACHE_BASE_PATH = MNIST_BASE_PATH / "cache"
 NUMPY_FILE_EXTENSION = ".npy"
 
 
-def load_mnist(config: dict) -> np.ndarray:
+def load_mnist(config: dict) -> list[Any]:
     expected_datasets_cache_path = create_datasets_cache_path(config)
 
     if expected_datasets_cache_path.exists():
@@ -38,7 +40,7 @@ def create_datasets_cache_path(config: dict) -> Path:
     return MNIST_CACHE_BASE_PATH / ("-".join(file_name) + NUMPY_FILE_EXTENSION)
 
 
-def create_and_store_mnist_datasets(config: dict) -> np.ndarray:
+def create_and_store_mnist_datasets(config: dict) -> list[Any]:
     train, test = obtain_mnist_dataset(config)
     datasets = create_mnist_binary_datasets(config, train, test)
     store_mnist_datasets(config, datasets)
@@ -51,7 +53,7 @@ def store_mnist_datasets(config: dict, datasets: np.ndarray) -> None:
     np.save(create_datasets_cache_path(config), datasets)
 
 
-def create_mnist_binary_datasets(config: dict, train, test) -> np.ndarray:
+def create_mnist_binary_datasets(config: dict, train, test) -> list[Tensor | Any]:
     max_digits = 10
     maximum_of_datasets = max_digits * (max_digits - 1)
     assertion_msg = f"Given {max_digits} digits, we can't create more than {maximum_of_datasets} MNIST binary datasets."
@@ -82,18 +84,18 @@ def create_mnist_binary_datasets(config: dict, train, test) -> np.ndarray:
             np.random.shuffle(idx)
             test = test[idx]
 
-            if first_class in [0,1] or second_class in [0,1]:
-                first_class_filter = test[:, target_starting_idx] == first_class
-                first_class_x = test[first_class_filter, :target_starting_idx]
-
-                second_class_filter = test[:, target_starting_idx] == second_class
-                second_class_x = test[second_class_filter, :target_starting_idx]
-            else:
+            if first_class not in [0,1] and second_class not in [0,1]:
                 first_class_filter = train[:, target_starting_idx] == first_class
                 first_class_x = train[first_class_filter, :target_starting_idx]
 
                 second_class_filter = train[:, target_starting_idx] == second_class
                 second_class_x = train[second_class_filter, :target_starting_idx]
+            else:
+                first_class_filter = test[:, target_starting_idx] == first_class
+                first_class_x = test[first_class_filter, :target_starting_idx]
+
+                second_class_filter = test[:, target_starting_idx] == second_class
+                second_class_x = test[second_class_filter, :target_starting_idx]
 
             x = torch.vstack((first_class_x[:int(config["n_instances_per_dataset"] / 2)],
                               second_class_x[:int(config["n_instances_per_dataset"] / 2)]))
@@ -114,7 +116,7 @@ def create_mnist_binary_datasets(config: dict, train, test) -> np.ndarray:
     return binary_datasets
 
 
-def obtain_mnist_dataset(config: dict) -> torch.Tensor:
+def obtain_mnist_dataset(config: dict) -> tuple[Tensor, Tensor]:
     train_set = create_train_set(config)
     test_set = create_test_set(config)
 
