@@ -1,4 +1,5 @@
 import torch
+from click.core import batch
 from torch import nn
 from torch.utils.data import DataLoader
 from src.model.predictor.predictor import Predictor
@@ -8,9 +9,9 @@ from src.training.compute_loss import compute_loss
 
 def launch_epoch_training(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor, train_loader: DataLoader,
                           criterion: nn.Module, optimizer: torch.optim.Optimizer) -> Predictor:
-    n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
     meta_predictor.train()
-    batch_size = config["batch_size"]
+    batch_size = config["batch_size"] if config["batch_size"] > 0 else config["n_instances_per_dataset"] + 1
+    n_instances_per_class_per_dataset = batch_size // 2
     with (torch.enable_grad()):
         for meta_instances in train_loader:
             meta_instances = meta_instances[0]
