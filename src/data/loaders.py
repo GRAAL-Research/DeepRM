@@ -32,11 +32,10 @@ def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[flo
         return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
 
     if not are_test_classes_shared_with_train and dataset == "cifar100":
-        np.random.seed(0)
-        used_idx = np.array(range(len(datasets)))
+        used_idx = np.array(range(100))
         np.random.shuffle(used_idx)
         split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * 100)
-        return np.array(used_idx[:split_1]), np.array(used_idx[split_1:100]), np.array(used_idx[100:150])
+        return np.array(used_idx[:split_1]), np.array(used_idx[split_1:]), np.array(range(100, 150))
 
     if is_shuffling and dataset != "mnist_multi":
         np.random.seed(seed)
