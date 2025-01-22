@@ -56,9 +56,13 @@ class SimpleMetaNet(nn.Module):
         if self.msg_type is not None and self.msg_size > 0:
             mod_2_input_dim += self.module_1_dim[-1]
 
+        if self.compression_set_size + self.msg_size == 0:
+            mod_2_input_dim = 1
+
         return mod_2_input_dim
 
     def forward(self, x: torch.Tensor, n_noisy_messages: int = 0, is_in_test_mode: bool = False) -> torch.Tensor:
+        curr_batch_size = x.shape[0]
         self.is_in_test_mode = is_in_test_mode
         msg_module_output = None
         compression_module_output = None
@@ -70,7 +74,7 @@ class SimpleMetaNet(nn.Module):
             msg_module_output = self.forward_msg_module(x, compression_module_output, n_noisy_messages)
             self.msg = msg_module_output.clone()
 
-        return self.forward_module_2(msg_module_output, compression_module_output)
+        return self.forward_module_2(msg_module_output, compression_module_output, curr_batch_size)
 
     def forward_msg_module(self, x: torch.Tensor, compression_module_output: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:
         if self.is_using_a_random_msg:
@@ -120,20 +124,24 @@ class SimpleMetaNet(nn.Module):
         return x_masked
 
     def forward_module_2(self, msg_module_output: torch.Tensor = None,
-                         compression_module_output: torch.Tensor = None) -> torch.Tensor:
+                         compression_module_output: torch.Tensor = None, curr_batch_size: int = 0) -> torch.Tensor:
 
         if msg_module_output is not None and compression_module_output is not None:
             merged_msg_and_compression_output = torch.cat((msg_module_output, compression_module_output),
                                                           dim=msg_module_output.ndim - 1)
             return self.module_2.forward(merged_msg_and_compression_output)
 
-        if msg_module_output is not None:
+        elif msg_module_output is not None:
             return self.module_2.forward(msg_module_output)
 
-        if compression_module_output is not None:
+        elif compression_module_output is not None:
             return self.module_2.forward(compression_module_output)
 
-        raise ValueError(f"The message module and the compression module are both disabled.")
+        else:
+            if self.device == 'gpu':
+                return self.module_2.forward(torch.zeros((curr_batch_size, 1)).cuda())
+            else:
+                return self.module_2.forward(torch.zeros((curr_batch_size, 1)))
 
     def compute_compression_set(self, x: torch.Tensor) -> None:
         """

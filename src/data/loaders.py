@@ -65,6 +65,8 @@ def create_data_loader(datasets: np.ndarray, meta_batch_size: int, indices: np.n
 def compute_variances(datasets: np.ndarray, train_idx,
                       valid_idx, test_idx) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     train_labels, valid_labels, test_labels = [], [], []
+    if type(datasets[0]) is np.ndarray:
+        datasets = torch.tensor(datasets)
     for i in range(len(datasets)):
         if i in train_idx:
             train_labels.append(datasets[i][:, -1])
