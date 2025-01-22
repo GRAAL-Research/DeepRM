@@ -85,10 +85,10 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
                 if are_bounds_computed:
                     for dataset_idx in range(len(instances)):
                         bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand", "kl_dis"], meta_predictor, predictor,
-                                                n_instance_per_dataset,
-                                                n_instance_per_dataset - (support_acc[dataset_idx].item() + query_acc[dataset_idx].item()), 0.10, 0, 1,
-                                                instances[[dataset_idx], n_instances_per_class_per_dataset:],
-                                                targets[[dataset_idx], n_instances_per_class_per_dataset:],
+                                                n_instances_per_class_per_dataset,
+                                                n_instances_per_class_per_dataset - support_acc[dataset_idx].item(), 0.10, 0, 1,
+                                                instances[[dataset_idx], :n_instances_per_class_per_dataset],
+                                                targets[[dataset_idx], :n_instances_per_class_per_dataset],
                                                 config["msg_size"], config["msg_type"], config["compression_set_size"])
                         linear_bounds.append(bounds[0])
                         hyperparam_bounds.append(bounds[1])
