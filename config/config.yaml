@@ -1,5 +1,5 @@
-dataset_config_path: dataset/mnist.yaml
-log_config_path: log/off.yaml
+dataset_config_path: dataset/cifar100.yaml
+log_config_path: log/on.yaml
 training_config_path: training/gpu.yaml
 compute_prior: False
 max_prior_epoch: 40
@@ -27,6 +27,7 @@ tfm_mlp_dim: 51
 tfm_n_encoders: 1
 tfm_drop_out: 0
 tfm_output_dim: 10
+is_concatenating_target_in_image_encoder: True
 
 compression_set_size: 0
 attention_dim: [10]

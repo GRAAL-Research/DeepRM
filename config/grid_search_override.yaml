@@ -1,12 +1,14 @@
-project_name: [test]
-run_name_content: [[lr, module_1_dim, msg_type, msg_size, compression_set_size, pred_hidden_sizes, seed, msg_std]]
+project_name: [image_encoder_on_cifar100]
+run_name_content: [[lr, msg_type, msg_size, compression_set_size, is_concatenating_target_in_image_encoder]]
 
 batch_size: [0]
-meta_batch_size: [10]
-lr: [1e-3]
-seed: [0]
+meta_batch_size: [20]
+lr: [1e-2, 1e-3, 1e-4]
+seed: [1234]
 
 data_encoder_name: [image_encoder]
+is_concatenating_target_in_image_encoder: [True, False]
+
 n_pixels_to_permute: [0]
 
 module_1_dim: [[500, 500]]
@@ -19,7 +21,7 @@ msg_penalty_coef: [0]
 
 msg_type: [dsc, cnt]
 msg_std: [1]
-msg_size: [0, 1, 2, 4, 8, 16, 32]
-compression_set_size: [0, 1, 2, 4, 6, 8, 12]
+msg_size: [0, 4, 32]
+compression_set_size: [0, 4, 12]
 pred_filter_sizes: [[10, 20]]
 pred_hidden_sizes: [[200, 200]]

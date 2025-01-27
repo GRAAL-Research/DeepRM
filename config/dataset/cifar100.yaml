@@ -9,5 +9,5 @@ shuffle_each_dataset_samples: True
 
 n_dataset: 150
 n_instances_per_dataset: 100
-input_shape: [3, 15, 15]  # [3, 32, 32], [3, 15, 15]
-n_features: 675  # 3072, 675
+input_shape: [3, 32, 32]  # [3, 32, 32], [3, 15, 15]
+n_features: 3072  # 3072, 675
