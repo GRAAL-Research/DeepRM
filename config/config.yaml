@@ -1,5 +1,5 @@
 dataset_config_path: dataset/mnist.yaml
-log_config_path: log/on.yaml
+log_config_path: log/off.yaml
 training_config_path: training/gpu.yaml
 compute_prior: False
 max_prior_epoch: 40
@@ -17,7 +17,7 @@ msg_penalty: l2
 msg_penalty_coef: 0
 is_using_a_random_msg: False
 
-data_encoder_name: kme
+data_encoder_name: image_encoder
 kme_dim: [100]
 fs_pool_dim: [100]
 conv_one_by_one_n_filters: 3

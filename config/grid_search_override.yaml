@@ -6,7 +6,7 @@ meta_batch_size: [20]
 lr: [1e-3]
 seed: [0]
 
-data_encoder_name: [kme]
+data_encoder_name: [image_encoder]
 n_pixels_to_permute: [0]
 
 module_1_dim: [[500, 500]]
