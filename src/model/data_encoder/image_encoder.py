@@ -61,4 +61,8 @@ class ImageEncoder(DataEncoder):
         return torch.cat(meta_batch_outputs, dim=0)
 
     def get_output_dimension(self) -> int:
-        return self.model.config.hidden_size + self.target_size
+        if self.is_concatenating_target:
+            return self.model.config.hidden_size + self.target_size
+        else:
+            return self.model.config.hidden_size
+

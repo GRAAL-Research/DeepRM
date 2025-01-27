@@ -1,5 +1,5 @@
 dataset_config_path: dataset/cifar100.yaml
-log_config_path: log/on.yaml
+log_config_path: log/off.yaml
 training_config_path: training/gpu.yaml
 compute_prior: False
 max_prior_epoch: 40
