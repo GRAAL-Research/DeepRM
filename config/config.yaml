@@ -5,7 +5,7 @@ compute_prior: False
 max_prior_epoch: 40
 posterior_handicap: 0.1
 
-is_bound_computed: True
+is_bound_computed: False  # TODO : enable bound
 bound_computation_epoch_frequency: 10
 are_test_classes_shared_with_train: False
 is_media_computed: True
