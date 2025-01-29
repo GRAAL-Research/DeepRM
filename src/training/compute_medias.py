@@ -12,7 +12,7 @@ def compute_medias(config: dict, meta_predictor: SimpleMetaNet, test_loader: Dat
                    train_idx: np.ndarray, valid_idx: np.ndarray, test_idx: np.ndarray, datasets: np.ndarray,
                    classes_name) -> None:
     if config["n_features"] == 2 and config["is_using_wandb"]:
-        show_decision_boundaries(meta_predictor, config["dataset"], test_loader, predictor, wandb, config["device"])
+        show_decision_boundaries(config, meta_predictor, config["dataset"], test_loader, predictor, wandb, config["device"])
 
     if config["dataset"] in ["mnist", "cifar100"]:
         idx = [train_idx, valid_idx, test_idx]
