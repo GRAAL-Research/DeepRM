@@ -15,6 +15,7 @@ class SimpleMetaNet(nn.Module):
         """
         super().__init__()
         self.compression_set_size = config["compression_set_size"]
+        self.compression_pool_size = config["compression_pool_size"]
         self.msg_type = config["msg_type"]
         self.msg_std = config["msg_std"]
         self.msg_size = config["msg_size"]
@@ -112,6 +113,9 @@ class SimpleMetaNet(nn.Module):
             out = self.cas[j].forward(x.clone())
             mask = torch.hstack((mask, out))
         if self.is_in_test_mode:
+            if self.compression_pool_size is not None:
+                max_dim = mask.shape[2]
+                mask[:, :, min(self.compression_pool_size, max_dim):] = 0
             mask = F.one_hot(torch.argmax(mask, dim=2, keepdim=False), num_classes=mask.shape[2]).type(torch.float)
         x_masked = mask.matmul(x.clone())
         x_masked = self.kme_2.forward(x_masked)
