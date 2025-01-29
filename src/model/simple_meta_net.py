@@ -115,8 +115,7 @@ class SimpleMetaNet(nn.Module):
         if self.is_in_test_mode:
             if self.compression_pool_size is not None:
                 max_dim = mask.shape[2]
-                mask = torch.cat((mask[:, :, min(self.compression_pool_size, max_dim)],
-                                  torch.zeros((mask.shape[0], mask.shape[1], max(0, max_dim - self.compression_pool_size)))))
+                mask[:, :, min(self.compression_pool_size, max_dim):] = 0
             mask = F.one_hot(torch.argmax(mask, dim=2, keepdim=False), num_classes=mask.shape[2]).type(torch.float)
         x_masked = mask.matmul(x.clone())
         x_masked = self.kme_2.forward(x_masked)
