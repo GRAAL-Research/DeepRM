@@ -11,3 +11,5 @@ n_dataset: 90
 n_instances_per_dataset: 100
 input_shape: [1, 28, 28]
 n_features: 121
+
+is_encoding_image: True

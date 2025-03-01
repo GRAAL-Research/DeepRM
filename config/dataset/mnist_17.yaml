@@ -11,6 +11,9 @@ n_pixels_to_permute: 200
 n_dataset: 320
 n_instances_per_dataset: 2000
 n_features: 784
+
+is_encoding_image: True
+
 #splits: [0.8375, 0.10, 0.0625]
 #shuffle_each_dataset_samples: True
 #n_pixels_to_permute: 100

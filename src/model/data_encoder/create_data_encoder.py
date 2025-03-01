@@ -5,6 +5,7 @@ from src.model.data_encoder.fspool import FSPool
 from src.model.data_encoder.image_encoder import ImageEncoder
 from src.model.data_encoder.kme import KME
 from src.model.data_encoder.customer_transformer_encoder import  CustomTransformerEncoder
+from src.model.data_encoder.pass_through_encoder import PassThroughVitEncoder
 
 
 def create_data_compressor_1(config: dict) -> DataEncoder:
@@ -27,7 +28,7 @@ def create_data_compressor_1(config: dict) -> DataEncoder:
     if data_encoder_name.lower() == "transformer":
         return CustomTransformerEncoder(config)
 
-    if data_encoder_name.lower() == "image_encoder":
-        return ImageEncoder(config)
+    if data_encoder_name.lower() == "pass_through_vit_encoder":
+        return PassThroughVitEncoder()
 
     raise NotImplementedError(f"'{data_encoder_name}' is not supported.")

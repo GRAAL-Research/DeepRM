@@ -9,10 +9,10 @@ from torchvision import transforms as transforms
 from torchvision.datasets.cifar import CIFAR100
 from torchvision.transforms import ToTensor
 from torchvision.transforms.functional import to_pil_image
-import itertools as it
 from tqdm import tqdm
 
 from src.config.utils import load_yaml_file_content, CONFIG_BASE_PATH
+from src.data.image_preprocessor import ImagePreprocessor
 
 DATA_BASE_PATH = Path("dataset")
 CIFAR100_BASE_PATH = DATA_BASE_PATH / "CIFAR100"
@@ -44,6 +44,7 @@ def create_datasets_cache_path(config: dict) -> Path:
 
 def create_and_store_cifar100_datasets(config: dict) -> list[Any]:
     train, test = obtain_cifar100_dataset(config)
+
     datasets = create_cifar100_binary_datasets(config, train, test)
     store_cifar100_datasets(config, datasets)
 
@@ -126,9 +127,16 @@ def create_train_set(config: dict) -> torch.Tensor:
     train_set = apply_transforms_to_dataset(config, train_set)
     n_instances_in_cifar100_train_set = train_set.data.shape[0]
 
-    return torch.hstack((torch.tensor(train_set.data.reshape((n_instances_in_cifar100_train_set, config["n_features"]))),
-                         torch.tensor(train_set.targets).reshape(n_instances_in_cifar100_train_set, -1)))
+    train_features = torch.tensor(train_set.data)
+    train_labels = torch.tensor(train_set.targets).reshape(n_instances_in_cifar100_train_set, -1)
 
+    if config["is_encoding_image"]:
+        image_preprocessor = ImagePreprocessor(config)
+        encoded_train_features = image_preprocessor(train_features)
+        return torch.hstack((encoded_train_features, train_labels))
+
+    reshaped_features = train_features.reshape((n_instances_in_cifar100_train_set, config["n_features"]))
+    return torch.hstack((reshaped_features, train_labels))
 
 def create_test_set(config: dict) -> torch.Tensor:
     test_set = torchvision.datasets.CIFAR100(root=str(CIFAR100_BASE_PATH), train=False, download=True)

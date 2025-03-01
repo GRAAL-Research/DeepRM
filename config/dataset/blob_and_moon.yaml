@@ -13,3 +13,5 @@ is_moon_identical: False
 n_dataset: 4000
 n_instances_per_dataset: 100
 n_features: 2
+
+is_encoding_image: False
