@@ -30,6 +30,7 @@ tfm_output_dim: 10
 is_concatenating_target_in_image_encoder: True
 
 compression_set_size: 0
+compression_pool_size: 50
 attention_dim: [10]
 attention_temperature: 20
 attention_pooling_type: kme

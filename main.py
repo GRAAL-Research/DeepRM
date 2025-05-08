@@ -15,9 +15,9 @@ def main(config_combinations: list[dict]) -> None:
     for run_idx, config in enumerate(config_combinations):
         logger.info(f"Launching run {run_idx + 1}/{n_runs} : {config}")
 
-        #if config["msg_size"] == 0 and config["compression_set_size"] == 0:
-        #    logger.info("Skipping the run... Opaque network.")
-        #    continue
+        if config["msg_size"] == 0 and config["compression_set_size"] == 0 and config["msg_type"] == 'cnt':
+            logger.info("Skipping the run... Opaque network.")
+            continue
         if config["msg_type"] == "dsc" and config["msg_penalty_coef"] > 0:
             logger.info("Skipping the run... It doesn't make sens to regularize discrete messages.")
             continue
