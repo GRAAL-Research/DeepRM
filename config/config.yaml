@@ -1,11 +1,11 @@
-dataset_config_path: dataset/cifar100.yaml
-log_config_path: log/off.yaml
+dataset_config_path: dataset/mnist.yaml
+log_config_path: log/on.yaml
 training_config_path: training/gpu.yaml
 compute_prior: False
 max_prior_epoch: 40
 posterior_handicap: 0.1
 
-is_bound_computed: False  # TODO : enable bound
+is_bound_computed: True
 bound_computation_epoch_frequency: 10
 are_test_classes_shared_with_train: False
 is_media_computed: True
@@ -17,7 +17,7 @@ msg_penalty: l2
 msg_penalty_coef: 0
 is_using_a_random_msg: False
 
-data_encoder_name: image_encoder
+data_encoder_name: kme
 kme_dim: [100]
 fs_pool_dim: [100]
 conv_one_by_one_n_filters: 3
@@ -27,7 +27,6 @@ tfm_mlp_dim: 51
 tfm_n_encoders: 1
 tfm_drop_out: 0
 tfm_output_dim: 10
-is_concatenating_target_in_image_encoder: True
 
 compression_set_size: 0
 compression_pool_size: 50

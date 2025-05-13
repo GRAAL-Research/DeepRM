@@ -3,7 +3,7 @@ import torch
 from src.model.data_encoder.data_encoder import DataEncoder
 
 
-class PassThroughEncoder(DataEncoder):
+class PassThroughModule(DataEncoder):
 
     def __init__(self, config: dict) -> None:
         super().__init__()
