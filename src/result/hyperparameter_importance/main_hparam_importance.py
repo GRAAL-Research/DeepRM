@@ -14,7 +14,8 @@ if __name__ == '__main__':
     data = fetch_wandb_data(team, project)
     show_correlation_with_test_accuracy(data, figure_file_name)
 
-    hyperparameters = ["lr", "meta_batch_size", "msg_size", "tfm_input_dim", "tfm_n_heads", "tfm_mlp_dim", "tfm_n_encoders",
+    hyperparameters = ["lr", "meta_batch_size", "msg_size", "tfm_input_dim", "tfm_n_heads", "tfm_mlp_dim",
+                       "tfm_n_encoders",
                        "tfm_drop_out", "tfm_output_dim"]
     show_two_hparams_impact_on_test_accuracy(data, hyperparameters)
     show_gini_importance(data)
