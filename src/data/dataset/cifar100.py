@@ -14,7 +14,6 @@ from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
 
 from src.config.utils import load_yaml_file_content, CONFIG_BASE_PATH
-from src.data.image_preprocessor import ImagePreprocessor
 from src.data.utils import validate_n_features_for_images
 
 DATA_BASE_PATH = Path("dataset")
