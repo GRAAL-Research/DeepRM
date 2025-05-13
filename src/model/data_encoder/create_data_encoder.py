@@ -4,7 +4,7 @@ from src.model.data_encoder.customer_transformer_encoder import CustomTransforme
 from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.data_encoder.fspool import FSPool
 from src.model.data_encoder.kme import KME
-from src.model.data_encoder.pass_through_encoder import PassThroughModule
+from src.model.data_encoder.pass_through_encoder import PassThroughEncoder
 
 
 def create_data_compressor_1(config: dict) -> DataEncoder:
@@ -28,6 +28,6 @@ def create_data_compressor_1(config: dict) -> DataEncoder:
         return CustomTransformerEncoder(config)
 
     if data_encoder_name.lower() == "pass_through":
-        return PassThroughModule(config)
+        return PassThroughEncoder(config)
 
     raise NotImplementedError(f"'{data_encoder_name}' is not supported.")
