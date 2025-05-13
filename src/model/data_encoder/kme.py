@@ -1,6 +1,5 @@
 import torch
 
-from src.data.image_preprocessor import ImagePreprocessor
 from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.mlp import MLP
 
@@ -10,10 +9,7 @@ class KME(DataEncoder):
     def __init__(self, config: dict, hidden_dims: list[int]) -> None:
         super().__init__()
         self.output_dim = hidden_dims[-1]
-        input_size = config["n_features"]
-        if config["is_encoding_image"]:
-            input_size = ImagePreprocessor.OUTPUT_FEATURE_SIZE
-        self.mlp = MLP(input_size, hidden_dims, config["device"], config["has_skip_connection"],
+        self.mlp = MLP(config["n_features"], hidden_dims, config["device"], config["has_skip_connection"],
                        config["has_batch_norm"], config["batch_norm_min_dim"], config["init_scheme"])
         self.task = config["task"]
         self.target_size = config["target_size"]

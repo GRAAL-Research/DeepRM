@@ -28,7 +28,6 @@ class ImagePreprocessor(nn.Module):
                                                                      image_mean=IMAGE_CHANNELS_MEANS,
                                                                      image_std=IMAGE_CHANNELS_STDS)
         self.model = ViTModel.from_pretrained(model_name).to(self.device)
-        self.input_shape = config["input_shape"]
         self.n_features = config["n_features"]
 
     def forward(self, features: torch.tensor) -> torch.tensor:
@@ -41,11 +40,11 @@ class ImagePreprocessor(nn.Module):
 
         n_batches = features.shape[0]
         if n_batches > MAX_BATCH_SIZE:
-            return self._process_to_much_batches(features)
+            return self._process_too_much_batches(features)
 
         return self._process_batches(features)
 
-    def _process_to_much_batches(self, features: torch.tensor) -> torch.tensor:
+    def _process_too_much_batches(self, features: torch.tensor) -> torch.tensor:
         outputs = []
         n_batches = features.shape[0]
 

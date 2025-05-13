@@ -6,3 +6,4 @@ Deep Reconstruction Machine (DeepRM) [...].
 
 - Use Python 3.11
 - Install torch  2.5.1 from https://pytorch.org/get-started/locally/
+- Install the other requirements from the `requirements.txt`

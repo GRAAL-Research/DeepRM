@@ -1,7 +1,6 @@
-import math
 from pathlib import Path
-from typing import Any
 
+import math
 import numpy as np
 import torch
 import torchvision
@@ -13,6 +12,7 @@ from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
 
 from src.config.utils import load_yaml_file_content, CONFIG_BASE_PATH
+from src.data.utils import validate_n_features_for_images
 
 DATA_BASE_PATH = Path("dataset")
 MNIST_BASE_PATH = DATA_BASE_PATH / "MNIST"
@@ -21,7 +21,7 @@ MNIST_CACHE_BASE_PATH = MNIST_BASE_PATH / "cache"
 NUMPY_FILE_EXTENSION = ".npy"
 
 
-def load_mnist(config: dict) -> list[Any]:
+def load_mnist(config: dict) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config)
 
     if expected_datasets_cache_path.exists():
@@ -40,7 +40,7 @@ def create_datasets_cache_path(config: dict) -> Path:
     return MNIST_CACHE_BASE_PATH / ("-".join(file_name) + NUMPY_FILE_EXTENSION)
 
 
-def create_and_store_mnist_datasets(config: dict) -> list[Any]:
+def create_and_store_mnist_datasets(config: dict) -> np.ndarray:
     train, test = obtain_mnist_dataset(config)
     datasets = create_mnist_binary_datasets(config, train, test)
     store_mnist_datasets(config, datasets)
@@ -53,14 +53,13 @@ def store_mnist_datasets(config: dict, datasets: np.ndarray) -> None:
     np.save(create_datasets_cache_path(config), datasets)
 
 
-def create_mnist_binary_datasets(config: dict, train, test) -> list[Tensor | Any]:
+def create_mnist_binary_datasets(config: dict, train, test) -> np.ndarray:
     max_digits = 10
     maximum_of_datasets = max_digits * (max_digits - 1)
     assertion_msg = f"Given {max_digits} digits, we can't create more than {maximum_of_datasets} MNIST binary datasets."
     assert config["n_dataset"] <= maximum_of_datasets, assertion_msg
     n_digits = (1 + math.sqrt(1 + 4 * int(config["n_dataset"]))) / 2
-    assert n_digits.is_integer(), \
-        f"A round number of classes should be deduced from given number of datasets."
+    assert n_digits.is_integer(), f"A round number of classes should be deduced from given number of datasets."
     n_digits = int(n_digits)
     assert config["n_instances_per_dataset"] % 2 == 0, "The number of instances per dataset must be even."
 
@@ -84,7 +83,7 @@ def create_mnist_binary_datasets(config: dict, train, test) -> list[Tensor | Any
             np.random.shuffle(idx)
             test = test[idx]
 
-            if first_class not in [0,1] and second_class not in [0,1]:
+            if first_class not in [0, 1] and second_class not in [0, 1]:
                 first_class_filter = train[:, target_starting_idx] == first_class
                 first_class_x = train[first_class_filter, :target_starting_idx]
 
@@ -113,7 +112,7 @@ def create_mnist_binary_datasets(config: dict, train, test) -> list[Tensor | Any
         if binary_dataset_idx == config["n_dataset"]:
             break
 
-    return binary_datasets
+    return np.stack([tensor.detach().cpu().numpy() for tensor in binary_datasets])
 
 
 def obtain_mnist_dataset(config: dict) -> tuple[Tensor, Tensor]:
@@ -146,6 +145,7 @@ def apply_transforms_to_dataset(config: dict, dataset: MNIST) -> MNIST:
     square_root_of_n_features = np.sqrt(config["n_features"])
     is_a_perfect_square = 0 <= config["n_features"] == int(square_root_of_n_features) ** 2
     assert is_a_perfect_square, "The number of features must be a perfect square."
+    validate_n_features_for_images(config)
 
     new_img_size = (int(square_root_of_n_features), int(square_root_of_n_features))
 

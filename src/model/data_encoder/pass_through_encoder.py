@@ -3,11 +3,11 @@ import torch
 from src.model.data_encoder.data_encoder import DataEncoder
 
 
-class PassThroughVitEncoder(DataEncoder):
+class PassThroughEncoder(DataEncoder):
 
-    def __init__(self) -> None:
+    def __init__(self, config: dict) -> None:
         super().__init__()
-        self.output_dim = 768
+        self.output_dim = config["n_features"]
 
     def forward(self, instances: torch.tensor) -> torch.tensor:
         return instances
