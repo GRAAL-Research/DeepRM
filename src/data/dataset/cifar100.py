@@ -1,18 +1,20 @@
+import itertools as it
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import torch
 import torchvision
+from numpy import ndarray, dtype
 from torch import Tensor
 from torchvision import transforms as transforms
 from torchvision.datasets.cifar import CIFAR100
 from torchvision.transforms import ToTensor
 from torchvision.transforms.functional import to_pil_image
-import itertools as it
 from tqdm import tqdm
 
 from src.config.utils import load_yaml_file_content, CONFIG_BASE_PATH
+from src.data.utils import validate_n_features_for_images
 
 DATA_BASE_PATH = Path("dataset")
 CIFAR100_BASE_PATH = DATA_BASE_PATH / "CIFAR100"
@@ -22,7 +24,7 @@ NUMPY_FILE_EXTENSION = ".npy"
 N_CHANNELS = 3
 
 
-def load_cifar100(config: dict) -> list[Any]:
+def load_cifar100(config: dict) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config)
 
     if expected_datasets_cache_path.exists():
@@ -42,8 +44,9 @@ def create_datasets_cache_path(config: dict) -> Path:
     return CIFAR100_CACHE_BASE_PATH / ("-".join(file_name) + NUMPY_FILE_EXTENSION)
 
 
-def create_and_store_cifar100_datasets(config: dict) -> list[Any]:
+def create_and_store_cifar100_datasets(config: dict) -> np.ndarray:
     train, test = obtain_cifar100_dataset(config)
+
     datasets = create_cifar100_binary_datasets(config, train, test)
     store_cifar100_datasets(config, datasets)
 
@@ -55,7 +58,7 @@ def store_cifar100_datasets(config: dict, datasets: np.ndarray) -> None:
     np.save(create_datasets_cache_path(config), datasets)
 
 
-def create_cifar100_binary_datasets(config: dict, train, test) -> list[Tensor | Any]:
+def create_cifar100_binary_datasets(config: dict, train, test) -> np.ndarray:
     binary_dataset_idx = 0
     target_starting_idx = -config["target_size"]
 
@@ -111,7 +114,7 @@ def create_cifar100_binary_datasets(config: dict, train, test) -> list[Tensor | 
         if binary_dataset_idx == config["n_dataset"]:
             break
 
-    return binary_datasets
+    return np.stack([tensor.detach().cpu().numpy() for tensor in binary_datasets])
 
 
 def obtain_cifar100_dataset(config: dict) -> tuple[Tensor, Tensor]:
@@ -126,8 +129,11 @@ def create_train_set(config: dict) -> torch.Tensor:
     train_set = apply_transforms_to_dataset(config, train_set)
     n_instances_in_cifar100_train_set = train_set.data.shape[0]
 
-    return torch.hstack((torch.tensor(train_set.data.reshape((n_instances_in_cifar100_train_set, config["n_features"]))),
-                         torch.tensor(train_set.targets).reshape(n_instances_in_cifar100_train_set, -1)))
+    train_features = torch.tensor(train_set.data)
+    train_labels = torch.tensor(train_set.targets).reshape(n_instances_in_cifar100_train_set, -1)
+
+    reshaped_features = train_features.reshape((n_instances_in_cifar100_train_set, config["n_features"]))
+    return torch.hstack((reshaped_features, train_labels))
 
 
 def create_test_set(config: dict) -> torch.Tensor:
@@ -143,6 +149,7 @@ def apply_transforms_to_dataset(config: dict, dataset: CIFAR100) -> CIFAR100:
     square_root_of_n_features = np.sqrt(config["n_features"] // N_CHANNELS)
     is_a_perfect_square = 0 <= config["n_features"] // N_CHANNELS == int(square_root_of_n_features) ** 2
     assert is_a_perfect_square, "The number of features (per channel) must be a perfect square."
+    validate_n_features_for_images(config)
 
     new_img_size = (int(square_root_of_n_features), int(square_root_of_n_features))
 
