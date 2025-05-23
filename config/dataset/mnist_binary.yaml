@@ -8,7 +8,7 @@ splits: [0.46, 0.16, 0.38]
 shuffle_each_dataset_samples: True
 
 n_dataset: 90
-n_instances_per_dataset: 100
-n_features: 121
+n_instances_per_dataset: 2000
+n_features: 784
 
 is_encoding_as_images: True

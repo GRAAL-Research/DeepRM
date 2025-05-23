@@ -1,5 +1,5 @@
 device: gpu
-max_epoch: 100
-batch_size: 32
+max_epoch: 200
+batch_size: 128
 meta_batch_size: 20
 seed: 0
