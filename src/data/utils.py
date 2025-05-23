@@ -1,5 +1,8 @@
+from pathlib import Path
+
 import numpy as np
 
+DATA_BASE_PATH = Path("dataset")
 
 def create_empty_datasets(config: dict) -> np.ndarray:
     return np.zeros(

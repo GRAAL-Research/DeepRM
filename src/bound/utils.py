@@ -134,6 +134,7 @@ def kl_inv(q, epsilon, mode, tol=10 ** -9, nb_iter_max=1000):
             p_max = p
     return p
 
+
 def kl_upper_bound(n):
     prob_cum = 0
     for i in range(n + 1):

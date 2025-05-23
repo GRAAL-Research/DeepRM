@@ -1,6 +1,4 @@
 import torch
-from IPython import embed
-from torch.nn.functional import embedding
 
 from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.mlp import MLP
@@ -20,6 +18,9 @@ class KME(DataEncoder):
         features = instances[:, :, :-self.target_size]
         targets = instances[:, :, -self.target_size:]
         embeddings = self.mlp(features)
+        target_size = targets.shape[-1]
+        embedding_last_dim = embeddings.shape[-1]
+        targets = targets.repeat(1, 1, embedding_last_dim // target_size)
 
         return (embeddings * targets).mean(dim=1)
 

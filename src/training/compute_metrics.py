@@ -69,24 +69,28 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
             if config["task"] == "classification":
                 if config["target_size"] == 1:
                     support_acc = n_instances_per_class_per_dataset * linear_loss(support_output[1],
-                                                                                targets[:,
-                                                                                :n_instances_per_class_per_dataset] * 2 - 1)
+                                                                                  targets[:,
+                                                                                  :n_instances_per_class_per_dataset] * 2 - 1)
                     query_acc = n_instances_per_class_per_dataset * linear_loss(query_output[1],
-                                                                          targets[:,
-                                                                          n_instances_per_class_per_dataset:] * 2 - 1)
+                                                                                targets[:,
+                                                                                n_instances_per_class_per_dataset:] * 2 - 1)
                 else:
                     support_acc = n_instances_per_class_per_dataset * torch.mean(linear_loss_multi(support_output[1],
-                                                                                targets[:,
-                                                                                :n_instances_per_class_per_dataset]), dim=-1)
+                                                                                                   targets[:,
+                                                                                                   :n_instances_per_class_per_dataset]),
+                                                                                 dim=-1)
                     query_acc = n_instances_per_class_per_dataset * torch.mean(linear_loss_multi(query_output[1],
-                                                                                targets[:,
-                                                                                n_instances_per_class_per_dataset:]), dim=-1)
+                                                                                                 targets[:,
+                                                                                                 n_instances_per_class_per_dataset:]),
+                                                                               dim=-1)
                 tot_acc.append(torch.mean(query_acc / n_instances_per_class_per_dataset).cpu())
                 if are_bounds_computed:
                     for dataset_idx in range(len(instances)):
-                        bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand", "kl_dis"], meta_predictor, predictor,
+                        bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand", "kl_dis"], meta_predictor,
+                                                predictor,
                                                 n_instances_per_class_per_dataset,
-                                                n_instances_per_class_per_dataset - support_acc[dataset_idx].item(), 0.10, 0, 1,
+                                                n_instances_per_class_per_dataset - support_acc[dataset_idx].item(),
+                                                0.10, 0, 1,
                                                 instances[[dataset_idx], :n_instances_per_class_per_dataset],
                                                 targets[[dataset_idx], :n_instances_per_class_per_dataset],
                                                 config["msg_size"], config["msg_type"], config["compression_set_size"],

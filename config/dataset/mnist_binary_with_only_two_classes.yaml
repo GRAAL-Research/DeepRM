@@ -1,0 +1,18 @@
+dataset: mnist_binary_with_only_two_classes
+
+task: classification
+target_size: 1
+criterion: bce_loss
+is_dataset_balanced: True
+splits: [0.7875, 0.15, 0.0625]
+shuffle_each_dataset_samples: True
+
+n_dataset: 320
+n_instances_per_dataset: 2000
+n_features: 784
+
+first_digit: 1
+second_digit: 7
+
+n_pixels_to_permute: 200
+is_encoding_as_images: True

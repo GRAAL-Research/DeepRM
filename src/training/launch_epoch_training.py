@@ -1,7 +1,7 @@
 import torch
-from click.core import batch
 from torch import nn
 from torch.utils.data import DataLoader
+
 from src.model.predictor.predictor import Predictor
 from src.model.simple_meta_net import SimpleMetaNet
 from src.training.compute_loss import compute_loss
@@ -29,7 +29,8 @@ def launch_epoch_training(config: dict, meta_predictor: SimpleMetaNet, predictor
                 meta_output = meta_predictor.forward(instances[:, :n_instances_per_class_per_dataset])
                 predictor.set_params(meta_output)
                 output, _ = predictor.forward(instances[:, n_instances_per_class_per_dataset:])
-                loss = compute_loss(config, criterion, output, targets[:, n_instances_per_class_per_dataset:], meta_predictor)
+                loss = compute_loss(config, criterion, output, targets[:, n_instances_per_class_per_dataset:],
+                                    meta_predictor)
                 loss.backward()
                 optimizer.step()
 

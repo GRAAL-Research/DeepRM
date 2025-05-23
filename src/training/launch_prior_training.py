@@ -1,7 +1,7 @@
+import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-import numpy as np
 
 from src.model.mlp import MLP
 from src.model.utils.loss import linear_loss, linear_loss_multi
@@ -50,7 +50,7 @@ def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, te
                 output = torch.sign(output)
             elif config["criterion"] == "ce_loss":
                 output = torch.nn.functional.one_hot(torch.argmax(output, dim=-1),
-                                                            num_classes=output.shape[-1])
+                                                     num_classes=output.shape[-1])
             if config["target_size"] == 1:
                 acc = torch.mean(linear_loss(output, targets * 2 - 1), dim=-1)
             else:
