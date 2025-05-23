@@ -18,7 +18,9 @@ class KME(DataEncoder):
         features = instances[:, :, :-self.target_size]
         targets = instances[:, :, -self.target_size:]
         embeddings = self.mlp(features)
-        targets = targets.repeat(1, 1, embeddings.shape[2] // targets.shape[2])
+        target_size = targets.shape[-1]
+        embedding_last_dim = embeddings.shape[-1]
+        targets = targets.repeat(1, 1, embedding_last_dim // target_size)
 
         return (embeddings * targets).mean(dim=1)
 
