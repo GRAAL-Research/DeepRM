@@ -1,11 +1,11 @@
 import math
-import torch
-
 import numpy as np
+import torch
 from torch.utils.data import Subset, DataLoader
 
 
-def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[float], are_test_classes_shared_with_train: bool,
+def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[float],
+                                 are_test_classes_shared_with_train: bool,
                                  seed: int, is_shuffling=True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     assert sum(splits) == 1, "The sum of splits must be 1."
 
@@ -97,9 +97,9 @@ def collate_fn_padd(batch):
     assume it takes in images rather than arbitrary tensors.
     '''
     ## get sequence lengths
-    lengths = torch.tensor([ t.shape[0] for t in batch ])
+    lengths = torch.tensor([t.shape[0] for t in batch])
     ## padd
-    batch = [ torch.Tensor(t) for t in batch ]
+    batch = [torch.Tensor(t) for t in batch]
     batch = torch.nn.utils.rnn.pad_sequence(batch)
     ## compute mask
     mask = (batch != 0)

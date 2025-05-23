@@ -1,5 +1,4 @@
 import math
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -39,7 +38,7 @@ def compute_acc(n_classes, idx, m, inputs, outputs, accs, are_test_classes_share
     for i in range(n_classes):
         for j in range(n_classes):
             if i != j:
-                loss = linear_loss(torch.reshape(outputs[[k]], (1,-1)), inputs[[k], m:, -1])
+                loss = linear_loss(torch.reshape(outputs[[k]], (1, -1)), inputs[[k], m:, -1])
                 accs[i, j] = loss
                 if k in idx[0]:
                     t_v_e_matrix[i, j] = "t"

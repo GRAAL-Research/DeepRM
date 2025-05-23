@@ -41,7 +41,7 @@ def generate_random_blob_features(config: dict) -> np.ndarray:
 
 def modify_first_class_samples_to_add_the_second_class(x: np.ndarray, y: np.ndarray,
                                                        nb_of_samples_of_the_second_class: int) -> tuple[
-        np.ndarray, np.ndarray]:
+    np.ndarray, np.ndarray]:
     nb_of_features = x.shape[1]
     x[: nb_of_samples_of_the_second_class] += np.sign(np.random.rand(nb_of_features) - 0.5) * 5
     y[: nb_of_samples_of_the_second_class] -= 2

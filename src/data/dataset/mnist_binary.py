@@ -2,7 +2,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 import torchvision
 from torchvision import transforms
 
@@ -12,6 +11,7 @@ DATA_BASE_PATH = Path("dataset")
 MNIST_DEFAULT_IMG_SIZE = (28, 28)
 NUMPY_FILE_EXTENSION = ".npy"
 MNIST_BASE_PATH = DATA_BASE_PATH / "MNIST"
+
 
 def load_mnist_binary(config: dict, first_digit: str, second_digit: str) -> np.ndarray:
     expected_datasets_cache_path = create_datasets_cache_path(config, first_digit, second_digit)
@@ -66,7 +66,8 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
             train_dataset_shuffled[:, second_pixel_location] = first_pixel
             train_dataset_shuffled[:, first_pixel_location] = second_pixel
         for num_partition in range(n_partition):
-            if n_partition * num_swap + num_partition == int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
+            if n_partition * num_swap + num_partition == int(
+                    config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
                 stop = True
                 break
             train_dataset_reduced = train_dataset_shuffled[num_partition * config["n_instances_per_dataset"]:
@@ -99,11 +100,13 @@ def obtain_mnist_dataset(config: dict, first_digit: str, second_digit: str) -> t
 
     return torch.vstack((train_set, test_set))
 
+
 def create_train_set(config: dict, first_digit, second_digit) -> torch.Tensor:
     assert int(config["n_features"] ** 0.5) == config["n_features"] ** 0.5
     reshaped_size = int(config["n_features"] ** 0.5)
     transform = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]  # transform to [-1,1]
-    train_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=True, download=True, transform=transforms.Compose(transform))
+    train_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=True, download=True,
+                                           transform=transforms.Compose(transform))
     n_instances_in_mnist_train_set = train_set.data.shape[0]
     train_feature = torchvision.transforms.functional.resize(train_set.data, (reshaped_size, reshaped_size))
     data = train_feature.data.reshape((n_instances_in_mnist_train_set, config["n_features"]))
@@ -123,7 +126,8 @@ def create_test_set(config: dict, first_digit, second_digit) -> torch.Tensor:
     assert int(config["n_features"] ** 0.5) == config["n_features"] ** 0.5
     reshaped_size = int(config["n_features"] ** 0.5)
     transform = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]  # transform to [-1,1]
-    test_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=False, download=True, transform=transforms.Compose(transform))
+    test_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=False, download=True,
+                                          transform=transforms.Compose(transform))
     n_instances_in_mnist_test_set = test_set.data.shape[0]
     test_feature = torchvision.transforms.functional.resize(test_set.data, (reshaped_size, reshaped_size))
     data = test_feature.data.reshape((n_instances_in_mnist_test_set, config["n_features"]))

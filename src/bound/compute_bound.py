@@ -1,5 +1,4 @@
 import math
-
 import numpy as np
 import torch
 
@@ -47,10 +46,12 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
         if meta_pred.get_message().ndim == 0:
             kl = 0
         else:
-            kl = torch.mean(torch.sum(meta_pred.get_message() ** 2, dim=1)) / (2 * msg_std)  # ... as well as avg KL val. (shortcut)
+            kl = torch.mean(torch.sum(meta_pred.get_message() ** 2, dim=1)) / (
+                        2 * msg_std)  # ... as well as avg KL val. (shortcut)
         for bnd_type in bnds_type:
             if bnd_type == 'kl':
-                epsilon = (kl + log_binomial_coefficient(compression_pool_size, n_z) + np.log(kl_upper_bound(m - n_z) / delta)) / (m - n_z)
+                epsilon = (kl + log_binomial_coefficient(compression_pool_size, n_z) + np.log(
+                    kl_upper_bound(m - n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
             elif bnd_type == 'linear':
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
@@ -74,7 +75,8 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
             elif bnd_type == 'marchand':
                 best_bnd = 0
             elif bnd_type == 'kl_dis':
-                epsilon = (2 * kl + log_binomial_coefficient(compression_pool_size, n_z) + np.log(kl_upper_bound(m - n_z)) + 3 * np.log(2 / delta)) / (m - n_z)
+                epsilon = (2 * kl + log_binomial_coefficient(compression_pool_size, n_z) + np.log(
+                    kl_upper_bound(m - n_z)) + 3 * np.log(2 / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
             best_bnds.append(best_bnd)
     elif msg_type == "dsc":
