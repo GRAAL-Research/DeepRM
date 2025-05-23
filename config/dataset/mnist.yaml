@@ -1,15 +1,32 @@
 dataset: mnist
 
 task: classification
-target_size: 1
-criterion: bce_loss
+target_size: 10
+criterion: ce_loss
 is_dataset_balanced: True
-splits: [0.46, 0.16, 0.38]
+splits: [0.7875, 0.15, 0.0625]
 shuffle_each_dataset_samples: True
+n_pixels_to_permute: 200
 
-n_dataset: 90
-n_instances_per_dataset: 100
-input_shape: [1, 28, 28]
-n_features: 121
+n_dataset: 320
+n_instances_per_dataset: 2000
+n_features: 784
 
 is_encoding_as_images: True
+
+#splits: [0.8375, 0.10, 0.0625]
+#shuffle_each_dataset_samples: True
+#n_pixels_to_permute: 100
+
+#n_dataset: 160
+#n_instances_per_dataset: 4000
+#n_features: 784
+
+# 10 training tasks of 60'000 examples
+# 20 test     tasks of  2'000 examples
+# ------------------------------------
+# 640'000: -Train prop.: 0.9375
+#          -Test  prop.: 0.0625
+#
+# In practice: 320 tasks of 2000 examples
+#           or 640 tasks of 1000 examples.

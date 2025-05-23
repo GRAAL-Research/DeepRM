@@ -108,7 +108,7 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
         plt.close()
         plt.cla()
         plt.clf()
-        if dataset_name == "mnist":
+        if dataset_name == "mnist_binary":  # TODO: support other dataset names
             fig, ax = plt.subplots()
         elif dataset_name == "cifar100":
             fig, ax = plt.subplots(figsize=(40, 40))
@@ -123,7 +123,8 @@ def show_performance_matrix(meta_pred: SimpleMetaNet, pred, dataset_name, datase
 
         # Loop over data dimensions and create text annotations.
         tr_in_legend, vd_in_legend, te_in_legend = False, False, False
-        linewidth = 5 * (dataset_name == "cifar100") + 2 * (dataset_name == "mnist")
+        linewidth = 5 * (dataset_name == "cifar100") + 2 * (
+                dataset_name == "mnist_binary")  # TODO: support other dataset names
         min_accs = np.min(accs)
         for i in range(len(classes_name)):
             for j in range(len(classes_name)):

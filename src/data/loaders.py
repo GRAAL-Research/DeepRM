@@ -4,22 +4,22 @@ import torch
 from torch.utils.data import Subset, DataLoader
 
 
-def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[float],
+def train_valid_and_test_indices(dataset_name, datasets: np.ndarray, splits: list[float],
                                  are_test_classes_shared_with_train: bool,
                                  seed: int, is_shuffling=True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     assert sum(splits) == 1, "The sum of splits must be 1."
 
     n_datasets = len(datasets)
     datasets_indices = np.arange(n_datasets)
-    if not are_test_classes_shared_with_train and dataset == "mnist":
-        num_classes = int((1 + math.sqrt(1 + 4 * int(n_datasets))) / 2)
+    if not are_test_classes_shared_with_train and dataset_name == "mnist_binary":  # TODO: support other dataset names
+        n_classes = int((1 + math.sqrt(1 + 4 * int(n_datasets))) / 2)
         valid_idx = []
         test_idx = []
         current_class = 0
         while len(test_idx) / n_datasets < splits[2]:
-            test_idx += extract_class(num_classes, current_class)
+            test_idx += extract_class(n_classes, current_class)
             current_class += 1
-        valid_idx += extract_class(num_classes, current_class)
+        valid_idx += extract_class(n_classes, current_class)
         other_idx = []
         for idx in datasets_indices:
             if idx not in valid_idx:
@@ -31,13 +31,13 @@ def train_valid_and_test_indices(dataset, datasets: np.ndarray, splits: list[flo
         train_idx = other_idx
         return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
 
-    if not are_test_classes_shared_with_train and dataset == "cifar100":
+    if not are_test_classes_shared_with_train and dataset_name == "cifar100":
         used_idx = np.array(range(100))
         np.random.shuffle(used_idx)
         split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * 100)
         return np.array(used_idx[:split_1]), np.array(used_idx[split_1:]), np.array(range(100, 150))
 
-    if is_shuffling and dataset != "mnist_multi":
+    if is_shuffling and "mnist_binary" != dataset_name:  # TODO: support other dataset names
         np.random.seed(seed)
         np.random.shuffle(datasets_indices)
 

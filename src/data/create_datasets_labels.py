@@ -14,12 +14,12 @@ def create_datasets_labels(config: dict) -> list:
         assert config["n_features"] == 2
         return ["-1", "+1"]
 
-    elif "mnist" in config["dataset"]:
-        return ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"][
-               :int((1 + math.sqrt(1 + 4 * int(config["n_dataset"]))) / 2)]
-
-    elif config["dataset"] == "mnist_multi":
+    elif config["dataset"] in ["mnist", "mnist_label_shuffle"]:
         return ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+
+    elif config["dataset"] in ["mnist_binary", "mnist_binary_with_only_two_classes"]:
+        n_classes = int((1 + math.sqrt(1 + 4 * int(config["n_dataset"]))) / 2)
+        return ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"][:n_classes]
 
     elif config["dataset"] == "cifar100":
         return ["beaver", "dolphin", "otter", "seal", "whale",

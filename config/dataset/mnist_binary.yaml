@@ -1,14 +1,14 @@
-dataset: cifar100
+dataset: mnist_binary
 
 task: classification
 target_size: 1
 criterion: bce_loss
 is_dataset_balanced: True
-splits: [0.5, 0.17, 0.33]
+splits: [0.46, 0.16, 0.38]
 shuffle_each_dataset_samples: True
 
-n_dataset: 150
+n_dataset: 90
 n_instances_per_dataset: 100
-n_features: 675  # 3072, 675
+n_features: 121
 
 is_encoding_as_images: True

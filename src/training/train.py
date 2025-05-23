@@ -4,8 +4,8 @@ from copy import copy
 import torch
 from loguru import logger
 
-from src.data.create_datasets import create_datasets
 from src.data.create_datasets_labels import create_datasets_labels
+from src.data.create_meta_dataset import create_datasets
 from src.data.loaders import train_valid_and_test_indices, create_data_loader, compute_variances
 from src.model.mlp import MLP
 from src.model.predictor.create_predictor import create_predictor
