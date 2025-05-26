@@ -1,6 +1,6 @@
 import torch
-from torch import nn as nn
 import torch.nn.functional as F
+from torch import nn as nn
 
 from src.model.attention import Attention
 from src.model.data_encoder.create_data_encoder import create_data_compressor_1
@@ -77,7 +77,8 @@ class SimpleMetaNet(nn.Module):
 
         return self.forward_module_2(msg_module_output, compression_module_output, curr_batch_size)
 
-    def forward_msg_module(self, x: torch.Tensor, compression_module_output: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:
+    def forward_msg_module(self, x: torch.Tensor, compression_module_output: torch.Tensor,
+                           n_noisy_messages: int) -> torch.Tensor:
         if self.is_using_a_random_msg:
             return self.create_random_message(x.shape[0])
 

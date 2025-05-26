@@ -64,7 +64,8 @@ def create_mnist_binary_datasets(config: dict, train_dataset, test_dataset) -> n
         np.random.shuffle(label_idx)
         train_dataset_shuffled[:, -10:] = train_dataset_shuffled[:, label_idx]
         for num_partition in range(n_partition):
-            if n_partition * num_swap + num_partition == int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
+            if n_partition * num_swap + num_partition == int(
+                    config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
                 stop = True
                 break
             train_dataset_reduced = train_dataset_shuffled[num_partition * config["n_instances_per_dataset"]:
@@ -96,7 +97,8 @@ def obtain_mnist_dataset(config: dict) -> torch.Tensor:
 
 def create_train_set(config: dict) -> torch.Tensor:
     transform = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]  # transform to [-1,1]
-    train_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=True, download=True, transform=transforms.Compose(transform))
+    train_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=True, download=True,
+                                           transform=transforms.Compose(transform))
     n_instances_in_mnist_train_set = train_set.data.shape[0]
     data = train_set.data.reshape((n_instances_in_mnist_train_set, config["n_features"]))
     target = train_set.targets.reshape(n_instances_in_mnist_train_set, -1)
@@ -106,7 +108,8 @@ def create_train_set(config: dict) -> torch.Tensor:
 
 def create_test_set(config: dict) -> torch.Tensor:
     transform = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]  # transform to [-1,1]
-    test_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=False, download=True, transform=transforms.Compose(transform))
+    test_set = torchvision.datasets.MNIST(root=str(MNIST_BASE_PATH), train=False, download=True,
+                                          transform=transforms.Compose(transform))
     n_instances_in_mnist_test_set = test_set.data.shape[0]
 
     return torch.hstack((test_set.data.reshape((n_instances_in_mnist_test_set, config["n_features"])),

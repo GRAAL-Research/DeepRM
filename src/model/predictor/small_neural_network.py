@@ -1,8 +1,8 @@
 import torch
-from torch import nn
-from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn.parameter as parameter
+from torch import nn
+from torch.autograd import Variable
 
 from src.model.lazy_batch_norm import LazyBatchNorm
 from src.model.mlp import MLP
@@ -174,20 +174,24 @@ class ConvNet(Predictor):
 
     def forward(self, instances: torch.Tensor) -> tuple:
         x = instances[:, :, :-self.target_size]
-        x = x.reshape([x.shape[0], x.shape[1]]+self.input_shape)
+        x = x.reshape([x.shape[0], x.shape[1]] + self.input_shape)
         meta_batch_size = len(x)
         if not self.use_last_values:
             self.batch_norm_params = []
 
         rslts = []
         for dataset_idx in range(len(x)):
-            self.conv1.weight = parameter.Parameter(self.params[dataset_idx, :self.num_conv1_weight_params].reshape((self.n_filt1, self.color_channels, 5, 5)))
+            self.conv1.weight = parameter.Parameter(self.params[dataset_idx, :self.num_conv1_weight_params].reshape(
+                (self.n_filt1, self.color_channels, 5, 5)))
             self.conv1.bias = parameter.Parameter(self.params[dataset_idx, self.num_conv1_weight_params:
-                self.num_conv1_weight_params + self.num_conv1_bias_params])
-            self.conv2.weight = parameter.Parameter(self.params[dataset_idx, self.num_conv1_weight_params + self.num_conv1_bias_params:
-                self.num_conv1_weight_params + self.num_conv1_bias_params + self.num_conv2_weight_params].reshape((self.n_filt2, self.n_filt1, 5, 5)))
-            self.conv2.bias = parameter.Parameter(self.params[dataset_idx, self.num_conv1_weight_params + self.num_conv1_bias_params + self.num_conv2_weight_params:
-                self.num_conv1_weight_params + self.num_conv1_bias_params + self.num_conv2_weight_params + self.num_conv2_bias_params])
+                                                                           self.num_conv1_weight_params + self.num_conv1_bias_params])
+            self.conv2.weight = parameter.Parameter(
+                self.params[dataset_idx, self.num_conv1_weight_params + self.num_conv1_bias_params:
+                                         self.num_conv1_weight_params + self.num_conv1_bias_params + self.num_conv2_weight_params].reshape(
+                    (self.n_filt2, self.n_filt1, 5, 5)))
+            self.conv2.bias = parameter.Parameter(self.params[dataset_idx,
+                                                  self.num_conv1_weight_params + self.num_conv1_bias_params + self.num_conv2_weight_params:
+                                                  self.num_conv1_weight_params + self.num_conv1_bias_params + self.num_conv2_weight_params + self.num_conv2_bias_params])
             x_processed = F.elu(F.max_pool2d(self.conv1(x[dataset_idx]), 2))
             x_processed = F.elu(F.max_pool2d(self.conv2(x_processed), 2))
             x_processed = x_processed.view(x_processed.size(0), -1)

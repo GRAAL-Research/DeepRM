@@ -1,11 +1,9 @@
 import itertools as it
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import torch
 import torchvision
-from numpy import ndarray, dtype
 from torch import Tensor
 from torchvision import transforms as transforms
 from torchvision.datasets.cifar import CIFAR100

@@ -28,7 +28,7 @@ class Predictor(nn.Module, ABC):
             return torch.sigmoid(output), torch.sign(output)
         elif self.criterion == "ce_loss":
             return torch.nn.Softmax(dim=2)(output), torch.nn.functional.one_hot(torch.argmax(output, dim=-1),
-                                                                           num_classes=output.shape[-1])
+                                                                                num_classes=output.shape[-1])
         elif self.criterion == "mse_loss":
             return torch.relu(output), output
 
