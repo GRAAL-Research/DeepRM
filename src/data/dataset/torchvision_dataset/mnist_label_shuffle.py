@@ -21,7 +21,6 @@ class MnistLabelShuffle(TorchvisionDataset):
         test_targets = test[:, -1].long()
         test = torch.hstack((test[:, :-1], F.one_hot(test_targets) * 2 - 1))
 
-        n_partition = len(train) // config["n_instances_per_dataset"]
         num_swap = 0
         stop = False
         while not stop:
@@ -31,15 +30,11 @@ class MnistLabelShuffle(TorchvisionDataset):
             label_idx = np.arange(784, 794)
             np.random.shuffle(label_idx)
             train_dataset_shuffled[:, -config["target_size"]:] = train_dataset_shuffled[:, label_idx]
-            for num_partition in range(n_partition):
-                if n_partition * num_swap + num_partition == int(
-                        config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
-                    stop = True
-                    break
-                train_dataset_reduced = train_dataset_shuffled[num_partition * config["n_instances_per_dataset"]:
-                                                               (num_partition + 1) * config["n_instances_per_dataset"]]
-                binary_datasets[n_partition * num_swap + num_partition] = train_dataset_reduced
+            train_dataset_reduced = train_dataset_shuffled[: config["n_instances_per_dataset"]]
+            binary_datasets[num_swap] = train_dataset_reduced
             num_swap += 1
+            if num_swap == int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
+                stop = True
         train_idx = np.arange(int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])))
         np.random.shuffle(train_idx)
         binary_datasets[np.arange(len(train_idx))] = binary_datasets[train_idx]
