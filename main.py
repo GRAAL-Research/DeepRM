@@ -24,6 +24,9 @@ def main(config_combinations: list[dict]) -> None:
         if is_run_already_completed(config):
             logger.info("Skipping the run... It is already completed.")
             continue
+        if config['kme_dim'][-1] % config['target_size'] != 0:
+            logger.info("Skipping the run... KME output size and target size are incompatible.")
+            continue
 
         if config["is_using_wandb"]:
             run_name = create_run_name(config)
