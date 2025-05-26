@@ -18,6 +18,9 @@ class KME(DataEncoder):
         features = instances[:, :, :-self.target_size]
         targets = instances[:, :, -self.target_size:]
         embeddings = self.mlp(features)
+        target_size = targets.shape[-1]
+        embedding_last_dim = embeddings.shape[-1]
+        targets = targets.repeat(1, 1, embedding_last_dim // target_size)
 
         target_size = targets.shape[-1]
         embedding_last_dim = embeddings.shape[-1]

@@ -14,8 +14,9 @@ def compute_medias(config: dict, meta_predictor: SimpleMetaNet, test_loader: Dat
         show_decision_boundaries(config, meta_predictor, config["dataset"], test_loader, predictor, wandb,
                                  config["device"])
 
-    if config["dataset"] in ["mnist", "cifar100"]:
-        idx = [train_idx, valid_idx, test_idx]
-        # show_performance_matrix(meta_predictor, predictor, config["dataset"], datasets, classes_name, idx,
-        #                        config["n_dataset"], config["is_using_wandb"], wandb, config["meta_batch_size"],
-        #                        config["are_test_classes_shared_with_train"], config["device"])
+    # TODO probably remove this :
+    # if config["dataset"] in ["mnist", "cifar100"]:
+    #     idx = [train_idx, valid_idx, test_idx]
+    # show_performance_matrix(meta_predictor, predictor, config["dataset"], datasets, classes_name, idx,
+    #                        config["n_dataset"], config["is_using_wandb"], wandb, config["meta_batch_size"],
+    #                        config["are_test_classes_shared_with_train"], config["device"])

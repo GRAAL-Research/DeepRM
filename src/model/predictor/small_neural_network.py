@@ -113,9 +113,17 @@ class ConvNet(Predictor):
         super().__init__(config)
         self.n_filt1 = int(config["pred_filter_sizes"][0])
         self.n_filt2 = int(config["pred_filter_sizes"][1])
+
+        if "input_shape" not in config:
+            error_msg = ("The class ConvNet is now unsupported. "
+                         "You should add 'input_shape' in the .yaml config to make it work. "
+                         "You will probably need to apply other fixes.")
+            raise Exception(error_msg)
+
         self.input_shape = config["input_shape"]
         self.color_channels = config["input_shape"][0]
-        if config["dataset"] == 'mnist':
+
+        if config["dataset"] == 'mnist_binary':  # TODO: support other dataset names
             conv_feat_size = 320
         elif config["dataset"] == 'cifar100':
             conv_feat_size = 500
