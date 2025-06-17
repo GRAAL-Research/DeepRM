@@ -4,7 +4,6 @@ from torch import nn as nn
 
 from src.model.attention import Attention
 from src.model.data_encoder.create_data_encoder import create_data_compressor_1
-from src.model.data_encoder.kme import KME
 from src.model.mlp import MLP
 
 
@@ -33,14 +32,16 @@ class SimpleMetaNet(nn.Module):
         self.data_compressor_1 = create_data_compressor_1(config)
         module_1_input_dim = self.data_compressor_1.get_output_dimension()
         if self.compression_set_size > 0:
-            module_1_input_dim += config["kme_dim"][-1]
+            # The module computing the message has the mapped compression set as input
+            module_1_input_dim += config["deepset_dim"][-1]
         self.module_1 = MLP(module_1_input_dim, self.module_1_dim, config["device"],
                             config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
                             config["init_scheme"], config["msg_type"])
 
         self.cas = nn.ModuleList([Attention(config) for _ in range(self.compression_set_size)])
-        self.kme_2 = KME(config, hidden_dims=config["kme_dim"])
-
+        # That data compressor maps the compression set to a vectorial representation
+        self.data_compressor_2 = create_data_compressor(config)
+        # That module takes as input the mapped compression set and the message, outputs the downstream pred. params.
         self.module_2 = MLP(self.compute_module_2_input_dim(), config["module_2_dim"] + [self.output_dim],
                             config["device"], config["has_skip_connection"], config["has_batch_norm"],
                             config["batch_norm_min_dim"], config["init_scheme"], has_msg_as_input=True)
@@ -52,7 +53,7 @@ class SimpleMetaNet(nn.Module):
         mod_2_input_dim = 0
 
         if self.compression_set_size > 0:
-            mod_2_input_dim += self.kme_2.get_output_dimension()
+            mod_2_input_dim += self.data_compressor_2.get_output_dimension()
 
         if self.msg_type is not None and self.msg_size > 0:
             mod_2_input_dim += self.module_1_dim[-1]

@@ -17,8 +17,8 @@ msg_penalty: l2
 msg_penalty_coef: 0
 is_using_a_random_msg: False
 
-data_encoder_name: kme
-kme_dim: [100]
+data_encoder_name: deepset
+deepset_dim: [100]
 fs_pool_dim: [100]
 conv_one_by_one_n_filters: 3
 tfm_input_dim: 64
@@ -32,7 +32,7 @@ compression_set_size: 0
 compression_pool_size: 50
 attention_dim: [10]
 attention_temperature: 20
-attention_pooling_type: kme
+attention_pooling_type: deepset
 
 module_1_dim: [100]
 module_2_dim: [100]

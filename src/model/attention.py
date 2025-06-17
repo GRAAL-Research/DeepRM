@@ -29,9 +29,7 @@ class Attention(nn.Module):
         if config["attention_pooling_type"] is None:
             return MLP(config["n_features"] + 1, config["attention_dim"], config["device"],
                        config["has_skip_connection"], config["has_batch_norm"], config["init_scheme"], "cnt")
-        elif config["attention_pooling_type"].lower() == "kme":
-            return KME(config, hidden_dims=config["attention_dim"])
-        elif config["attention_pooling_type"].lower() == "fs_pool":
-            return FSPool(config, config["attention_dim"])
+        elif config["attention_pooling_type"].lower() == "deepset":
+            return DeepSet(config, hidden_dims=config["attention_dim"])
 
         raise NotImplementedError(f"The pooling '{config['attention_pooling_type']}' is not supported.")

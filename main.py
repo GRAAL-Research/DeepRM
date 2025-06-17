@@ -24,7 +24,7 @@ def main(config_combinations: list[dict]) -> None:
         if is_run_already_completed(config):
             logger.info("Skipping the run... It is already completed.")
             continue
-        if config['kme_dim'][-1] % config['target_size'] != 0:
+        if config['deepset_dim'][-1] % config['target_size'] != 0:
             logger.info("Skipping the run... KME output size and target size are incompatible.")
             continue
 
