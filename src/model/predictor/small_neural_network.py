@@ -18,7 +18,7 @@ class FCNet(Predictor):
         super().__init__(config)
         self.architecture_sizes = [config["n_features"]] + config["pred_hidden_sizes"] + [config["target_size"]]
         self.mlp = MLP(config["n_features"], self.architecture_sizes[1:], config["device"],
-                       config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"])
+                       config["has_skip_connection"], config["has_batch_norm"])
 
         self.params = torch.tensor([])
         self.batch_norm_params = []
@@ -153,7 +153,7 @@ class ConvNet(Predictor):
         self.conv1 = nn.Conv2d(self.color_channels, self.n_filt1, kernel_size=5)
         self.conv2 = nn.Conv2d(self.n_filt1, self.n_filt2, kernel_size=5)
         self.mlp = MLP(conv_feat_size, self.architecture_sizes[1:], config["device"],
-                       config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"])
+                       config["has_skip_connection"], config["has_batch_norm"])
 
         self.num_conv1_weight_params = torch.numel(self.conv1.weight)
         self.num_conv1_bias_params = torch.numel(self.conv1.bias)

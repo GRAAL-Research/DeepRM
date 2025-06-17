@@ -43,12 +43,12 @@ class TorchvisionDatasetCreator:
         return train_set, test_set
 
     @classmethod
-    def preprocess_dataset(cls, config: dict, features: np.ndarray, targets: list[int]) -> torch.Tensor:
+    def preprocess_dataset(cls, config: dict, features: np.ndarray, targets: torch.Tensor) -> torch.Tensor:
         """
         Processes both the features and the labels.
         """
         n_instances = len(targets)
-        reshaped_targets = torch.tensor(targets).unsqueeze(-1)  # TODO : features and targets are actually tensors
+        reshaped_targets = targets.unsqueeze(-1)
 
         features = cls.apply_transforms_to_features(config, features)
         reshaped_features = features.reshape((n_instances, config["n_features"]))

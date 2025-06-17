@@ -12,38 +12,41 @@ def train_valid_and_test_indices(dataset_name, datasets: np.ndarray, splits: lis
         datasets.
     """
     assert sum(splits) == 1, "The sum of splits must be 1."
-
     n_datasets = len(datasets)
-    datasets_indices = np.arange(n_datasets)
-    if not are_test_classes_shared_with_train and dataset_name == "mnist_binary":  # TODO: support other dataset names
-        n_classes = int((1 + math.sqrt(1 + 4 * int(n_datasets))) / 2)
-        valid_idx = []
-        test_idx = []
-        current_class = 0
-        while len(test_idx) / n_datasets < splits[2]:
-            test_idx += extract_class(n_classes, current_class)
-            current_class += 1
-        valid_idx += extract_class(n_classes, current_class)
-        other_idx = []
-        for idx in datasets_indices:
-            if idx not in valid_idx:
-                if idx not in test_idx:
-                    other_idx.append(idx)
-        if is_shuffling:
-            np.random.seed(seed)
-            np.random.shuffle(other_idx)
-        train_idx = other_idx
-        return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
 
-    if not are_test_classes_shared_with_train and dataset_name == "cifar100":
-        used_idx = np.array(range(100))
-        np.random.shuffle(used_idx)
-        split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * 100)
-        return np.array(used_idx[:split_1]), np.array(used_idx[split_1:]), np.array(range(100, 150))
+    assert n_datasets > 3, "There needs to be at least 3 datasets!"
+    datasets_indices = np.arange(n_datasets)
+    if not are_test_classes_shared_with_train:
+        if dataset_name == "mnist_binary":
             # If dataset is mnist_binary, the test meta-dataset will contain tasks with digit 0, then 1, 2, and so on
             # until its proportion is filled.
+            n_classes = int((1 + math.sqrt(1 + 4 * int(n_datasets))) / 2)
+            valid_idx = []
+            test_idx = []
+            current_class = 0
+            while len(test_idx) / n_datasets < splits[2]:
+                test_idx += extract_class(n_classes, current_class)
+                current_class += 1
             # Same goes for validation tasks
+            while len(valid_idx) / n_datasets < splits[1]:
+                valid_idx += extract_class(n_classes, current_class)
+                current_class += 1
+            other_idx = []
             # The remaining indices corresponds to the train meta-set.
+            for idx in datasets_indices:
+                if idx not in valid_idx:
+                    if idx not in test_idx:
+                        other_idx.append(idx)
+            if is_shuffling:
+                np.random.seed(seed)
+                np.random.shuffle(other_idx)
+            train_idx = other_idx
+            return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
+        elif dataset_name == "cifar100":
+            used_idx = np.array(range(100))
+            np.random.shuffle(used_idx)
+            split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * 100)
+            return np.array(used_idx[:split_1]), np.array(used_idx[split_1:]), np.array(range(100, 150))
 
     if is_shuffling:
         np.random.seed(seed)

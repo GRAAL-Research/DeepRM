@@ -1,6 +1,4 @@
 import math
-import numpy as np
-
 
 def log_stirling_approximation(n):
     """
@@ -65,13 +63,6 @@ def inf_bin(k, m, delta):
             gamma_inf = gamma
         gamma = (gamma_sup + gamma_inf) / 2
     return gamma
-
-
-def zeta(x):
-    """
-    Mario's function...
-    """
-    return (6 / np.pi ** 2) * (x + 1) ** -2
 
 
 def kl_bern(q, p):

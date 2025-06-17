@@ -5,7 +5,7 @@ from src.model.data_encoder.data_encoder import DataEncoder
 from src.model.data_encoder.deepset import DeepSet
 
 
-def create_data_compressor_1(config: dict) -> DataEncoder:
+def create_data_compressor(config: dict) -> DataEncoder:
     data_encoder_name = config["data_encoder_name"]
 
     if data_encoder_name.lower() == "deepset":

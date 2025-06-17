@@ -7,7 +7,6 @@ def create_scheduler(config: dict, optimizer: Optimizer) -> lr_scheduler:
         return torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode="max",
                                                           factor=config["scheduler_factor"],
                                                           patience=config["scheduler_patience"],
-                                                          threshold=config["scheduler_threshold"],
-                                                          verbose=True)
+                                                          threshold=config["scheduler_threshold"])
 
     raise NotImplementedError(f"The scheduler '{config['scheduler']}' is not supported.")

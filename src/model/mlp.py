@@ -9,14 +9,12 @@ from src.model.utils.sign_straight_through import SignStraightThrough
 
 class MLP(nn.Module):
     def __init__(self, input_dim: int, hidden_dims: list[int], device: str, has_skip_connection: bool,
-                 has_batch_norm: bool, batch_norm_min_dim: int, init_scheme: str = None,
-                 msg_type: str = None, has_msg_as_input: bool = False, biases: bool = True) -> None:
+                 has_batch_norm: bool, init_scheme: str = None, msg_type: str = None, biases: bool = True) -> None:
         super(MLP, self).__init__()
         self.has_skip_connection = has_skip_connection
 
         input_and_hidden_dims = MLP.compute_input_and_hidden_dims(input_dim, hidden_dims)
-        self.mlp = MLP.create_mlp(has_batch_norm, batch_norm_min_dim, msg_type,
-                                  has_msg_as_input, input_and_hidden_dims, device, biases)
+        self.mlp = MLP.create_mlp(msg_type, input_and_hidden_dims, device, biases)
 
         last_layer_idx = len(self.mlp) - 1
         self.skip_position = last_layer_idx - has_batch_norm
@@ -37,8 +35,7 @@ class MLP(nn.Module):
         return input_and_hidden_dims
 
     @staticmethod
-    def create_mlp(has_batch_norm: bool, batch_norm_min_dim: int, msg_type: str, has_msg_as_input: bool,
-                   input_and_hidden_dims: list[int], device: str = "cpu", biases: bool = True) -> nn.ModuleList:
+    def create_mlp(msg_type: str, input_and_hidden_dims: list[int], device: str = "cpu", biases: bool = True) -> nn.ModuleList:
         modules = torch.nn.ModuleList()
         # The MLP is composed of successive blocks of the form [Batchnorm, linear, activation].
         for dim_idx in range(len(input_and_hidden_dims) - 1):
