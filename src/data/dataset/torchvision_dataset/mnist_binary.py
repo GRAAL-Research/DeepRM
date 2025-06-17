@@ -81,5 +81,9 @@ class MnistBinary(TorchvisionDataset):
 
             if binary_dataset_idx == config["n_dataset"]:
                 break
+        smallest_n = np.inf
+        for tensor in binary_datasets:
+            if tensor.shape[0] < smallest_n:
+                smallest_n = tensor.shape[0]
 
-        return np.stack([tensor.detach().cpu().numpy() for tensor in binary_datasets])
+        return np.stack([tensor[:smallest_n].detach().cpu().numpy() for tensor in binary_datasets])
