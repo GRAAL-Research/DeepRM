@@ -16,6 +16,9 @@ class TorchvisionDatasetCreator:
         self.torchvision_dataset = torchvision_dataset
 
     def create_meta_dataset(self, config: dict) -> np.ndarray:
+        """
+        Load the data and store in cache.
+        """
         data_base_path = self.torchvision_dataset.get_data_base_path()
         expected_datasets_cache_path = create_cache_path(config, create_cache_base_path(data_base_path))
 
@@ -29,6 +32,9 @@ class TorchvisionDatasetCreator:
         return datasets
 
     def create_train_and_test_datasets(self, config: dict, dataset_base_path: Path) -> tuple[Tensor, Tensor]:
+        """
+        Downloads the train and test data, and applies the relevant data transformation.
+        """
         train_features, train_targets = self.torchvision_dataset.download(dataset_base_path, is_train_data=True)
         test_features, test_targets = self.torchvision_dataset.download(dataset_base_path, is_train_data=False)
         train_set = self.preprocess_dataset(config, train_features, train_targets)
@@ -38,6 +44,9 @@ class TorchvisionDatasetCreator:
 
     @classmethod
     def preprocess_dataset(cls, config: dict, features: np.ndarray, targets: list[int]) -> torch.Tensor:
+        """
+        Processes both the features and the labels.
+        """
         n_instances = len(targets)
         reshaped_targets = torch.tensor(targets).unsqueeze(-1)  # TODO : features and targets are actually tensors
 
@@ -47,6 +56,9 @@ class TorchvisionDatasetCreator:
 
     @staticmethod
     def apply_transforms_to_features(config: dict, features: np.ndarray) -> torch.tensor:
+        """
+        Apply the relevant transformations to the features, given the dataset is an image dataset.
+        """
         has_color_channels = len(features.shape) == 4
 
         if not has_color_channels:

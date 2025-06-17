@@ -40,6 +40,7 @@ class MLP(nn.Module):
     def create_mlp(has_batch_norm: bool, batch_norm_min_dim: int, msg_type: str, has_msg_as_input: bool,
                    input_and_hidden_dims: list[int], device: str = "cpu", biases: bool = True) -> nn.ModuleList:
         modules = torch.nn.ModuleList()
+        # The MLP is composed of successive blocks of the form [Batchnorm, linear, activation].
         for dim_idx in range(len(input_and_hidden_dims) - 1):
             modules.append(LazyBatchNorm(device))
             modules.append(nn.Linear(input_and_hidden_dims[dim_idx], input_and_hidden_dims[dim_idx + 1], bias=biases))

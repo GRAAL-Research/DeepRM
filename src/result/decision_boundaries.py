@@ -14,6 +14,7 @@ from src.utils.utils import FIGURE_BASE_PATH
 def show_decision_boundaries(config, meta_pred: SimpleMetaNet, dataset, data_loader, pred: Predictor, wandb, device):
     """
     Builds a visual depiction of the decision boundary of the predictor for tackling a given problem.
+        Code to generate the figures 5 and 6 in the article
     Args:
         meta_pred (nn.Module): A meta predictor (neural network) to train;
         dataset (str): name of the current dataset;

@@ -25,11 +25,13 @@ class SimpleMetaNet(nn.Module):
 
         self.n_instances_per_class_per_dataset = config["n_instances_per_dataset"] // 2
         self.module_1_dim = config["module_1_dim"] + [config["msg_size"]]
-        self.msg = torch.tensor(0.0)
+        self.msg = torch.tensor(0.0)  # The default message
         self.msk = None  # Mask (compression selection)
         self.output_dim = pred_input_dim
 
         self.data_compressor_1 = create_data_compressor_1(config)
+        # The number of parameters the predictor has corresponds to the output dim of the meta-predictor.
+        # The first component of our meta-learner is a data compressor; a way to map a whole dataset to a vector.
         module_1_input_dim = self.data_compressor_1.get_output_dimension()
         if self.compression_set_size > 0:
             # The module computing the message has the mapped compression set as input
@@ -37,7 +39,7 @@ class SimpleMetaNet(nn.Module):
         self.module_1 = MLP(module_1_input_dim, self.module_1_dim, config["device"],
                             config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
                             config["init_scheme"], config["msg_type"])
-
+        # For each example in the copression wet, an attention head is required (see article).
         self.cas = nn.ModuleList([Attention(config) for _ in range(self.compression_set_size)])
         # That data compressor maps the compression set to a vectorial representation
         self.data_compressor_2 = create_data_compressor(config)
@@ -69,13 +71,16 @@ class SimpleMetaNet(nn.Module):
         msg_module_output = None
         compression_module_output = None
 
+        # Compute the compression set, if necessary
         if self.compression_set_size > 0:
             compression_module_output = self.forward_compression_module(x, n_noisy_messages)
 
+        # Compute that message, helped by the mapped compression set, if necessary
         if self.msg_size > 0:
             msg_module_output = self.forward_msg_module(x, compression_module_output, n_noisy_messages)
             self.msg = msg_module_output.clone()
 
+        # Compute the dowstream predictor parameters, given a message and a mapped compressions set
         return self.forward_module_2(msg_module_output, compression_module_output, curr_batch_size)
 
     def forward_msg_module(self, x: torch.Tensor, compression_module_output: torch.Tensor,
@@ -83,9 +88,12 @@ class SimpleMetaNet(nn.Module):
         if self.is_using_a_random_msg:
             return self.create_random_message(x.shape[0])
 
+        # The task is mapped to a vector...
         x = self.data_compressor_1.forward(x)
+        # ... Then the mapped compression set is appended...
         if compression_module_output is not None:
             x = torch.hstack((x, compression_module_output[:x.shape[0], :]))
+        # ... Then the message is computed.
         message = self.module_1.forward(x)
 
         if self.msg_type == "cnt":
@@ -107,6 +115,7 @@ class SimpleMetaNet(nn.Module):
         return random_message
 
     def create_noisy_message(self, x: torch.Tensor) -> torch.Tensor:
+        # The underlying distribution is a standard isotropic Gaussian distribution.
         return torch.normal(x, self.msg_std)
 
     def forward_compression_module(self, x: torch.Tensor, n_noisy_messages: int) -> torch.Tensor:

@@ -10,6 +10,9 @@ from src.result.decision_boundaries import show_decision_boundaries
 def compute_medias(config: dict, meta_predictor: SimpleMetaNet, test_loader: DataLoader, predictor: Predictor,
                    train_idx: np.ndarray, valid_idx: np.ndarray, test_idx: np.ndarray, datasets: np.ndarray,
                    classes_name) -> None:
+    """
+    Serves to render figures 5 and 6 of the article.
+    """
     if config["n_features"] == 2 and config["is_using_wandb"]:
         show_decision_boundaries(config, meta_predictor, config["dataset"], test_loader, predictor, wandb,
                                  config["device"])

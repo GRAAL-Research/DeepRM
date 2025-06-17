@@ -26,6 +26,7 @@ from src.utils.utils import VALID_ACCURACY_MEAN, VALID_LOSS
 def train_meta_predictor(config: dict) -> None:
     torch.autograd.set_detect_anomaly(True)
 
+    # We initialize the various components of our model.
     datasets = create_datasets(config)
     classes_name = create_datasets_labels(config)
     predictor = create_predictor(config)
@@ -49,6 +50,8 @@ def train_meta_predictor(config: dict) -> None:
     history = create_history()
     start_time = time.time()
 
+    # If the config permits it, a "prior" is computed for the downstream predictor; the future predictions of the meta
+    #   model will just fine-tune this "prior".
     if config["compute_prior"]:
         prior = MLP(config["n_features"], config["pred_hidden_sizes"] + [config["target_size"]], config["device"],
                     config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
@@ -57,6 +60,7 @@ def train_meta_predictor(config: dict) -> None:
         predictor.get_batch_norm_from_prior(prior)
         predictor.set_prior_weights(prior)
 
+    # The training pipeline loops over several epochs...
     for epoch_idx in range(config["max_epoch"]):
         predictor = launch_epoch_training(config, meta_predictor, predictor, train_loader, criterion, optimizer)
 
@@ -78,6 +82,7 @@ def train_meta_predictor(config: dict) -> None:
         if config["is_using_wandb"]:
             log_history_in_wandb(history)
 
+        # The rolling validation performance tells whether to stop the training.
         rolling_val_perf = compute_rolling_performance(history, validation_metric, epoch_idx)
 
         has_done_significant_improvement = rolling_val_perf > best_rolling_val_acc + config["early_stopping_tolerance"]
@@ -97,4 +102,5 @@ def train_meta_predictor(config: dict) -> None:
 
 
 def compute_rolling_performance(history: dict[str, list], metric: str, epoch_idx: int) -> torch.Tensor:
+    # The rolling performances are computed over at most 100 epochs
     return torch.mean(torch.tensor(history[metric][-min(100, epoch_idx + 1):]))

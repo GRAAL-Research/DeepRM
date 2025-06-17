@@ -136,6 +136,10 @@ def kl_inv(q, epsilon, mode, tol=10 ** -9, nb_iter_max=1000):
 
 
 def kl_upper_bound(n):
+    """
+    See last equality in Sample Compression Unleashed: New Generalization Bounds for Real Valued Losses (Bazinet et al.,
+    2025), Appendices, Corollary 6.
+    """
     prob_cum = 0
     for i in range(n + 1):
         prob_cum += math.exp(log_prob_bin(i, n, i / n))

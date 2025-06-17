@@ -7,6 +7,10 @@ from torch.utils.data import Subset, DataLoader
 def train_valid_and_test_indices(dataset_name, datasets: np.ndarray, splits: list[float],
                                  are_test_classes_shared_with_train: bool,
                                  seed: int, is_shuffling=True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Given a few parameters, returns three np.array containing the dataset indices for the train, valid and test meta-
+        datasets.
+    """
     assert sum(splits) == 1, "The sum of splits must be 1."
 
     n_datasets = len(datasets)
@@ -36,24 +40,21 @@ def train_valid_and_test_indices(dataset_name, datasets: np.ndarray, splits: lis
         np.random.shuffle(used_idx)
         split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * 100)
         return np.array(used_idx[:split_1]), np.array(used_idx[split_1:]), np.array(range(100, 150))
+            # If dataset is mnist_binary, the test meta-dataset will contain tasks with digit 0, then 1, 2, and so on
+            # until its proportion is filled.
+            # Same goes for validation tasks
+            # The remaining indices corresponds to the train meta-set.
 
-    if is_shuffling and "mnist_binary" != dataset_name:  # TODO: support other dataset names
+    if is_shuffling:
         np.random.seed(seed)
         np.random.shuffle(datasets_indices)
 
-    if n_datasets > 3:
-        split_1 = math.floor(splits[0] * n_datasets)
-        split_2 = math.floor(splits[1] * n_datasets) + split_1
-        train_idx = datasets_indices[:split_1]
-        valid_idx = datasets_indices[split_1:split_2]
-        test_idx = datasets_indices[split_2:]
-        return train_idx, valid_idx, test_idx
-
-    split_1 = math.floor(splits[0] / (1 - splits[2]) * n_datasets)
+    # Otherwise, a random partitioning of the datasets is done with proportions respecting "splits".
+    split_1 = math.floor(splits[0] * n_datasets)
+    split_2 = math.floor(splits[1] * n_datasets) + split_1
     train_idx = datasets_indices[:split_1]
-    valid_idx = datasets_indices[split_1:]
-    test_idx = np.arange(len(datasets[1]))
-
+    valid_idx = datasets_indices[split_1:split_2]
+    test_idx = datasets_indices[split_2:]
     return train_idx, valid_idx, test_idx
 
 
@@ -64,6 +65,9 @@ def create_data_loader(datasets: np.ndarray, meta_batch_size: int, indices: np.n
 
 def compute_variances(datasets: np.ndarray, train_idx,
                       valid_idx, test_idx) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    A simple function to compute the variance of the labels for the train, valid and test data.
+    """
     train_labels, valid_labels, test_labels = [], [], []
     if type(datasets[0]) is np.ndarray:
         datasets = torch.tensor(datasets)
@@ -82,6 +86,9 @@ def compute_variances(datasets: np.ndarray, train_idx,
 
 
 def extract_class(num_classes: int, current_class: int) -> list:
+    """
+    Extracts the dataset idx corresponding to a given class, given the total number of classes.
+    """
     starting_point = num_classes * current_class
     data_number = list(np.arange(starting_point, starting_point + num_classes - current_class - 1))
     for i in range(1, num_classes - current_class):
@@ -90,12 +97,12 @@ def extract_class(num_classes: int, current_class: int) -> list:
 
 
 def collate_fn_padd(batch):
-    '''
-    Padds batch of variable length
+    """
+    Pads batch of variable length
 
     note: it converts things ToTensor manually here since the ToTensor transform
     assume it takes in images rather than arbitrary tensors.
-    '''
+    """
     ## get sequence lengths
     lengths = torch.tensor([t.shape[0] for t in batch])
     ## padd
