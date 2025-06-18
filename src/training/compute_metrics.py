@@ -45,6 +45,8 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
         tot_acc = []
         for instances in data_loader:
             instances = instances[0]
+            if set_type is SetType.TEST:
+                instances = instances[:min(len(instances), config['n_data_per_test_dataset'])]
             n_datasets = len(instances)
             n_instance_per_dataset = len(instances[0])
             # Half the data serves to generate the dowstream predictor, the other half to compute the metrics.

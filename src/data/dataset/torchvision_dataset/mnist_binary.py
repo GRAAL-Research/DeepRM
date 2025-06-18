@@ -31,7 +31,9 @@ class MnistBinary(TorchvisionDataset):
         n_digits = (1 + math.sqrt(1 + 4 * int(config["n_dataset"]))) / 2
         assert n_digits.is_integer(), f"A round number of classes should be deduced from given number of datasets."
         n_digits = int(n_digits)
-        assert config["n_instances_per_dataset"] % 2 == 0, "The number of instances per dataset must be even."
+        assert config["n_data_per_train_dataset"] % 2 == 0 and config["n_data_per_test_dataset"] % 2 == 0, \
+            "The number of instances per dataset must be even."
+        n_instances_per_dataset = max(config["n_data_per_train_dataset"], config["n_data_per_test_dataset"])
 
         binary_datasets = []
 
@@ -66,10 +68,10 @@ class MnistBinary(TorchvisionDataset):
                     second_class_filter = test[:, target_starting_idx] == second_class
                     second_class_x = test[second_class_filter, :target_starting_idx]
 
-                x = torch.vstack((first_class_x[:int(config["n_instances_per_dataset"] / 2)],
-                                  second_class_x[:int(config["n_instances_per_dataset"] / 2)]))
+                x = torch.vstack((first_class_x[:int(n_instances_per_dataset / 2)],
+                                  second_class_x[:int(n_instances_per_dataset / 2)]))
                 y = torch.ones((len(x), 1))
-                y[:min(len(first_class_x), int(config["n_instances_per_dataset"] / 2))] -= 2
+                y[:min(len(first_class_x), int(n_instances_per_dataset / 2))] -= 2
 
                 binary_dataset = torch.hstack((x, y))
                 if config["shuffle_each_dataset_samples"]:

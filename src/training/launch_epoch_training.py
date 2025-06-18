@@ -13,7 +13,7 @@ def launch_epoch_training(config: dict, meta_predictor: SimpleMetaNet, predictor
     A standard meta-learning loop.
     """
     meta_predictor.train()
-    batch_size = config["batch_size"] if config["batch_size"] > 0 else config["n_instances_per_dataset"] + 1
+    batch_size = config["batch_size"] if config["batch_size"] > 0 else config["n_data_per_train_dataset"] + 1
     n_instances_per_class_per_dataset = batch_size // 2
     with (torch.enable_grad()):
         # For all train task...

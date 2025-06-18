@@ -15,7 +15,7 @@ def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, te
     The prior corresponds to the single model capable of achieving the best performances over the meta-train tasks.
     """
     optimizer = create_optimizer(config, prior)
-    indx_vec = np.arange(config["n_instances_per_dataset"])
+    indx_vec = np.arange(config["n_data_per_train_dataset"])
     if config["target_size"] == 1:
         output_activation = torch.nn.Sigmoid()
     else:

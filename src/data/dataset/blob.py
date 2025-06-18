@@ -20,10 +20,11 @@ def generate_blob_datasets(config: dict) -> np.ndarray:
 
 
 def generate_random_blob_dataset(config: dict) -> np.ndarray:
-    nb_of_samples_of_the_second_class = config["n_instances_per_dataset"] // 2
+    n_instances_per_dataset = max(config["n_data_per_train_dataset"], config["n_data_per_test_dataset"])
+    nb_of_samples_of_the_second_class = n_instances_per_dataset // 2
 
     x_of_first_class = generate_random_blob_features(config)
-    y_of_first_class = np.ones((config["n_instances_per_dataset"], 1))
+    y_of_first_class = np.ones((n_instances_per_dataset, 1))
     x, y = modify_first_class_samples_to_add_the_second_class(x_of_first_class, y_of_first_class,
                                                               nb_of_samples_of_the_second_class)
 
@@ -35,8 +36,9 @@ def generate_random_blob_dataset(config: dict) -> np.ndarray:
 
 def generate_random_blob_features(config: dict) -> np.ndarray:
     random_gaussian_blob_center = np.random.rand(config["n_features"]) * 10 - 5
+    n_instances_per_dataset = max(config["n_data_per_train_dataset"], config["n_data_per_test_dataset"])
     return np.random.multivariate_normal(mean=random_gaussian_blob_center, cov=np.eye(config["n_features"]),
-                                         size=config["n_instances_per_dataset"])
+                                         size=n_instances_per_dataset)
 
 
 def modify_first_class_samples_to_add_the_second_class(x: np.ndarray, y: np.ndarray,

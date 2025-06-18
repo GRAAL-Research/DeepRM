@@ -8,7 +8,8 @@ splits: [0.7875, 0.15, 0.0625]
 shuffle_each_dataset_samples: True
 
 n_dataset: 320
-n_instances_per_dataset: 2000
+n_data_per_train_dataset: 2000
+n_data_per_test_dataset: 2000
 n_features: 784
 
 first_digit: 1
