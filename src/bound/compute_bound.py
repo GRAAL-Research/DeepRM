@@ -9,7 +9,7 @@ from src.model.utils.loss import linear_loss, linear_loss_multi
 
 
 def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, delta, a, b, inputs, targets,
-                   msg_size: str, msg_type: str, compression_set_size: int, compression_pool_size: int):
+                   msg_size: str, msg_type: str, compression_set_size: int):
     """
     Generates the DeepRM meta-predictor.
         Args:
@@ -50,14 +50,14 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                         2 * msg_std)  # ... as well as avg KL val. (shortcut)
         for bnd_type in bnds_type:
             if bnd_type == 'kl': # Corollary D.2 in our article
-                epsilon = (kl + log_binomial_coefficient(compression_pool_size, n_z) + np.log(
+                epsilon = (kl + log_binomial_coefficient(m, n_z) + np.log(
                     kl_upper_bound(m - n_z) / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
             elif bnd_type == 'linear': # Corollary D.3 in our article
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     lambd = beta / m ** 0.5
                     bound = 1 - ((r / (m - n_z)) + lambd * (b - a) ** 2 / (8 * (m - n_z)) +
-                                 (kl + log_binomial_coefficient(compression_pool_size, n_z) -
+                                 (kl + log_binomial_coefficient(m, n_z) -
                                   np.log(delta / n_grid)) / lambd
                                  ).item()
                     if bound > best_bnd:
@@ -66,7 +66,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     c = beta / m ** 0.5
                     bound = 1 - ((1 - math.exp(-c * (r / (m - n_z)) -
-                                               (kl + log_binomial_coefficient(compression_pool_size, n_z) -
+                                               (kl + log_binomial_coefficient(m, n_z) -
                                                 np.log(delta / n_grid)) / (m - n_z))) / (1 - math.e ** (-c)))
                     if bound > best_bnd:
                         best_bnd = bound
@@ -75,7 +75,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
             elif bnd_type == 'marchand':
                 best_bnd = 0
             elif bnd_type == 'kl_dis': # Corollary F.1 in our article
-                epsilon = (2 * kl + log_binomial_coefficient(compression_pool_size, n_z) + np.log(
+                epsilon = (2 * kl + log_binomial_coefficient(m, n_z) + np.log(
                     kl_upper_bound(m - n_z)) + 3 * np.log(2 / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min((r / (m - n_z)).item(), 1), epsilon.item(), 'MAX')
             best_bnds.append(best_bnd)
@@ -84,14 +84,14 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
             p_sigma = 2 ** (-n_sigma)  # Since the message is a binary vector, we consider a uniform distribution
             #   on its various possibilities (prob = 2 ** -number of possibilities)
             if bnd_type == 'kl': # Corollary A.2 in our article
-                epsilon = (log_binomial_coefficient(compression_pool_size, n_z) +
+                epsilon = (log_binomial_coefficient(m, n_z) +
                            np.log(kl_upper_bound(m - n_z) / p_sigma / delta)) / (m - n_z)
                 best_bnd = 1 - kl_inv(min(1, r / (m - n_z)), epsilon, 'MAX')
             elif bnd_type == 'linear': # Corollary A.3 in our article
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     lambd = beta / m ** 0.5
                     bound = 1 - ((r / (m - n_z)) + lambd * (b - a) ** 2 / 8 +
-                                 (log_binomial_coefficient(compression_pool_size, n_z) -
+                                 (log_binomial_coefficient(m, n_z) -
                                   np.log(p_sigma) -
                                   np.log(delta / n_grid)) / (lambd * (m - n_z))
                                  )
@@ -101,7 +101,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                 for beta in np.logspace(grid_start, grid_stop, n_grid):  # Grid search for the optimal parameter
                     c = beta / m ** 0.5
                     bound = 1 - ((1 - math.exp(-c * (r / (m - n_z)) -
-                                               (log_binomial_coefficient(compression_pool_size, n_z) -
+                                               (log_binomial_coefficient(m, n_z) -
                                                 np.log(p_sigma) -
                                                 np.log(delta / n_grid)) / (m - n_z)))
                                  / (1 - math.exp(-c))
@@ -115,7 +115,7 @@ def compute_bounds(bnds_type, meta_pred: SimpleMetaNet, pred: Predictor, m, r, d
                         np.log(delta)))
             elif bnd_type == 'marchand':
                 best_bnd = 1 - sup_bin(int(min(r, m - n_z)), int(m - n_z),  # The test-set bound for sample compression
-                                       delta * p_sigma / math.exp(log_binomial_coefficient(compression_pool_size, n_z)))
+                                       delta * p_sigma / math.exp(log_binomial_coefficient(m, n_z)))
             elif bnd_type == 'kl_dis':
                 best_bnd = 0
             best_bnds.append(best_bnd)

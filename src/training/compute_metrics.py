@@ -100,8 +100,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
                                                 0.10, 0, 1,
                                                 instances[[dataset_idx], :n_instances_per_class_per_dataset],
                                                 targets[[dataset_idx], :n_instances_per_class_per_dataset],
-                                                config["msg_size"], config["msg_type"], config["compression_set_size"],
-                                                config["compression_pool_size"])
+                                                config["msg_size"], config["msg_type"], config["compression_set_size"])
                         # All of the various bounds are computed and reported.
                         linear_bounds.append(bounds[0])
                         hyperparam_bounds.append(bounds[1])

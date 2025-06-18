@@ -31,7 +31,6 @@ tfm_drop_out: 0
 tfm_output_dim: 10
 
 compression_set_size: 0
-compression_pool_size: 50
 attention_dim: [10]
 attention_temperature: 20
 attention_pooling_type: deepset

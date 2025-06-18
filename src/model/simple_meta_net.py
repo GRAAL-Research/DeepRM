@@ -14,7 +14,6 @@ class SimpleMetaNet(nn.Module):
         """
         super().__init__()
         self.compression_set_size = config["compression_set_size"]
-        self.compression_pool_size = config["compression_pool_size"]
         self.msg_type = config["msg_type"]
         self.msg_std = config["msg_std"]
         self.msg_size = config["msg_size"]
