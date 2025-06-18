@@ -13,7 +13,8 @@ def create_cache_path(config: dict, cache_base_path: Path) -> Path:
         CONFIG_BASE_PATH / config["dataset_config_path"])
     file_name = []
     for key in dataset_config_not_overrode_by_grid_search_config.keys():
-        if key not in ["task", "target_size", "criterion", "is_dataset_balanced"]:
+        if key not in ["task", "target_size", "criterion", "is_dataset_balanced", "shuffle_each_dataset_samples",
+                       "is_encoding_as_images"]:
             file_name.append(f"{key}={config[key]}")
 
     return cache_base_path / ("-".join(file_name) + NUMPY_FILE_EXTENSION)

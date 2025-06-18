@@ -48,7 +48,7 @@ class TorchvisionDatasetCreator:
         Processes both the features and the labels.
         """
         n_instances = len(targets)
-        reshaped_targets = targets.unsqueeze(-1)
+        reshaped_targets = torch.tensor(targets).unsqueeze(-1) if type(targets) == list else targets.unsqueeze(-1)
 
         features = cls.apply_transforms_to_features(config, features)
         reshaped_features = features.reshape((n_instances, config["n_features"]))
