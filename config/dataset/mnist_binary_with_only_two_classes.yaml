@@ -15,5 +15,5 @@ n_features: 784
 first_digit: 1
 second_digit: 7
 
-n_pixels_to_permute: 200
+n_pixels_to_permute: 0
 is_encoding_as_images: True

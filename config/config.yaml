@@ -1,6 +1,8 @@
-dataset_config_path: dataset/mnist.yaml
+dataset_config_path: dataset/moon.yaml
 log_config_path: log/off.yaml
-training_config_path: training/gpu.yaml
+training_config_path: training/cpu.yaml
+
+
 compute_prior: False
 max_prior_epoch: 40
 posterior_handicap: 0.1

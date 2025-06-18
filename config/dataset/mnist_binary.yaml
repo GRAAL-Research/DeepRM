@@ -12,4 +12,5 @@ n_data_per_train_dataset: 2000
 n_data_per_test_dataset: 2000
 n_features: 784
 
+n_pixels_to_permute: 0
 is_encoding_as_images: True

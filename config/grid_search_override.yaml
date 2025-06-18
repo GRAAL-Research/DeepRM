@@ -3,24 +3,23 @@ run_name_content: [[lr, module_1_dim, msg_type, msg_size, compression_set_size, 
 
 batch_size: [0]
 meta_batch_size: [20]
-lr: [1e-3]
-seed: [0]
+lr: [1e-3, 1e-4]
+seed: [20250618]
 
 data_encoder_name: [deepset]
-n_pixels_to_permute: [0]
 
 module_1_dim: [[200, 200], [500, 500]]
-module_2_dim: [[100], [200], [500, 500]]
+module_2_dim: [[100], [200]]
 deepset_dim: [[100], [200, 200]]
-attention_dim: [[400, 400]]
+attention_dim: [[100]]
 
 msg_penalty: [l2]
 msg_penalty_coef: [0]
 
 msg_type: [dsc, cnt]
 msg_std: [1]
-msg_size: [0, 1, 2, 4, 8, 16, 32]
-compression_set_size: [0, 1, 2, 4, 6, 8, 12]
+msg_size: [0, 1, 2, 4, 8, 16, 32, 64, 128]
+compression_set_size: [0, 1, 2, 4, 6, 8, 15]
 compression_pool_size: [20]
 pred_filter_sizes: [[10, 20]]
-pred_hidden_sizes: [[200, 200]]
+pred_hidden_sizes: [[1000, 400, 200]]
