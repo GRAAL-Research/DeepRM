@@ -25,6 +25,10 @@ The files containing the hyperparameters impacting the runs are mostly found in 
 
 Take a look at the `hyperparameters_dictionary.txt` to learn more about the effect of many tunable hyperparameters.
 
+### Why is the repository named "DeepRM"?
+
+DeepRM stands for Deep Reconstruction Machine, since a pivotal aspect of this work consists of learning the reconstruction function.
+
 ### BiBTeX
 
 If you find this work useful, please cite:
