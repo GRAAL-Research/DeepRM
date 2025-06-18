@@ -11,7 +11,7 @@ This repository contains the source code of experiments presented in  "[Generali
 
 Run `main.py`.
 
-### Reproduce main results
+### Reproducing the main results
 
 To reproduce the paper's main results on real benchmarks, set the `dataset_config_path` hyperparameter to `dataset/dataset_name.yaml` in `config/config.yaml`, then run `main.py`.
 
