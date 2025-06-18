@@ -1,5 +1,7 @@
 # Generalization Bounds via Meta-Learned Model Representations: PAC-Bayes and Sample Compression Hypernetworks
 
+This repository contains the source code of experiments presented in  "[Generalization Bounds via Meta-Learned Model Representations: PAC-Bayes and Sample Compression Hypernetworks](https://arxiv.org/abs/2410.13577)" by Leblanc, Bazinet, D'Amours, Drouin and Germain, accepted at ICML 2025.
+
 ### Dependencies
 
 - Use Python 3.11
