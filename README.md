@@ -23,7 +23,7 @@ Set the `log_config_path` hyperparameter to `log/on.yaml` in `config/config.yaml
 
 The files containing the hyperparameters impacting the runs are mostly found in `config/config.yaml` and `config/grid_search_override.yaml`. Depending on the chosen task, whether the run is saved in Weights & Biases, and the chosen device, other hyperparameters are found in the corresponding .yaml files in `config/dataset`, `config/log`, and `config/training`.
 
-Take a look at the `hyperparameters_dictionary.txt` to learn more about the effect of every tunable hyperparameter.
+Take a look at the `hyperparameters_dictionary.txt` to learn more about the effect of many tunable hyperparameters.
 
 ### BiBTeX
 
