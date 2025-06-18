@@ -25,7 +25,7 @@ The files containing the hyperparameters impacting the runs are mostly found in 
 
 Take a look at the `hyperparameters_dictionary.txt` to learn more about the effect of every tunable hyperparameter.
 
-### Bibtex
+### BiBTeX
 
 If you find this work useful, please cite:
 
