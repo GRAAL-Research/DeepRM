@@ -13,8 +13,9 @@ from src.data.utils import DATA_BASE_PATH
 class MnistLabelShuffle(TorchvisionDataset):
     @staticmethod
     def create_meta_datasets(config: dict, train: torch.Tensor, test: torch.Tensor) -> np.ndarray:
-        binary_datasets = np.zeros((config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] +
-                                    config["target_size"]))
+        n_instances_per_dataset = max(config["n_data_per_train_dataset"], config["n_data_per_test_dataset"])
+        binary_datasets = np.zeros((config["n_dataset"], n_instances_per_dataset,
+                                    config["n_features"] + config["target_size"]))
 
         train_targets = train[:, -1].long()
         train = torch.hstack((train[:, :-1], F.one_hot(train_targets) * 2 - 1))
@@ -30,7 +31,7 @@ class MnistLabelShuffle(TorchvisionDataset):
             label_idx = np.arange(784, 794)
             np.random.shuffle(label_idx)
             train_dataset_shuffled[:, -config["target_size"]:] = train_dataset_shuffled[:, label_idx]
-            train_dataset_reduced = train_dataset_shuffled[: config["n_instances_per_dataset"]]
+            train_dataset_reduced = train_dataset_shuffled[: n_instances_per_dataset]
             binary_datasets[num_swap] = train_dataset_reduced
             num_swap += 1
             if num_swap == int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
@@ -43,7 +44,7 @@ class MnistLabelShuffle(TorchvisionDataset):
                                         config["n_dataset"]):
             idx = np.arange(len(test))
             np.random.shuffle(idx)
-            test_dataset_reduced = test[idx[:config["n_instances_per_dataset"]]]
+            test_dataset_reduced = test[idx[:n_instances_per_dataset]]
 
             label_idx = np.arange(784, 794)
             np.random.shuffle(label_idx)

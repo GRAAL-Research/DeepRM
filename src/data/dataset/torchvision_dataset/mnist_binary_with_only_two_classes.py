@@ -23,9 +23,10 @@ class MnistBinaryWithOnlyTwoClasses(TorchvisionDataset):
     def create_meta_datasets(cls, config: dict, train: torch.Tensor, test: torch.Tensor) -> np.ndarray:
         train = cls.preprocess_set_for_binary(config, train)
         test = cls.preprocess_set_for_binary(config, test)
-        binary_datasets = np.zeros((config["n_dataset"], config["n_instances_per_dataset"], config["n_features"] +
+        n_instances_per_dataset = max(config["n_data_per_train_dataset"], config["n_data_per_test_dataset"])
+        binary_datasets = np.zeros((config["n_dataset"], n_instances_per_dataset, config["n_features"] +
                                     config["target_size"]))
-        n_partition = len(train) // config["n_instances_per_dataset"]
+        n_partition = len(train) // n_instances_per_dataset
         num_swap = 0
         stop = False
         while not stop:
@@ -44,8 +45,8 @@ class MnistBinaryWithOnlyTwoClasses(TorchvisionDataset):
                         config["n_dataset"] * (config["splits"][0] + config["splits"][1])):
                     stop = True
                     break
-                train_dataset_reduced = train_dataset_shuffled[num_partition * config["n_instances_per_dataset"]:
-                                                               (num_partition + 1) * config["n_instances_per_dataset"]]
+                train_dataset_reduced = train_dataset_shuffled[num_partition * n_instances_per_dataset:
+                                                               (num_partition + 1) * n_instances_per_dataset]
                 binary_datasets[n_partition * num_swap + num_partition] = train_dataset_reduced
             num_swap += 1
         train_idx = np.arange(int(config["n_dataset"] * (config["splits"][0] + config["splits"][1])))
@@ -55,7 +56,7 @@ class MnistBinaryWithOnlyTwoClasses(TorchvisionDataset):
                                         config["n_dataset"]):
             idx = np.arange(len(test))
             np.random.shuffle(idx)
-            test_dataset_reduced = test[idx[:config["n_instances_per_dataset"]]]
+            test_dataset_reduced = test[idx[:n_instances_per_dataset]]
 
             for pixel in range(config["n_pixels_to_permute"]):
                 first_pixel_location = np.random.randint(0, config["n_features"])

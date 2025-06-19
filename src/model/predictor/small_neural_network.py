@@ -10,11 +10,15 @@ from src.model.predictor.predictor import Predictor
 
 
 class FCNet(Predictor):
+    """
+    Implementation of a fully connected neural network which does not have static parameters.
+        This custom implementation is made in order to guarantee that the gradient flows back to the meta-classifier.
+    """
     def __init__(self, config: dict) -> None:
         super().__init__(config)
         self.architecture_sizes = [config["n_features"]] + config["pred_hidden_sizes"] + [config["target_size"]]
         self.mlp = MLP(config["n_features"], self.architecture_sizes[1:], config["device"],
-                       config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"])
+                       config["has_skip_connection"], config["has_batch_norm"])
 
         self.params = torch.tensor([])
         self.batch_norm_params = []
@@ -26,12 +30,21 @@ class FCNet(Predictor):
 
     @property
     def n_params(self) -> int:
+        """
+        Compute the number of parameters that is required to parameterize this MLP.
+        """
         return sum(parameter.numel() for parameter in self.parameters() if parameter.requires_grad)
 
     def set_params(self, params: torch.Tensor) -> None:
+        """
+        The parameters is a linear combinations of the "prior" (if there is one) and a new set of weights.
+        """
         self.params = params * self.posterior_handicap + self.prior
 
     def set_forward_mode(self, use_last_values: bool = False, save_bn_params: bool = False):
+        """
+        Permits the continual use of the same parameters for the batch norm layers.
+        """
         self.use_last_values = use_last_values
         self.save_bn_params = save_bn_params
 
@@ -45,6 +58,9 @@ class FCNet(Predictor):
                 self.mlp.mlp[i] = prior.mlp[i]
 
     def set_prior_weights(self, prior):
+        """
+        Given the current weights of the MLP, freeze the parameters to become the prior values.
+        """
         first, weights = True, None
         for layer in prior.mlp:
             if isinstance(layer, nn.Linear):
@@ -57,6 +73,9 @@ class FCNet(Predictor):
         self.prior = weights.reshape((1, -1))
 
     def forward(self, instances: torch.Tensor) -> tuple:
+        """
+        The computation has to be done manually in order to ensure the gradient to flow properly to the meta-learner.
+        """
         x = instances[:, :, :-self.target_size]
         meta_batch_size = len(x)
 
@@ -70,7 +89,8 @@ class FCNet(Predictor):
             if isinstance(layer, nn.Linear):
                 current_linear_layer_dim = self.architecture_sizes[linear_layer_idx]
                 new_linear_layer_dim = self.architecture_sizes[linear_layer_idx + 1]
-
+                # Each time a computation is made on a feedforward layer, the idx of the weights of self.params
+                #   corresponding to the current layer weights and biases.
                 params_high_idx += current_linear_layer_dim * new_linear_layer_dim
                 weights = self.params[:, params_low_idx: params_high_idx].reshape(meta_batch_size,
                                                                                   new_linear_layer_dim,
@@ -133,7 +153,7 @@ class ConvNet(Predictor):
         self.conv1 = nn.Conv2d(self.color_channels, self.n_filt1, kernel_size=5)
         self.conv2 = nn.Conv2d(self.n_filt1, self.n_filt2, kernel_size=5)
         self.mlp = MLP(conv_feat_size, self.architecture_sizes[1:], config["device"],
-                       config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"])
+                       config["has_skip_connection"], config["has_batch_norm"])
 
         self.num_conv1_weight_params = torch.numel(self.conv1.weight)
         self.num_conv1_bias_params = torch.numel(self.conv1.bias)

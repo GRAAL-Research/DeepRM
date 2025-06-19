@@ -1,0 +1,36 @@
+Hyperparameters found in config/config.yaml:
+    -dataset_config_path (str): Points toward the task to train on.
+    -log_config_path (std): Whether to save the runes in Weights & Biases.
+    -training_config_path (str): Whether to run on "cpu" or "gpu".
+    -compute_prior (bool): Whether to compute a "prior" downstream predictor, in which case the output of the meta-learner is simply added to the prior.
+    -posterior_handicap (float between 0 and 1): Posterior multiplicative factor.
+    -is_bound_computed (bool): Whether to compute generalization bounds...
+    -bound_computation_epoch_frequency (int): ... And if so, once every how many epochs?
+    -are_test_classes_shared_with_train (bool): Whether the test classes were seen in during the training; important to set to False to reproduce the experiments from section 4.4 in the article.
+    -is_media_computed (bool): Whether to compute performance matrix.
+    -msg_type (str): Message type. Choices between "dsc" (discrete), "cnt" (continuous).
+    -msg_std (float): Normal distribution standard deviation over which message are drawn.
+    -msg_size (int): Message size.
+    -msg_penalty (str): Penalty type applied to messages (if continuous). Choices between "l2" and "l1".
+    -msg_penalty_coef (float): Penalty applied to messages (if continuous).
+    -is_using_a_random_msg (bool): Whether to have strictly random messages.
+    -data_encoder_name (str): Method to encode a dataset into a vector. Choices between "deepset", "concatenator", "conv_one_by_one", "fs_pool" or "transformer".
+    -deepset_dim (list of int): Hidden layers architecture of the MLP in DeepSet.
+    -fs_pool_dim (list of int): Hidden layers architecture of the MLP in FSPool.
+    -tfm_input_dim (int), tfm_n_heads (int), tfm_mlp_dim (int), tfm_n_encoders (int), tfm_drop_out (int), tfm_output_dim (int): Various hyperparameters regarding the architecture of the transformer encoder.
+    -compression_set_size (int): Compression set size.
+    -module_1_dim (list of int): PAC-Bayes encoder / message compressor feedforward network hidden layers architecture.
+    -module_2_dim (list of int): Decoder / reconstructor feedforward network hidden layers architecture.
+    -meta_pred (str): Type of meta-learner. Choices between "simple_net".
+    -predictor (str): Type of downstream predictor. Choices between "FCNet", "LinearClassifier" (not maintained), "ConvNet" (not maintained).
+    -pred_filter_sizes (list of int): Filter sizes (if predictor == "ConvNet").
+    -pred_hidden_sizes (list of int): Architecture of the hidden layers of the downstream predictors.
+    -has_skip_connection (bool): Whether the various components of the meta-learner (and the downstream predictor) include skip connections.
+    -has_batch_norm (bool): Whether the various components of the meta-learner (and the downstream predictor) include batch norm layers.
+    -batch_norm_min_dim (int): Minimum input dimension in order to append a batch norm layer.
+    -loss_exponent (float): Exponent to apply to the loss.
+
+Hyperparameters found in config/dataset:
+    -splits (list of three floats, where sum(splits) == 1): Train, valid and test tasks proportion out of n_dataset.
+    -shuffle_each_dataset_samples (bool): Whether to shuffle the content of each dataset.
+    -n_pixels_to_permute (int): Number of pixels to permute in the pixel swap experiment.

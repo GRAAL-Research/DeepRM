@@ -29,6 +29,7 @@ class CIFAR100(TorchvisionDataset):
         used_idx = np.array(range(len(dataset_bank)))
         np.random.shuffle(used_idx)
         used_idx = used_idx[:150]
+        n_instances_per_dataset = max(config["n_data_per_train_dataset"], config["n_data_per_test_dataset"])
 
         for dataset_classes in used_idx:
             idx = np.arange(len(train))
@@ -52,10 +53,10 @@ class CIFAR100(TorchvisionDataset):
                 second_class_filter = test[:, target_starting_idx] == dataset_bank[dataset_classes, 1]
                 second_class_x = test[second_class_filter, :target_starting_idx]
 
-            x = torch.vstack((first_class_x[:int(config["n_instances_per_dataset"] / 2)],
-                              second_class_x[:int(config["n_instances_per_dataset"] / 2)]))
+            x = torch.vstack((first_class_x[:int(n_instances_per_dataset / 2)],
+                              second_class_x[:int(n_instances_per_dataset / 2)]))
             y = torch.ones((len(x), 1))
-            y[:min(len(first_class_x), int(config["n_instances_per_dataset"] / 2))] -= 2
+            y[:min(len(first_class_x), int(n_instances_per_dataset / 2))] -= 2
 
             binary_dataset = torch.hstack((x, y))
             if config["shuffle_each_dataset_samples"]:

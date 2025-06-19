@@ -3,6 +3,9 @@ from torch import nn as nn
 
 
 class LazyBatchNorm(nn.Module):
+    """
+    A custom batch norm layer, which is defined the first time it is used by the size of its input.
+    """
     def __init__(self, device: str) -> None:
         super().__init__()
         self.device = device
