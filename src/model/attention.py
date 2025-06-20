@@ -1,8 +1,7 @@
 import torch
 from torch import nn as nn
 
-from src.model.data_encoder.fspool import FSPool
-from src.model.data_encoder.kme import KME
+from src.model.data_encoder.deepset import DeepSet
 from src.model.mlp import MLP
 
 
@@ -11,7 +10,7 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
         self.temperature = config["attention_temperature"]
         self.keys = MLP(config["n_features"] + config["target_size"], config["attention_dim"], config["device"],
-                        config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
+                        config["has_skip_connection"], config["has_batch_norm"],
                         config["init_scheme"], "cnt")
         self.queries = self.create_queries(config)
 
@@ -29,9 +28,7 @@ class Attention(nn.Module):
         if config["attention_pooling_type"] is None:
             return MLP(config["n_features"] + 1, config["attention_dim"], config["device"],
                        config["has_skip_connection"], config["has_batch_norm"], config["init_scheme"], "cnt")
-        elif config["attention_pooling_type"].lower() == "kme":
-            return KME(config, hidden_dims=config["attention_dim"])
-        elif config["attention_pooling_type"].lower() == "fs_pool":
-            return FSPool(config, config["attention_dim"])
+        elif config["attention_pooling_type"].lower() == "deepset":
+            return DeepSet(config, hidden_dims=config["attention_dim"])
 
         raise NotImplementedError(f"The pooling '{config['attention_pooling_type']}' is not supported.")

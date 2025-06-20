@@ -11,6 +11,9 @@ from src.training.factory.optimizer import create_optimizer
 
 def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, test_loader: DataLoader,
                           criterion: nn.Module) -> MLP:
+    """
+    The prior corresponds to the single model capable of achieving the best performances over the meta-train tasks.
+    """
     optimizer = create_optimizer(config, prior)
     indx_vec = np.arange(config["n_instances_per_dataset"])
     if config["target_size"] == 1:
@@ -19,6 +22,7 @@ def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, te
         output_activation = torch.nn.Softmax(dim=2)
     print("*** Prior training ***")
     for epoch_idx in range(config["max_prior_epoch"]):
+        # A standard training loop
         prior.train()
         for instances in train_loader:
             if config["device"] == "gpu":
@@ -32,6 +36,8 @@ def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, te
                 loss = compute_loss(config, criterion, output_activation(output), targets, None)
                 loss.backward()
                 optimizer.step()
+
+        # The prior model now is in evaluation mode; the batch norm layers are not impacted by the test data.
         prior.eval()
         tot_acc = []
         for instances in test_loader:
