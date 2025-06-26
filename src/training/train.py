@@ -16,7 +16,7 @@ from src.training.factory.criterion import create_criterion
 from src.training.factory.meta_predictor import create_meta_predictor
 from src.training.factory.optimizer import create_optimizer
 from src.training.factory.scheduler import create_scheduler
-from src.training.launch_epoch_training import launch_epoch_training
+from src.training.launch_epoch_training import launch_one_meta_training_epoch
 from src.training.launch_prior_training import launch_prior_training
 from src.training.log_epoch_in_terminal import log_epoch_info_in_terminal
 from src.utils.utils import VALID_ACCURACY_MEAN, VALID_LOSS
@@ -58,7 +58,7 @@ def train_meta_predictor(config: dict) -> None:
         predictor.set_prior_weights(prior)
 
     for epoch_idx in range(config["max_epoch"]):
-        predictor = launch_epoch_training(config, meta_predictor, predictor, train_loader, criterion, optimizer)
+        predictor = launch_one_meta_training_epoch(config, meta_predictor, predictor, train_loader, criterion, optimizer)
 
         is_computing_test_bounds = False
         if config["is_bound_computed"] and epoch_idx % config["bound_computation_epoch_frequency"] == 0:

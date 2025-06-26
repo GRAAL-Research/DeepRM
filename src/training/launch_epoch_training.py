@@ -7,8 +7,8 @@ from src.model.simple_meta_net import SimpleMetaNet
 from src.training.compute_loss import compute_loss
 
 
-def launch_epoch_training(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor, train_loader: DataLoader,
-                          criterion: nn.Module, optimizer: torch.optim.Optimizer) -> Predictor:
+def launch_one_meta_training_epoch(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor, train_loader:
+                                   DataLoader, criterion: nn.Module, optimizer: torch.optim.Optimizer) -> Predictor:
     """
     A standard meta-learning loop.
     """
