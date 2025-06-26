@@ -32,9 +32,6 @@ class TorchvisionDatasetCreator:
         return datasets
 
     def create_train_and_test_datasets(self, config: dict, dataset_base_path: Path) -> tuple[Tensor, Tensor]:
-        """
-        Downloads the train and test data, and applies the relevant data transformation.
-        """
         train_features, train_targets = self.torchvision_dataset.download(dataset_base_path, is_train_data=True)
         test_features, test_targets = self.torchvision_dataset.download(dataset_base_path, is_train_data=False)
         train_set = self.preprocess_dataset(config, train_features, train_targets)
@@ -44,21 +41,15 @@ class TorchvisionDatasetCreator:
 
     @classmethod
     def preprocess_dataset(cls, config: dict, features: np.ndarray, targets: torch.Tensor) -> torch.Tensor:
-        """
-        Processes both the features and the labels.
-        """
         n_instances = len(targets)
         reshaped_targets = torch.tensor(targets).unsqueeze(-1) if type(targets) == list else targets.unsqueeze(-1)
 
-        features = cls.apply_transforms_to_features(config, features)
+        features = cls.apply_image_transforms_to_features(config, features)
         reshaped_features = features.reshape((n_instances, config["n_features"]))
         return torch.hstack((reshaped_features, reshaped_targets))
 
     @staticmethod
-    def apply_transforms_to_features(config: dict, features: np.ndarray) -> torch.tensor:
-        """
-        Apply the relevant transformations to the features, given the dataset is an image dataset.
-        """
+    def apply_image_transforms_to_features(config: dict, features: np.ndarray) -> torch.tensor:
         has_color_channels = len(features.shape) == 4
 
         if not has_color_channels:

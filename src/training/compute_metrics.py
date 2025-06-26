@@ -14,9 +14,6 @@ from src.utils.utils import SetType, \
 def compute_metrics_for_all_sets(config: dict, meta_predictor: SimpleMetaNet, predictor: Predictor,
                                  criterion: nn.Module, train_loader: DataLoader, valid_loader: DataLoader,
                                  test_loader: DataLoader, is_computing_test_bounds: bool) -> tuple[dict, dict, dict]:
-    """
-    Compute the metrics (bound values, loss, etc.) for train, valid and test sets.
-    """
     train_metrics = compute_metrics(config, meta_predictor, predictor, criterion, train_loader, False,
                                     set_type=SetType.TRAIN)
     valid_metrics = compute_metrics(config, meta_predictor, predictor, criterion, valid_loader,

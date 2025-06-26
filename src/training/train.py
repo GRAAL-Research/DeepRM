@@ -25,7 +25,6 @@ from src.utils.utils import VALID_ACCURACY_MEAN, VALID_LOSS
 def train_meta_predictor(config: dict) -> None:
     torch.autograd.set_detect_anomaly(True)
 
-    # We initialize the various components of our model.
     datasets = create_datasets(config)
     predictor = create_predictor(config)
     meta_predictor = create_meta_predictor(config, predictor)
@@ -58,7 +57,6 @@ def train_meta_predictor(config: dict) -> None:
         predictor.get_batch_norm_from_prior(prior)
         predictor.set_prior_weights(prior)
 
-    # The training pipeline loops over several epochs...
     for epoch_idx in range(config["max_epoch"]):
         predictor = launch_epoch_training(config, meta_predictor, predictor, train_loader, criterion, optimizer)
 
@@ -98,5 +96,5 @@ def train_meta_predictor(config: dict) -> None:
 
 
 def compute_rolling_performance(history: dict[str, list], metric: str, epoch_idx: int) -> torch.Tensor:
-    # The rolling performances are computed over at most 100 epochs
-    return torch.mean(torch.tensor(history[metric][-min(100, epoch_idx + 1):]))
+    max_epoch_on_which_the_rolling_performance_is_computed = 100
+    return torch.mean(torch.tensor(history[metric][-min(rolling_performance_max_epoch, epoch_idx + 1):]))

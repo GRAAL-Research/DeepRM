@@ -22,7 +22,6 @@ def launch_prior_training(config: dict, prior: MLP, train_loader: DataLoader, te
         output_activation = torch.nn.Softmax(dim=2)
     print("*** Prior training ***")
     for epoch_idx in range(config["max_prior_epoch"]):
-        # A standard training loop
         prior.train()
         for instances in train_loader:
             if config["device"] == "gpu":
