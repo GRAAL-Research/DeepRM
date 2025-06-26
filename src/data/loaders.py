@@ -90,13 +90,13 @@ def compute_variances(datasets: np.ndarray, train_idx,
 
 def extract_class(num_classes: int, current_class: int) -> list:
     """
-    Extracts the dataset idx corresponding to a given class, given the total number of classes.
+    Extracts the dataset indices for samples belonging to a given class, given the total number of classes.
     """
     starting_point = num_classes * current_class
-    data_number = list(np.arange(starting_point, starting_point + num_classes - current_class - 1))
+    dataset_indices = list(np.arange(starting_point, starting_point + num_classes - current_class - 1))
     for i in range(1, num_classes - current_class):
-        data_number.append(starting_point + (num_classes - 1) * i)
-    return data_number
+        dataset_indices.append(starting_point + (num_classes - 1) * i)
+    return dataset_indices
 
 
 def collate_fn_padd(batch):

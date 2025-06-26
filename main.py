@@ -1,7 +1,7 @@
 import wandb
 from loguru import logger
 
-from src.config.config import create_config
+from src.config.config import create_hyperparameters_config
 from src.config.grid_search_config import create_config_combinations_sorted_by_dataset
 from src.training.train import train_meta_predictor
 from src.utils.default_logger import DefaultLogger
@@ -51,6 +51,6 @@ def main(config_combinations: list[dict]) -> None:
 
 if __name__ == "__main__":
     DefaultLogger.apply_format()
-    loaded_config = create_config()
+    loaded_config = create_hyperparameters_config()
     config_combinations = create_config_combinations_sorted_by_dataset(loaded_config)
     main(config_combinations)

@@ -50,15 +50,12 @@ class TorchvisionDatasetCreator:
         n_instances = len(targets)
         reshaped_targets = targets.unsqueeze(-1)
 
-        features = cls.apply_transforms_to_features(config, features)
+        features = cls.apply_image_transforms_to_features(config, features)
         reshaped_features = features.reshape((n_instances, config["n_features"]))
         return torch.hstack((reshaped_features, reshaped_targets))
 
     @staticmethod
-    def apply_transforms_to_features(config: dict, features: np.ndarray) -> torch.tensor:
-        """
-        Apply the relevant transformations to the features, given the dataset is an image dataset.
-        """
+    def apply_image_transforms_to_features(config: dict, features: np.ndarray) -> torch.tensor:
         has_color_channels = len(features.shape) == 4
 
         if not has_color_channels:
