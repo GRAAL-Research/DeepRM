@@ -16,6 +16,9 @@ class TorchvisionDatasetCreator:
         self.torchvision_dataset = torchvision_dataset
 
     def create_meta_dataset(self, config: dict) -> np.ndarray:
+        """
+        Load the data and store in cache.
+        """
         data_base_path = self.torchvision_dataset.get_data_base_path()
         expected_datasets_cache_path = create_cache_path(config, create_cache_base_path(data_base_path))
 
@@ -37,16 +40,16 @@ class TorchvisionDatasetCreator:
         return train_set, test_set
 
     @classmethod
-    def preprocess_dataset(cls, config: dict, features: np.ndarray, targets: list[int]) -> torch.Tensor:
+    def preprocess_dataset(cls, config: dict, features: np.ndarray, targets: torch.Tensor) -> torch.Tensor:
         n_instances = len(targets)
-        reshaped_targets = torch.tensor(targets).unsqueeze(-1)  # TODO : features and targets are actually tensors
+        reshaped_targets = targets.unsqueeze(-1)
 
-        features = cls.apply_transforms_to_features(config, features)
+        features = cls.apply_image_transforms_to_features(config, features)
         reshaped_features = features.reshape((n_instances, config["n_features"]))
         return torch.hstack((reshaped_features, reshaped_targets))
 
     @staticmethod
-    def apply_transforms_to_features(config: dict, features: np.ndarray) -> torch.tensor:
+    def apply_image_transforms_to_features(config: dict, features: np.ndarray) -> torch.tensor:
         has_color_channels = len(features.shape) == 4
 
         if not has_color_channels:

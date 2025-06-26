@@ -8,52 +8,52 @@ def train_valid_and_test_indices(dataset_name, datasets: np.ndarray, splits: lis
                                  are_test_classes_shared_with_train: bool,
                                  seed: int, is_shuffling=True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     assert sum(splits) == 1, "The sum of splits must be 1."
-
     n_datasets = len(datasets)
+
+    assert n_datasets > 3, "There needs to be at least 3 datasets!"
     datasets_indices = np.arange(n_datasets)
-    if not are_test_classes_shared_with_train and dataset_name == "mnist_binary":  # TODO: support other dataset names
-        n_classes = int((1 + math.sqrt(1 + 4 * int(n_datasets))) / 2)
-        valid_idx = []
-        test_idx = []
-        current_class = 0
-        while len(test_idx) / n_datasets < splits[2]:
-            test_idx += extract_class(n_classes, current_class)
-            current_class += 1
-        valid_idx += extract_class(n_classes, current_class)
-        other_idx = []
-        for idx in datasets_indices:
-            if idx not in valid_idx:
-                if idx not in test_idx:
-                    other_idx.append(idx)
-        if is_shuffling:
-            np.random.seed(seed)
-            np.random.shuffle(other_idx)
-        train_idx = other_idx
-        return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
+    if not are_test_classes_shared_with_train:
+        if dataset_name == "mnist_binary":
+            # If dataset is mnist_binary, the test meta-dataset will contain tasks with digit 0, then 1, 2, and so on
+            # until its proportion is filled.
+            n_classes = int((1 + math.sqrt(1 + 4 * int(n_datasets))) / 2)
+            valid_idx = []
+            test_idx = []
+            current_class = 0
+            while len(test_idx) / n_datasets < splits[2]:
+                test_idx += extract_class(n_classes, current_class)
+                current_class += 1
+            # Same goes for validation tasks
+            while len(valid_idx) / n_datasets < splits[1]:
+                valid_idx += extract_class(n_classes, current_class)
+                current_class += 1
+            other_idx = []
+            # The remaining indices corresponds to the train meta-set.
+            for idx in datasets_indices:
+                if idx not in valid_idx:
+                    if idx not in test_idx:
+                        other_idx.append(idx)
+            if is_shuffling:
+                np.random.seed(seed)
+                np.random.shuffle(other_idx)
+            train_idx = other_idx
+            return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
+        elif dataset_name == "cifar100":
+            used_idx = np.array(range(100))
+            np.random.shuffle(used_idx)
+            split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * 100)
+            return np.array(used_idx[:split_1]), np.array(used_idx[split_1:]), np.array(range(100, 150))
 
-    if not are_test_classes_shared_with_train and dataset_name == "cifar100":
-        used_idx = np.array(range(100))
-        np.random.shuffle(used_idx)
-        split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * 100)
-        return np.array(used_idx[:split_1]), np.array(used_idx[split_1:]), np.array(range(100, 150))
-
-    if is_shuffling and "mnist_binary" != dataset_name:  # TODO: support other dataset names
+    if is_shuffling:
         np.random.seed(seed)
         np.random.shuffle(datasets_indices)
 
-    if n_datasets > 3:
-        split_1 = math.floor(splits[0] * n_datasets)
-        split_2 = math.floor(splits[1] * n_datasets) + split_1
-        train_idx = datasets_indices[:split_1]
-        valid_idx = datasets_indices[split_1:split_2]
-        test_idx = datasets_indices[split_2:]
-        return train_idx, valid_idx, test_idx
-
-    split_1 = math.floor(splits[0] / (1 - splits[2]) * n_datasets)
+    # Otherwise, a random partitioning of the datasets is done with proportions respecting "splits".
+    split_1 = math.floor(splits[0] * n_datasets)
+    split_2 = math.floor(splits[1] * n_datasets) + split_1
     train_idx = datasets_indices[:split_1]
-    valid_idx = datasets_indices[split_1:]
-    test_idx = np.arange(len(datasets[1]))
-
+    valid_idx = datasets_indices[split_1:split_2]
+    test_idx = datasets_indices[split_2:]
     return train_idx, valid_idx, test_idx
 
 
@@ -64,6 +64,9 @@ def create_data_loader(datasets: np.ndarray, meta_batch_size: int, indices: np.n
 
 def compute_variances(datasets: np.ndarray, train_idx,
                       valid_idx, test_idx) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    A simple function to compute the variance of the labels for the train, valid and test data.
+    """
     train_labels, valid_labels, test_labels = [], [], []
     if type(datasets[0]) is np.ndarray:
         datasets = torch.tensor(datasets)
@@ -82,20 +85,23 @@ def compute_variances(datasets: np.ndarray, train_idx,
 
 
 def extract_class(num_classes: int, current_class: int) -> list:
+    """
+    Extracts the dataset indices for samples belonging to a given class, given the total number of classes.
+    """
     starting_point = num_classes * current_class
-    data_number = list(np.arange(starting_point, starting_point + num_classes - current_class - 1))
+    dataset_indices = list(np.arange(starting_point, starting_point + num_classes - current_class - 1))
     for i in range(1, num_classes - current_class):
-        data_number.append(starting_point + (num_classes - 1) * i)
-    return data_number
+        dataset_indices.append(starting_point + (num_classes - 1) * i)
+    return dataset_indices
 
 
 def collate_fn_padd(batch):
-    '''
-    Padds batch of variable length
+    """
+    Pads batch of variable length
 
     note: it converts things ToTensor manually here since the ToTensor transform
     assume it takes in images rather than arbitrary tensors.
-    '''
+    """
     ## get sequence lengths
     lengths = torch.tensor([t.shape[0] for t in batch])
     ## padd

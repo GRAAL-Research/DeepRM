@@ -44,6 +44,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
             instances = instances[0]
             n_datasets = len(instances)
             n_instance_per_dataset = len(instances[0])
+            # Half the data serves to generate the dowstream predictor, the other half to compute the metrics.
             n_instances_per_class_per_dataset = n_instance_per_dataset // 2
             n_instances_seen += n_datasets * n_instance_per_dataset // 2
             n_batches += 1
@@ -86,6 +87,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
                 tot_acc.append(torch.mean(query_acc / n_instances_per_class_per_dataset).cpu())
                 if are_bounds_computed:
                     for dataset_idx in range(len(instances)):
+                        # The bound is computed using the support set accuracy.
                         bounds = compute_bounds(["linear", "hyperparam", "kl", "marchand", "kl_dis"], meta_predictor,
                                                 predictor,
                                                 n_instances_per_class_per_dataset,
@@ -95,6 +97,7 @@ def compute_metrics(config: dict, meta_predictor: SimpleMetaNet, predictor: Pred
                                                 targets[[dataset_idx], :n_instances_per_class_per_dataset],
                                                 config["msg_size"], config["msg_type"], config["compression_set_size"],
                                                 config["compression_pool_size"])
+                        # All of the various bounds are computed and reported.
                         linear_bounds.append(bounds[0])
                         hyperparam_bounds.append(bounds[1])
                         kl_bounds.append(bounds[2])

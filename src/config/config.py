@@ -4,11 +4,11 @@ from src.config.utils import load_yaml_file_content, CONFIG_BASE_PATH, get_sub_c
     get_sub_config_paths_values
 
 
-def create_config():
+def create_hyperparameters_config():
     config = load_yaml_file_content(CONFIG_PATH)
     add_sub_config_parameters(config)
     if config["is_logging_commit_info"]:
-        config = update_config_with_commit_name_and_hash(config)
+        config = add_commit_name_and_hash_to_the_config(config)
     return config
 
 
@@ -37,7 +37,7 @@ def compute_keys_intersection(a: dict, b: dict) -> list[str]:
     return list(intersection)
 
 
-def update_config_with_commit_name_and_hash(config: dict) -> dict:
+def add_commit_name_and_hash_to_the_config(config: dict) -> dict:
     repo = Repo()
 
     if repo.is_dirty(untracked_files=True):

@@ -4,7 +4,6 @@ from copy import copy
 import torch
 from loguru import logger
 
-from src.data.create_datasets_labels import create_datasets_labels
 from src.data.create_meta_dataset import create_datasets
 from src.data.loaders import train_valid_and_test_indices, create_data_loader, compute_variances
 from src.model.mlp import MLP
@@ -27,7 +26,6 @@ def train_meta_predictor(config: dict) -> None:
     torch.autograd.set_detect_anomaly(True)
 
     datasets = create_datasets(config)
-    classes_name = create_datasets_labels(config)
     predictor = create_predictor(config)
     meta_predictor = create_meta_predictor(config, predictor)
     criterion = create_criterion(config)
@@ -49,9 +47,11 @@ def train_meta_predictor(config: dict) -> None:
     history = create_history()
     start_time = time.time()
 
+    # If the config permits it, a "prior" is computed for the downstream predictor; the future predictions of the meta
+    #   model will just fine-tune this "prior".
     if config["compute_prior"]:
         prior = MLP(config["n_features"], config["pred_hidden_sizes"] + [config["target_size"]], config["device"],
-                    config["has_skip_connection"], config["has_batch_norm"], config["batch_norm_min_dim"],
+                    config["has_skip_connection"], config["has_batch_norm"],
                     config["init_scheme"], None)
         prior = launch_prior_training(config, prior, train_loader, test_loader, criterion)
         predictor.get_batch_norm_from_prior(prior)
@@ -78,23 +78,23 @@ def train_meta_predictor(config: dict) -> None:
         if config["is_using_wandb"]:
             log_history_in_wandb(history)
 
+        # The rolling validation performance tells whether to stop the training.
         rolling_val_perf = compute_rolling_performance(history, validation_metric, epoch_idx)
-
         has_done_significant_improvement = rolling_val_perf > best_rolling_val_acc + config["early_stopping_tolerance"]
         if has_done_significant_improvement:
             best_epoch = epoch_idx
             best_rolling_val_acc = copy(rolling_val_perf)
 
-        if is_stopping_training(config, train_metrics, epoch_idx, best_epoch):
+        if is_stopping_training(config, train_metrics, epoch_idx, best_epoch, config["target_size"]):
             logger.info("The early stopping stopped the training.")
             break
 
         scheduler.step(rolling_val_perf)
 
     if config["is_media_computed"]:
-        compute_medias(config, meta_predictor, test_loader, predictor, train_idx, valid_idx, test_idx, datasets,
-                       classes_name)
+        compute_medias(config, meta_predictor, test_loader, predictor)
 
 
 def compute_rolling_performance(history: dict[str, list], metric: str, epoch_idx: int) -> torch.Tensor:
-    return torch.mean(torch.tensor(history[metric][-min(100, epoch_idx + 1):]))
+    max_epoch_on_which_the_rolling_performance_is_computed = 100
+    return torch.mean(torch.tensor(history[metric][-min(rolling_performance_max_epoch, epoch_idx + 1):]))
