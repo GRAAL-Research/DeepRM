@@ -27,10 +27,6 @@ def add_sub_config_parameters(config: dict) -> dict:
 
 
 def validate_keys_are_not_duplicated_across_config_files(config: dict, sub_config: dict) -> None:
-    """
-    Ensures that the config found in the subconfig files do not overlap with the config found in the
-        main config file.
-    """
     keys_intersection = compute_keys_intersection(sub_config, config)
     possible_config_with_duplicated_keys = [CONFIG_PATH.name] + get_sub_config_paths_values(config)
 
