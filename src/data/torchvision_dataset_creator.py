@@ -32,9 +32,6 @@ class TorchvisionDatasetCreator:
         return datasets
 
     def create_train_and_test_datasets(self, config: dict, dataset_base_path: Path) -> tuple[Tensor, Tensor]:
-        """
-        Downloads the train and test data, and applies the relevant data transformation.
-        """
         train_features, train_targets = self.torchvision_dataset.download(dataset_base_path, is_train_data=True)
         test_features, test_targets = self.torchvision_dataset.download(dataset_base_path, is_train_data=False)
         train_set = self.preprocess_dataset(config, train_features, train_targets)
