@@ -1,0 +1,59 @@
+cff-version: 1.2.0
+title: >-
+  Software for the article "Generalization Bounds via
+  Meta-Learned Model Representations: PAC-Bayes and Sample
+  Compression Hypernetworks"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - given-names: Benjamin
+    family-names: Leblanc
+    affiliation: Laval University
+    email: benjamin.leblanc.2@ulaval.ca
+  - given-names: Mathieu
+    family-names: Bazinet
+    affiliation: Laval University
+    email: mathieu.bazinet.2@ulaval.ca
+  - given-names: Nathaniel
+    family-names: D'Amours
+    affiliation: Laval University
+    email: nathaniel.damours.1@ulaval.ca
+  - given-names: Alexandre
+    family-names: Drouin
+    affiliation: 'ServiceNow Research, Laval University'
+    email: alexandre.drouin@servicenow.com
+  - given-names: Pascal
+    family-names: Germain
+    affiliation: Laval University
+    email: pascal.germain@ift.ulaval.ca
+repository-code: "https://github.com/GRAAL-Research/DeepRM"
+preferred-citation:
+  type: conference-paper
+  authors:
+  - given-names: Benjamin
+    family-names: Leblanc
+    affiliation: Laval University
+    email: benjamin.leblanc.2@ulaval.ca
+  - given-names: Mathieu
+    family-names: Bazinet
+    affiliation: Laval University
+    email: mathieu.bazinet.2@ulaval.ca
+  - given-names: Nathaniel
+    family-names: D'Amours
+    affiliation: Laval University
+    email: nathaniel.damours.1@ulaval.ca
+  - given-names: Alexandre
+    family-names: Drouin
+    affiliation: 'ServiceNow Research, Laval University'
+    email: alexandre.drouin@servicenow.com
+  - given-names: Pascal
+    family-names: Germain
+    affiliation: Laval University
+    email: pascal.germain@ift.ulaval.ca
+  doi: "10.48550/arXiv.2410.13577"
+  title: "Generalization Bounds via Meta-Learned Model Representations: PAC-Bayes and Sample Compression Hypernetworks"
+  conference:
+    name: "International Conference on Machine Learning"
+    abbreviation: "ICML"
+  url: "https://arxiv.org/abs/2410.13577"
+  year: 2025
