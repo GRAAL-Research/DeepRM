@@ -13,9 +13,6 @@ def create_hyperparameters_config():
 
 
 def add_sub_config_parameters(config: dict) -> dict:
-    """
-    Adds in the config dictionary all of the auxiliary configs found in other .yaml files.
-    """
     for sub_config_paths_key in get_sub_config_paths_keys(config):
         sub_config_file_path = CONFIG_BASE_PATH / config[sub_config_paths_key]
         sub_config = load_yaml_file_content(sub_config_file_path)
@@ -27,10 +24,6 @@ def add_sub_config_parameters(config: dict) -> dict:
 
 
 def validate_keys_are_not_duplicated_across_config_files(config: dict, sub_config: dict) -> None:
-    """
-    Ensures that the config found in the subconfig files do not overlap with the config found in the
-        main config file.
-    """
     keys_intersection = compute_keys_intersection(sub_config, config)
     possible_config_with_duplicated_keys = [CONFIG_PATH.name] + get_sub_config_paths_values(config)
 

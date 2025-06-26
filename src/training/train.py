@@ -25,7 +25,6 @@ from src.utils.utils import VALID_ACCURACY_MEAN, VALID_LOSS
 def train_meta_predictor(config: dict) -> None:
     torch.autograd.set_detect_anomaly(True)
 
-    # We initialize the various components of our model.
     datasets = create_datasets(config)
     predictor = create_predictor(config)
     meta_predictor = create_meta_predictor(config, predictor)
