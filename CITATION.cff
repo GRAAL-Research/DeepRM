@@ -3,9 +3,7 @@ title: >-
   Software for the article "Generalization Bounds via
   Meta-Learned Model Representations: PAC-Bayes and Sample
   Compression Hypernetworks"
-message: >-
-  message: "If you use this software, please cite it as
-  below."
+message: "If you use this software, please cite it as below."
 type: software
 authors:
   - given-names: Benjamin
@@ -27,8 +25,10 @@ authors:
   - given-names: Pascal
     family-names: Germain
     affiliation: Laval University
+    email: pascal.germain@ift.ulaval.ca
+repository-code: "https://github.com/GRAAL-Research/DeepRM"
 preferred-citation:
-  type: article
+  type: conference-paper
   authors:
   - given-names: Benjamin
     family-names: Leblanc
@@ -49,8 +49,11 @@ preferred-citation:
   - given-names: Pascal
     family-names: Germain
     affiliation: Laval University
+    email: pascal.germain@ift.ulaval.ca
   doi: "10.48550/arXiv.2410.13577"
-  journal: "ICML 2025"
   title: "Generalization Bounds via Meta-Learned Model Representations: PAC-Bayes and Sample Compression Hypernetworks"
-  abstract: "Both PAC-Bayesian and Sample Compress learning frameworks are instrumental for deriving tight (non-vacuous) generalization bounds for neural networks. We leverage these results in a meta-learning scheme, relying on a hypernetwork that outputs the parameters of a downstream predictor from a dataset input. The originality of our approach lies in the investigated hypernetwork architectures that encode the dataset before decoding the parameters: (1) a PAC-Bayesian encoder that expresses a posterior distribution over a latent space, (2) a Sample Compress encoder that selects a small sample of the dataset input along with a message from a discrete set, and (3) a hybrid between both approaches motivated by a new Sample Compress theorem handling continuous messages. The latter theorem exploits the pivotal information transiting at the encoder-decoder junction in order to compute generalization guarantees for each downstream predictor obtained by our meta-learning scheme. "
-  url: "https://github.com/GRAAL-Research/DeepRM"
+  conference:
+    name: "International Conference on Machine Learning"
+    abbreviation: "ICML"
+  url: "https://arxiv.org/abs/2410.13577"
+  year: 2025
