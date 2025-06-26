@@ -96,5 +96,5 @@ def train_meta_predictor(config: dict) -> None:
 
 
 def compute_rolling_performance(history: dict[str, list], metric: str, epoch_idx: int) -> torch.Tensor:
-    # The rolling performances are computed over at most 100 epochs
-    return torch.mean(torch.tensor(history[metric][-min(100, epoch_idx + 1):]))
+    max_epoch_on_which_the_rolling_performance_is_computed = 100
+    return torch.mean(torch.tensor(history[metric][-min(rolling_performance_max_epoch, epoch_idx + 1):]))

@@ -7,10 +7,6 @@ from torch.utils.data import Subset, DataLoader
 def train_valid_and_test_indices(dataset_name, datasets: np.ndarray, splits: list[float],
                                  are_test_classes_shared_with_train: bool,
                                  seed: int, is_shuffling=True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Given a few parameters, returns three np.array containing the dataset indices for the train, valid and test meta-
-        datasets.
-    """
     assert sum(splits) == 1, "The sum of splits must be 1."
     n_datasets = len(datasets)
 

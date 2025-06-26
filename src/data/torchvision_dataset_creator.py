@@ -32,9 +32,6 @@ class TorchvisionDatasetCreator:
         return datasets
 
     def create_train_and_test_datasets(self, config: dict, dataset_base_path: Path) -> tuple[Tensor, Tensor]:
-        """
-        Downloads the train and test data, and applies the relevant data transformation.
-        """
         train_features, train_targets = self.torchvision_dataset.download(dataset_base_path, is_train_data=True)
         test_features, test_targets = self.torchvision_dataset.download(dataset_base_path, is_train_data=False)
         train_set = self.preprocess_dataset(config, train_features, train_targets)
@@ -44,9 +41,6 @@ class TorchvisionDatasetCreator:
 
     @classmethod
     def preprocess_dataset(cls, config: dict, features: np.ndarray, targets: torch.Tensor) -> torch.Tensor:
-        """
-        Processes both the features and the labels.
-        """
         n_instances = len(targets)
         reshaped_targets = targets.unsqueeze(-1)
 
