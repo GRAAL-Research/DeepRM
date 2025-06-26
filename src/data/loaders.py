@@ -38,11 +38,6 @@ def train_valid_and_test_indices(dataset_name, datasets: np.ndarray, splits: lis
                 np.random.shuffle(other_idx)
             train_idx = other_idx
             return np.array(train_idx), np.array(valid_idx), np.array(test_idx)
-        elif dataset_name == "cifar100":
-            used_idx = np.array(range(100))
-            np.random.shuffle(used_idx)
-            split_1 = math.floor(splits[0] / (splits[0] + splits[1]) * 100)
-            return np.array(used_idx[:split_1]), np.array(used_idx[split_1:]), np.array(range(100, 150))
 
     if is_shuffling:
         np.random.seed(seed)

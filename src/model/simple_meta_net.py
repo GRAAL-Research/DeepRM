@@ -14,7 +14,6 @@ class SimpleMetaNet(nn.Module):
         """
         super().__init__()
         self.compression_set_size = config["compression_set_size"]
-        self.compression_pool_size = config["compression_pool_size"]
         self.msg_type = config["msg_type"]
         self.msg_std = config["msg_std"]
         self.msg_size = config["msg_size"]
@@ -33,10 +32,11 @@ class SimpleMetaNet(nn.Module):
         if self.compression_set_size > 0:
             # The module computing the message has the mapped compression set as input
             module_1_input_dim += config["deepset_dim"][-1]
-        self.module_1 = MLP(module_1_input_dim, self.module_1_dim, config["device"],
-                            config["has_skip_connection"], config["has_batch_norm"],
-                            config["init_scheme"], config["msg_type"])
-        # For each example in the compression set, an attention head is required (see article).
+        if self.msg_size > 0:
+            self.module_1 = MLP(module_1_input_dim, self.module_1_dim, config["device"],
+                                config["has_skip_connection"], config["has_batch_norm"],
+                                config["init_scheme"], config["msg_type"])
+        # For each example in the copression wet, an attention head is required (see article).
         self.cas = nn.ModuleList([Attention(config) for _ in range(self.compression_set_size)])
         # That data compressor maps the compression set to a vectorial representation
         self.data_compressor_2 = create_data_compressor(config)
@@ -116,7 +116,7 @@ class SimpleMetaNet(nn.Module):
         if compression_module_output is not None:
             x = torch.hstack((x, compression_module_output[:x.shape[0], :]))
         # ... Then the message is computed.
-        message = self.module_1.forward(x)
+        message = self.module_1.forward(x) if self.msg_size > 0 else 1
 
         if self.msg_type == "cnt":
             message = message * 3  # See bound computation

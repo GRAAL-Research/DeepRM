@@ -1,6 +1,7 @@
+ipython==8.20.0
 loguru==0.7.2
 matplotlib==3.9.0
-numpy==1.23.5 # 2.1.2
+numpy==1.26.4 # 2.1.2
 omegaconf==2.3.0
 pandas==2.0.3
 pillow==10.3.0 # 11.0.0
@@ -8,7 +9,8 @@ PyYAML==6.0.1
 scikit-learn==1.5.0
 seaborn==0.13.2
 shap==0.46.0
+torch==2.5.1
+torchvision==0.22.1
+transformers==4.48.1
 tqdm==4.66.4
 wandb==0.16.2
-ipython==8.20.0
-transformers==4.48.1
