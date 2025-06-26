@@ -36,7 +36,7 @@ class SimpleMetaNet(nn.Module):
         self.module_1 = MLP(module_1_input_dim, self.module_1_dim, config["device"],
                             config["has_skip_connection"], config["has_batch_norm"],
                             config["init_scheme"], config["msg_type"])
-        # For each example in the copression wet, an attention head is required (see article).
+        # For each example in the compression set, an attention head is required (see article).
         self.cas = nn.ModuleList([Attention(config) for _ in range(self.compression_set_size)])
         # That data compressor maps the compression set to a vectorial representation
         self.data_compressor_2 = create_data_compressor(config)
