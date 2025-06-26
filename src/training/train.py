@@ -57,7 +57,6 @@ def train_meta_predictor(config: dict) -> None:
         predictor.get_batch_norm_from_prior(prior)
         predictor.set_prior_weights(prior)
 
-    # The training pipeline loops over several epochs...
     for epoch_idx in range(config["max_epoch"]):
         predictor = launch_epoch_training(config, meta_predictor, predictor, train_loader, criterion, optimizer)
 
