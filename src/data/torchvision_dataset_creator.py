@@ -44,9 +44,6 @@ class TorchvisionDatasetCreator:
 
     @classmethod
     def preprocess_dataset(cls, config: dict, features: np.ndarray, targets: torch.Tensor) -> torch.Tensor:
-        """
-        Processes both the features and the labels.
-        """
         n_instances = len(targets)
         reshaped_targets = targets.unsqueeze(-1)
 
